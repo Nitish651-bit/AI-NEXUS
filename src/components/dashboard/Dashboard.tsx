@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { AIToolModal } from "./AIToolModal";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -116,6 +117,13 @@ interface DashboardProps {
 export function Dashboard({ userEmail, onLogout }: DashboardProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
+  const [selectedTool, setSelectedTool] = useState<typeof aiTools[0] | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  const handleToolClick = (tool: typeof aiTools[0]) => {
+    setSelectedTool(tool);
+    setIsModalOpen(true);
+  };
 
   const filteredTools = aiTools.filter(tool => {
     const matchesSearch = tool.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -228,11 +236,20 @@ export function Dashboard({ userEmail, onLogout }: DashboardProps) {
                 icon={tool.icon}
                 isPremium={tool.isPremium}
                 isPopular={tool.isPopular}
-                onClick={() => console.log(`Opening ${tool.title}`)}
+                onClick={() => handleToolClick(tool)}
               />
             ))}
           </div>
         </div>
+
+        {/* AI Tool Modal */}
+        {selectedTool && (
+          <AIToolModal
+            isOpen={isModalOpen}
+            onClose={() => setIsModalOpen(false)}
+            tool={selectedTool}
+          />
+        )}
       </div>
     </div>
   );
