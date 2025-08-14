@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -32,6 +33,7 @@ export function AIToolModal({ isOpen, onClose, tool }: AIToolModalProps) {
   const [input, setInput] = useState("");
   const [output, setOutput] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
+  const { toast } = useToast();
 
   const handleGenerate = async () => {
     if (!input.trim()) return;
@@ -58,8 +60,55 @@ export function AIToolModal({ isOpen, onClose, tool }: AIToolModalProps) {
     setIsProcessing(false);
   };
 
-  const copyToClipboard = () => {
-    navigator.clipboard.writeText(output);
+  const copyToClipboard = async () => {
+    try {
+      await navigator.clipboard.writeText(output);
+      toast({
+        title: "Copied to clipboard!",
+        description: "The AI output has been copied successfully.",
+      });
+    } catch (error) {
+      // Fallback for older browsers
+      const textArea = document.createElement("textarea");
+      textArea.value = output;
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand("copy");
+      document.body.removeChild(textArea);
+      
+      toast({
+        title: "Copied to clipboard!",
+        description: "The AI output has been copied successfully.",
+      });
+    }
+  };
+
+  const downloadOutput = () => {
+    try {
+      const element = document.createElement("a");
+      const file = new Blob([output], { type: "text/plain" });
+      element.href = URL.createObjectURL(file);
+      
+      // Generate filename based on tool and timestamp
+      const timestamp = new Date().toISOString().slice(0, 19).replace(/[:.]/g, "-");
+      const toolName = tool.title.toLowerCase().replace(/\s+/g, "-");
+      element.download = `${toolName}-output-${timestamp}.txt`;
+      
+      document.body.appendChild(element);
+      element.click();
+      document.body.removeChild(element);
+      
+      toast({
+        title: "Download started!",
+        description: "Your AI output is being downloaded.",
+      });
+    } catch (error) {
+      toast({
+        title: "Download failed",
+        description: "There was an error downloading the file. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   return (
@@ -164,7 +213,7 @@ export function AIToolModal({ isOpen, onClose, tool }: AIToolModalProps) {
                       <Copy size={14} />
                       Copy
                     </Button>
-                    <Button variant="outline" size="sm">
+                    <Button variant="outline" size="sm" onClick={downloadOutput}>
                       <Download size={14} />
                       Download
                     </Button>
