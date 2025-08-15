@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { useGeminiAI } from "@/hooks/useGeminiAI";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -32,32 +33,27 @@ interface AIToolModalProps {
 export function AIToolModal({ isOpen, onClose, tool }: AIToolModalProps) {
   const [input, setInput] = useState("");
   const [output, setOutput] = useState("");
-  const [isProcessing, setIsProcessing] = useState(false);
   const { toast } = useToast();
+  const { generateContent, isProcessing } = useGeminiAI({
+    toolCategory: tool.category,
+    toolTitle: tool.title
+  });
 
   const handleGenerate = async () => {
     if (!input.trim()) return;
     
-    setIsProcessing(true);
-    
-    // Simulate AI processing
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    // Generate mock output based on tool type
-    let mockOutput = "";
-    
-    if (tool.category === "Text & Writing") {
-      mockOutput = `Here's an AI-generated response to "${input}":\n\nThis is a sophisticated analysis using advanced language models. The content demonstrates the power of modern AI in understanding context, generating coherent responses, and maintaining consistency throughout the output.\n\nKey insights:\n• Advanced natural language processing\n• Context-aware generation\n• High-quality, human-like text output`;
-    } else if (tool.category === "Code Assistant") {
-      mockOutput = `// AI-generated code for: ${input}\n\nfunction aiGeneratedSolution() {\n  // This code demonstrates AI-powered programming assistance\n  const result = processInput("${input}");\n  \n  return {\n    success: true,\n    data: result,\n    timestamp: new Date().toISOString()\n  };\n}\n\n// Additional optimizations and best practices applied\nexport default aiGeneratedSolution;`;
-    } else if (tool.category === "Image Generation") {
-      mockOutput = `🎨 Image Generation Complete!\n\nPrompt: "${input}"\n\n✅ High-resolution image created\n📏 Dimensions: 1024x1024px\n🎯 Style: Photorealistic\n⚡ Processing time: 1.8 seconds\n\n[In a real implementation, the generated image would appear here]\n\nImage features:\n• Professional quality\n• Optimized compression\n• Ready for download`;
-    } else {
-      mockOutput = `AI Analysis Result for "${input}":\n\n✨ Processing completed using ${tool.title}\n\nResults:\n• Data processed successfully\n• Advanced algorithms applied\n• Insights generated\n• Quality score: ${tool.rating}/5.0\n\nThis demonstrates the power of AI in the ${tool.category} category.`;
+    try {
+      const aiOutput = await generateContent(input);
+      setOutput(aiOutput);
+      
+      toast({
+        title: "AI processing completed!",
+        description: "Your content has been generated successfully.",
+      });
+    } catch (error) {
+      // Error handling is done in the hook
+      console.error('Failed to generate content:', error);
     }
-    
-    setOutput(mockOutput);
-    setIsProcessing(false);
   };
 
   const copyToClipboard = async () => {
