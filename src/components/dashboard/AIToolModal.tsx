@@ -220,8 +220,8 @@ export function AIToolModal({ isOpen, onClose, tool }: AIToolModalProps) {
                   </div>
                 </div>
                 
-                <div className="bg-background/30 border border-holo-blue/20 rounded-lg p-4">
-                  <pre className="text-sm text-foreground whitespace-pre-wrap font-mono">
+                <div className="bg-card border border-holo-blue/30 rounded-lg p-4 shadow-lg">
+                  <pre className="text-card-foreground whitespace-pre-wrap font-mono text-sm leading-relaxed">
                     {output}
                   </pre>
                 </div>
