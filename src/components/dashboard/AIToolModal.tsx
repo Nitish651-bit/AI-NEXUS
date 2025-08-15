@@ -220,10 +220,12 @@ export function AIToolModal({ isOpen, onClose, tool }: AIToolModalProps) {
                   </div>
                 </div>
                 
-                <div className="bg-card border border-holo-blue/30 rounded-lg p-4 shadow-lg max-h-96 overflow-y-auto">
-                  <pre className="text-card-foreground whitespace-pre-wrap font-mono text-sm leading-relaxed">
-                    {output}
-                  </pre>
+                <div className="bg-card border border-holo-blue/30 rounded-lg shadow-lg max-h-80 overflow-hidden">
+                  <div className="p-4 max-h-full overflow-y-auto scrollbar-thin scrollbar-thumb-holo-blue scrollbar-track-muted">
+                    <pre className="text-card-foreground whitespace-pre-wrap font-mono text-sm leading-relaxed">
+                      {output}
+                    </pre>
+                  </div>
                 </div>
               </div>
             </>
