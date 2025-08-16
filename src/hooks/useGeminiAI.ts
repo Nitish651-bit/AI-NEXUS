@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { supabase, isSupabaseConnected } from '@/integrations/supabase/client';
+import { supabase } from '@/integrations/supabase/client';
 
 interface UseGeminiAIProps {
   toolCategory: string;
@@ -25,11 +25,7 @@ export function useGeminiAI({ toolCategory, toolTitle }: UseGeminiAIProps) {
     setIsProcessing(true);
 
     try {
-      // If Supabase is not connected, return mock response
-      if (!isSupabaseConnected || !supabase) {
-        await new Promise(resolve => setTimeout(resolve, 2000)); // Simulate processing
-        return generateMockResponse(input, toolCategory, toolTitle);
-      }
+      // Use real Gemini AI via Supabase edge function
       const { data, error } = await supabase.functions.invoke('gemini-ai', {
         body: {
           input: input.trim(),
