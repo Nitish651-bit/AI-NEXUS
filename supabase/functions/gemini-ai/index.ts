@@ -19,9 +19,14 @@ serve(async (req) => {
   try {
     const { input, toolCategory, toolTitle }: AIRequest = await req.json();
     
+    console.log('Received request:', { input, toolCategory, toolTitle });
+    
     const apiKey = Deno.env.get('GEMINI_API_KEY');
+    console.log('API Key exists:', !!apiKey);
+    
     if (!apiKey) {
-      throw new Error('Gemini API key not found');
+      console.error('GEMINI_API_KEY not found in environment variables');
+      throw new Error('Gemini API key not configured. Please add GEMINI_API_KEY to your Supabase project secrets.');
     }
 
     // Generate appropriate prompt based on tool category
@@ -47,6 +52,8 @@ serve(async (req) => {
         prompt = `Using the ${toolTitle} AI tool, please help with: ${input}. Provide a comprehensive and helpful response.`;
     }
 
+    console.log('Making request to Gemini API...');
+    
     const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${apiKey}`, {
       method: 'POST',
       headers: {
@@ -67,17 +74,24 @@ serve(async (req) => {
       })
     });
 
+    console.log('Gemini API response status:', response.status);
+
     if (!response.ok) {
-      throw new Error(`Gemini API error: ${response.status} ${response.statusText}`);
+      const errorText = await response.text();
+      console.error('Gemini API error response:', errorText);
+      throw new Error(`Gemini API error: ${response.status} ${response.statusText}. Response: ${errorText}`);
     }
 
     const data = await response.json();
+    console.log('Gemini API response received:', !!data);
     
     if (!data.candidates || !data.candidates[0] || !data.candidates[0].content) {
-      throw new Error('Invalid response from Gemini API');
+      console.error('Invalid Gemini API response structure:', JSON.stringify(data));
+      throw new Error('Invalid response from Gemini API - no content generated');
     }
 
     const aiOutput = data.candidates[0].content.parts[0].text;
+    console.log('AI output generated successfully, length:', aiOutput?.length);
 
     return new Response(
       JSON.stringify({ 
@@ -95,11 +109,14 @@ serve(async (req) => {
     );
 
   } catch (error) {
-    console.error('Error:', error);
+    console.error('Edge Function Error:', error);
+    console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
+    
     return new Response(
       JSON.stringify({ 
         success: false, 
-        error: error.message || 'An error occurred while processing your request' 
+        error: error instanceof Error ? error.message : 'An unexpected error occurred while processing your request',
+        timestamp: new Date().toISOString()
       }),
       { 
         status: 500,
