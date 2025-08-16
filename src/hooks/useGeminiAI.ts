@@ -34,6 +34,8 @@ export function useGeminiAI({ toolCategory, toolTitle }: UseGeminiAIProps) {
         }
       });
 
+      console.log('Supabase response:', { data, error });
+
       if (error) {
         throw new Error(error.message || 'Failed to connect to AI service');
       }
