@@ -23,10 +23,24 @@ serve(async (req) => {
     
     const apiKey = Deno.env.get('GEMINI_API_KEY');
     console.log('API Key exists:', !!apiKey);
+    console.log('Available env vars:', Object.keys(Deno.env.toObject()));
     
     if (!apiKey) {
       console.error('GEMINI_API_KEY not found in environment variables');
-      throw new Error('Gemini API key not configured. Please add GEMINI_API_KEY to your Supabase project secrets.');
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: 'Gemini API key not configured. Please add GEMINI_API_KEY to your Supabase project secrets.',
+          debug: 'No API key found in environment'
+        }),
+        { 
+          status: 400,
+          headers: { 
+            ...corsHeaders, 
+            'Content-Type': 'application/json' 
+          } 
+        }
+      );
     }
 
     // Generate appropriate prompt based on tool category
