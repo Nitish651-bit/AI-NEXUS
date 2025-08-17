@@ -37,13 +37,15 @@ export function useGeminiAI({ toolCategory, toolTitle }: UseGeminiAIProps) {
       console.log('Supabase response:', { data, error });
 
       if (error) {
-        throw new Error(error.message || 'Failed to connect to AI service');
+        console.error('Supabase function error:', error);
+        throw new Error(error.message || 'Failed to connect to AI service. Please check your API key configuration.');
       }
 
       const response: AIResponse = data;
 
       if (!response.success) {
-        throw new Error(response.error || 'AI processing failed');
+        console.error('AI service returned error:', response.error);
+        throw new Error(response.error || 'AI processing failed. Please try again.');
       }
 
       if (!response.output) {
