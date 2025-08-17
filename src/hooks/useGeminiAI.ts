@@ -38,28 +38,18 @@ export function useGeminiAI({ toolCategory, toolTitle }: UseGeminiAIProps) {
 
       if (error) {
         console.error('Supabase function error:', error);
-        
-        // Fallback to mock response if edge function fails
-        console.log('Falling back to mock response due to edge function error');
-        await new Promise(resolve => setTimeout(resolve, 1500)); // Simulate processing
-        return generateMockResponse(input, toolCategory, toolTitle);
+        throw new Error(error.message || 'Failed to connect to AI service');
       }
 
       const response: AIResponse = data;
 
       if (!response.success) {
         console.error('AI service returned error:', response.error);
-        
-        // Fallback to mock response if AI service fails
-        console.log('Falling back to mock response due to AI service error');
-        await new Promise(resolve => setTimeout(resolve, 1500)); // Simulate processing
-        return generateMockResponse(input, toolCategory, toolTitle);
+        throw new Error(response.error || 'AI processing failed');
       }
 
       if (!response.output) {
-        console.log('No output from AI service, falling back to mock response');
-        await new Promise(resolve => setTimeout(resolve, 1500)); // Simulate processing
-        return generateMockResponse(input, toolCategory, toolTitle);
+        throw new Error('No output received from AI');
       }
 
       return response.output;
@@ -69,16 +59,13 @@ export function useGeminiAI({ toolCategory, toolTitle }: UseGeminiAIProps) {
       
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       
-      // Show a user-friendly toast instead of throwing
       toast({
-        title: "Using Demo Mode",
-        description: "AI service temporarily unavailable. Showing demo response.",
-        variant: "default",
+        title: "AI Processing Failed",
+        description: errorMessage,
+        variant: "destructive",
       });
       
-      // Return mock response instead of throwing error
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Brief delay
-      return generateMockResponse(input, toolCategory, toolTitle);
+      throw error;
     } finally {
       setIsProcessing(false);
     }
