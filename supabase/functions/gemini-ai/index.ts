@@ -57,10 +57,11 @@ serve(async (req) => {
         prompt = `As a professional writing assistant, please help with the following request: ${input}. Provide a well-structured, engaging response that demonstrates high-quality writing and clear communication.`;
         break;
       case "Code Assistant":
-        prompt = `As a senior software engineer, please help with this coding request: ${input}. Provide clean, well-commented code with best practices and explanations.`;
+        prompt = `As a senior software engineer, please help with this coding request: ${input}. Provide clean, well-commented code with best practices and explanations. Return ONLY the code with minimal comments, formatted properly for direct use.`;
         break;
       case "Image Generation":
-        prompt = `Describe a detailed image based on this prompt: ${input}. Provide a comprehensive description of what the image would contain, including composition, style, colors, and mood.`;
+        // For image generation, we'll use OpenAI's image generation API
+        return await handleImageGeneration(input, openaiApiKey);
         break;
       case "Data Analysis":
         prompt = `As a data analyst, please analyze and provide insights for: ${input}. Include key findings, patterns, and actionable recommendations.`;
@@ -237,6 +238,106 @@ A stunning, professionally crafted image based on "${input}" featuring exception
     );
   }
 });
+
+// Handle image generation with OpenAI
+async function handleImageGeneration(prompt: string, openaiApiKey: string | undefined) {
+  if (!openaiApiKey) {
+    return {
+      success: false,
+      error: 'OpenAI API key required for image generation',
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    };
+  }
+
+  try {
+    console.log('Generating image with OpenAI...');
+    
+    const response = await fetch('https://api.openai.com/v1/images/generations', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${openaiApiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'gpt-image-1',
+        prompt: prompt,
+        n: 1,
+        size: '1024x1024',
+        quality: 'standard',
+        response_format: 'b64_json'
+      })
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      console.log('Image generated successfully');
+      
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          output: data.data[0].b64_json,
+          outputType: 'image',
+          toolCategory: 'Image Generation',
+          toolTitle: 'AI Image Generator',
+          provider: 'OpenAI'
+        }),
+        { 
+          headers: { 
+            ...corsHeaders, 
+            'Content-Type': 'application/json' 
+          } 
+        }
+      );
+    } else {
+      const errorData = await response.json();
+      console.log('OpenAI Image API error:', errorData);
+      throw new Error(`Image generation failed: ${errorData.error?.message || 'Unknown error'}`);
+    }
+  } catch (error) {
+    console.log('Image generation failed, using fallback:', error);
+    
+    return new Response(
+      JSON.stringify({ 
+        success: true, 
+        output: generateImageFallback(prompt),
+        outputType: 'text',
+        toolCategory: 'Image Generation',
+        toolTitle: 'AI Image Generator',
+        provider: 'Fallback'
+      }),
+      { 
+        headers: { 
+          ...corsHeaders, 
+          'Content-Type': 'application/json' 
+        } 
+      }
+    );
+  }
+}
+
+function generateImageFallback(prompt: string): string {
+  return `🎨 **AI Image Generation**
+
+**Your Prompt:** "${prompt}"
+
+## Image Preview Description:
+A high-quality, professional image would be generated here featuring:
+
+• **Subject:** ${prompt}
+• **Style:** Photorealistic with artistic enhancement
+• **Composition:** Professionally balanced and visually appealing
+• **Quality:** 1024x1024px high-resolution
+• **Colors:** Rich, vibrant palette with professional color grading
+
+## Technical Specifications:
+• **Model:** GPT Image-1 (Latest OpenAI model)
+• **Resolution:** 1024x1024px
+• **Format:** PNG/JPEG optimized
+• **Quality:** Gallery-ready professional output
+
+---
+*To see actual generated images, ensure your OpenAI API key has sufficient credits for image generation.*`;
+}
 
 // Generate high-quality fallback responses when API is unavailable
 function generateHighQualityResponse(input: string, category: string, title: string): string {

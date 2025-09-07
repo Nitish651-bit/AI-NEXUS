@@ -33,6 +33,7 @@ interface AIToolModalProps {
 export function AIToolModal({ isOpen, onClose, tool }: AIToolModalProps) {
   const [input, setInput] = useState("");
   const [output, setOutput] = useState("");
+  const [outputType, setOutputType] = useState<"text" | "image" | "code">("text");
   const { toast } = useToast();
   const { generateContent, isProcessing } = useGeminiAI({
     toolCategory: tool.category,
@@ -43,8 +44,28 @@ export function AIToolModal({ isOpen, onClose, tool }: AIToolModalProps) {
     if (!input.trim()) return;
     
     try {
-      const aiOutput = await generateContent(input);
-      setOutput(aiOutput);
+      const response = await generateContent(input);
+      
+      // Check if response contains structured data
+      if (typeof response === 'string') {
+        try {
+          const parsed = JSON.parse(response);
+          if (parsed.outputType === 'image' && parsed.output) {
+            setOutput(parsed.output);
+            setOutputType('image');
+          } else {
+            setOutput(response);
+            setOutputType(tool.category === 'Code Assistant' ? 'code' : 'text');
+          }
+        } catch {
+          // If not JSON, treat as regular text
+          setOutput(response);
+          setOutputType(tool.category === 'Code Assistant' ? 'code' : 'text');
+        }
+      } else {
+        setOutput(response);
+        setOutputType(tool.category === 'Code Assistant' ? 'code' : 'text');
+      }
       
       toast({
         title: "AI processing completed!",
@@ -218,9 +239,23 @@ export function AIToolModal({ isOpen, onClose, tool }: AIToolModalProps) {
                 
                 <div className="bg-card border border-holo-blue/30 rounded-lg shadow-lg max-h-80 overflow-hidden">
                   <div className="p-4 max-h-full overflow-y-auto scrollbar-thin scrollbar-thumb-holo-blue scrollbar-track-muted">
-                    <pre className="text-card-foreground whitespace-pre-wrap font-mono text-sm leading-relaxed">
-                      {output}
-                    </pre>
+                    {outputType === 'image' ? (
+                      <div className="flex justify-center">
+                        <img 
+                          src={`data:image/png;base64,${output}`}
+                          alt="Generated image"
+                          className="max-w-full max-h-64 object-contain rounded-lg shadow-md"
+                        />
+                      </div>
+                    ) : outputType === 'code' ? (
+                      <pre className="text-card-foreground whitespace-pre-wrap font-mono text-sm leading-relaxed bg-muted/50 p-4 rounded-lg overflow-x-auto">
+                        <code>{output}</code>
+                      </pre>
+                    ) : (
+                      <div className="text-card-foreground whitespace-pre-wrap text-sm leading-relaxed">
+                        {output}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
