@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useGeminiAI } from "@/hooks/useGeminiAI";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { 
   Sparkles, 
   Send, 
@@ -14,7 +15,12 @@ import {
   Download, 
   Star,
   Zap,
-  X
+  X,
+  Plus,
+  Camera,
+  FileImage,
+  Folder,
+  Trash2
 } from "lucide-react";
 
 interface AIToolModalProps {
@@ -34,17 +40,67 @@ export function AIToolModal({ isOpen, onClose, tool }: AIToolModalProps) {
   const [input, setInput] = useState("");
   const [output, setOutput] = useState("");
   const [outputType, setOutputType] = useState<"text" | "image" | "code">("text");
+  const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   const { generateContent, isProcessing } = useGeminiAI({
     toolCategory: tool.category,
     toolTitle: tool.title
   });
 
+  const handleFileUpload = (files: File[]) => {
+    const validFiles = files.filter(file => {
+      const isValid = file.type.startsWith('image/') || file.type.startsWith('video/') || 
+                     file.type === 'application/pdf' || file.type.startsWith('text/');
+      if (!isValid) {
+        toast({
+          title: "Invalid file type",
+          description: "Please upload images, videos, PDFs, or text files only.",
+          variant: "destructive"
+        });
+      }
+      return isValid;
+    });
+    
+    setUploadedFiles(prev => [...prev, ...validFiles]);
+    
+    if (validFiles.length > 0) {
+      toast({
+        title: "Files uploaded!",
+        description: `${validFiles.length} file(s) added successfully.`
+      });
+    }
+  };
+
+  const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      handleFileUpload(Array.from(e.target.files));
+    }
+  };
+
+  const removeFile = (index: number) => {
+    setUploadedFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const openFileDialog = () => {
+    fileInputRef.current?.click();
+  };
+
+  const openCameraDialog = () => {
+    cameraInputRef.current?.click();
+  };
+
   const handleGenerate = async () => {
-    if (!input.trim()) return;
+    if (!input.trim() && uploadedFiles.length === 0) return;
     
     try {
-      const response = await generateContent(input);
+      let prompt = input;
+      if (uploadedFiles.length > 0) {
+        prompt += `\n\nAttached files: ${uploadedFiles.map(f => f.name).join(', ')}`;
+      }
+      
+      const response = await generateContent(prompt);
       
       // Check if response contains structured data
       if (typeof response === 'string') {
@@ -176,25 +232,109 @@ export function AIToolModal({ isOpen, onClose, tool }: AIToolModalProps) {
             </div>
             
             <div className="space-y-3">
-              {tool.category === "Text & Writing" ? (
-                <Textarea
-                  placeholder="Enter your text prompt or question..."
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  className="bg-background/50 border-holo-blue/30 focus:border-holo-blue min-h-[100px]"
-                />
-              ) : (
-                <Input
-                  placeholder={`Enter your ${tool.category.toLowerCase()} request...`}
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  className="bg-background/50 border-holo-blue/30 focus:border-holo-blue"
-                />
+              <div className="relative">
+                {tool.category === "Text & Writing" ? (
+                  <Textarea
+                    placeholder="Enter your text prompt or question..."
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    className="bg-background/50 border-holo-blue/30 focus:border-holo-blue min-h-[100px] pr-12"
+                  />
+                ) : (
+                  <Input
+                    placeholder={`Enter your ${tool.category.toLowerCase()} request...`}
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    className="bg-background/50 border-holo-blue/30 focus:border-holo-blue pr-12"
+                  />
+                )}
+                
+                {/* Upload Button */}
+                <div className="absolute right-2 top-2">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 w-8 p-0 text-holo-blue hover:bg-holo-blue/20"
+                      >
+                        <Plus size={16} />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-48">
+                      <DropdownMenuItem onClick={openCameraDialog} className="gap-2">
+                        <Camera size={14} />
+                        Take Photo
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={openFileDialog} className="gap-2">
+                        <FileImage size={14} />
+                        From Gallery
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={openFileDialog} className="gap-2">
+                        <Folder size={14} />
+                        From Files
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              </div>
+              
+              {/* File inputs */}
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                accept="image/*,video/*,.pdf,.txt,.doc,.docx"
+                onChange={handleFileInputChange}
+                className="hidden"
+              />
+              <input
+                ref={cameraInputRef}
+                type="file"
+                accept="image/*"
+                capture="environment"
+                onChange={handleFileInputChange}
+                className="hidden"
+              />
+              
+              {/* Uploaded files display */}
+              {uploadedFiles.length > 0 && (
+                <div className="space-y-2">
+                  <h4 className="text-sm font-medium text-foreground">Attached Files:</h4>
+                  <div className="space-y-2">
+                    {uploadedFiles.map((file, index) => (
+                      <div key={index} className="flex items-center justify-between bg-card border border-holo-blue/30 rounded-lg p-2">
+                        <div className="flex items-center gap-2">
+                          {file.type.startsWith('image/') ? (
+                            <FileImage size={16} className="text-holo-blue" />
+                          ) : (
+                            <Folder size={16} className="text-holo-blue" />
+                          )}
+                          <span className="text-sm text-foreground truncate max-w-40">
+                            {file.name}
+                          </span>
+                          <span className="text-xs text-muted-foreground">
+                            ({Math.round(file.size / 1024)}KB)
+                          </span>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => removeFile(index)}
+                          className="h-6 w-6 p-0 text-destructive hover:bg-destructive/20"
+                        >
+                          <Trash2 size={12} />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               )}
               
               <Button
                 onClick={handleGenerate}
-                disabled={!input.trim() || isProcessing}
+                disabled={(!input.trim() && uploadedFiles.length === 0) || isProcessing}
                 variant="holo"
                 className="w-full"
               >
