@@ -20,6 +20,7 @@ import {
   Zap,
   LogOut
 } from "lucide-react";
+// Logo will be updated with uploaded image
 
 const categories = [
   "All", "Text & Writing", "Image Generation", "Code Assistant", 
@@ -140,8 +141,8 @@ export function Dashboard({ userEmail, onLogout }: DashboardProps) {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-gradient-primary">
-                  <Zap className="w-6 h-6 text-white" />
+                <div className="w-10 h-10 rounded-lg">
+                  <img src="/lovable-uploads/c2ed5a9d-749a-43c7-9f54-039c35fd9ee9.png" alt="AI Nexus Logo" className="w-full h-full object-contain" />
                 </div>
                 <div>
                   <h1 className="text-2xl font-bold text-foreground">AI Nexus</h1>

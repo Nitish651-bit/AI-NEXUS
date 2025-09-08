@@ -3,7 +3,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
-import { Eye, EyeOff, Zap, Bot } from "lucide-react";
+import { Eye, EyeOff, Zap } from "lucide-react";
+// Logo will be updated with uploaded image
 
 interface LoginFormProps {
   onLogin: (email: string, password: string) => void;
@@ -26,8 +27,8 @@ export function LoginForm({ onLogin, isLoading = false }: LoginFormProps) {
       <div className="w-full max-w-md space-y-8">
         {/* Logo Section */}
         <div className="text-center space-y-4">
-          <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-primary animate-float holo-glow">
-            <Bot className="w-10 h-10 text-white" />
+          <div className="inline-flex items-center justify-center w-24 h-24 rounded-full animate-float holo-glow">
+            <img src="/lovable-uploads/c2ed5a9d-749a-43c7-9f54-039c35fd9ee9.png" alt="AI Nexus Logo" className="w-20 h-20 object-contain" />
           </div>
           <div>
             <h1 className="text-4xl font-bold bg-gradient-primary bg-clip-text text-transparent">
