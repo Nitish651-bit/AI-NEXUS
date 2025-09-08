@@ -54,7 +54,7 @@ export function AIHelpAgent() {
     try {
       const { data, error } = await supabase.functions.invoke('gemini-ai', {
         body: {
-          prompt: `You are a helpful AI assistant for AI Nexus, a platform with 700+ AI tools. The platform includes tools for:
+          input: `You are a helpful AI assistant for AI Nexus, a platform with 700+ AI tools. The platform includes tools for:
           - Text & Writing (GPT-4, content generation)
           - Image Generation (DALL-E 3, image creation)
           - Code Assistant (coding help, debugging)
@@ -68,7 +68,8 @@ export function AIHelpAgent() {
           Current user question: ${inputMessage}
 
           Provide helpful, concise answers about the platform, its tools, or how to use specific features. Be friendly and professional.`,
-          type: 'text'
+          toolCategory: 'Text & Writing',
+          toolTitle: 'AI Help Assistant'
         }
       });
 
@@ -77,7 +78,7 @@ export function AIHelpAgent() {
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: data.response || "I apologize, but I'm having trouble processing your request right now. Please try again.",
+        content: data?.output || "I apologize, but I'm having trouble processing your request right now. Please try again.",
         timestamp: new Date()
       };
 
