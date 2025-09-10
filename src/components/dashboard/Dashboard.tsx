@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { AIToolCard } from "./AIToolCard";
 import { AIHelpAgent } from "@/components/help/AIHelpAgent";
+import { AutomationDashboard } from "@/components/automation/AutomationDashboard";
 import { 
   Search, 
   Filter, 
@@ -19,7 +20,8 @@ import {
   BarChart3,
   Globe,
   Zap,
-  LogOut
+  LogOut,
+  Bot
 } from "lucide-react";
 // Logo will be updated with uploaded image
 
@@ -241,6 +243,7 @@ export function Dashboard({ userEmail, onLogout }: DashboardProps) {
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [selectedTool, setSelectedTool] = useState<typeof aiTools[0] | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<"tools" | "automation">("tools");
 
   const handleToolClick = (tool: typeof aiTools[0]) => {
     setSelectedTool(tool);
@@ -273,6 +276,26 @@ export function Dashboard({ userEmail, onLogout }: DashboardProps) {
             </div>
             
             <div className="flex items-center gap-4">
+              <div className="flex gap-2">
+                <Button
+                  variant={activeTab === "tools" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setActiveTab("tools")}
+                  className="gap-2"
+                >
+                  <Brain size={16} />
+                  AI Tools
+                </Button>
+                <Button
+                  variant={activeTab === "automation" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setActiveTab("automation")}
+                  className="gap-2"
+                >
+                  <Bot size={16} />
+                  Automation
+                </Button>
+              </div>
               <span className="text-sm text-muted-foreground">Welcome, {userEmail}</span>
               <Button variant="ghost" size="sm" onClick={onLogout}>
                 <LogOut size={16} />
@@ -360,9 +383,10 @@ export function Dashboard({ userEmail, onLogout }: DashboardProps) {
                 isPopular={tool.isPopular}
                 onClick={() => handleToolClick(tool)}
               />
-            ))}
-          </div>
-        </div>
+              ))}
+            </div>
+            </>
+          )}
 
         {/* AI Tool Modal */}
         {selectedTool && (
