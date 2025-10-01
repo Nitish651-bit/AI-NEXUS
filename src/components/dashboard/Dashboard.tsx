@@ -270,7 +270,7 @@ export function Dashboard({ userEmail, onLogout }: DashboardProps) {
                 </div>
                 <div>
                   <h1 className="text-2xl font-bold text-foreground">AI Nexus</h1>
-                  <p className="text-sm text-muted-foreground">700+ AI Tools</p>
+                  <p className="text-sm text-muted-foreground">150+ AI Tools & Automation</p>
                 </div>
               </div>
             </div>
@@ -307,6 +307,8 @@ export function Dashboard({ userEmail, onLogout }: DashboardProps) {
       </header>
 
       <div className="max-w-7xl mx-auto px-6 py-8">
+        {activeTab === "tools" && (
+        <>
         {/* Search and Filters */}
         <div className="space-y-6 mb-8">
           <div className="flex flex-col sm:flex-row gap-4">
@@ -383,10 +385,15 @@ export function Dashboard({ userEmail, onLogout }: DashboardProps) {
                 isPopular={tool.isPopular}
                 onClick={() => handleToolClick(tool)}
               />
-              ))}
-            </div>
-            </>
-          )}
+            ))}
+          </div>
+        </div>
+        </>
+        )}
+
+        {activeTab === "automation" && (
+          <AutomationDashboard />
+        )}
 
         {/* AI Tool Modal */}
         {selectedTool && (

@@ -31,10 +31,13 @@ export function LoginForm({ onLogin, isLoading = false }: LoginFormProps) {
           </div>
           <div>
             <h1 className="text-4xl font-bold bg-gradient-primary bg-clip-text text-transparent">
-              AI Nexus
+              AI Nexus - Your Ultimate AI Tools Platform
             </h1>
-            <p className="text-muted-foreground mt-2">
-              Access 700+ powerful AI tools in one place
+            <p className="text-muted-foreground mt-2 text-lg">
+              Access 150+ Cutting-Edge AI Tools: ChatGPT, Claude, Midjourney & More
+            </p>
+            <p className="text-muted-foreground mt-1 text-sm">
+              The Best AI Platform for Chat, Coding, Design & Automation
             </p>
           </div>
         </div>
@@ -121,8 +124,14 @@ export function LoginForm({ onLogin, isLoading = false }: LoginFormProps) {
         </Card>
 
         {/* Feature Preview */}
-        <div className="text-center text-sm text-muted-foreground">
-          <p>🚀 700+ AI Tools • 🔒 Secure • ⚡ Lightning Fast</p>
+        <div className="text-center space-y-2">
+          <p className="text-sm text-muted-foreground">
+            🚀 150+ AI Tools • 🔒 Enterprise-Grade Security • ⚡ Lightning Fast Performance
+          </p>
+          <div className="text-xs text-muted-foreground space-y-1">
+            <p>✨ Featured AI Tools: ChatGPT, Claude, Gemini, Midjourney, GitHub Copilot</p>
+            <p>🎯 Categories: AI Chat, Code Generation, Image Creation, Video Editing & More</p>
+          </div>
         </div>
       </div>
     </div>
