@@ -2,3 +2,18 @@ project_id = "afhdmpuwczqnbbxrgytt"
 
 [functions.gemini-ai]
 verify_jwt = false
+
+[functions.google-ai]
+verify_jwt = false
+
+[functions.ai-tool-router]
+verify_jwt = false
+
+[functions.elevenlabs-tts]
+verify_jwt = false
+
+[functions.replicate-image]
+verify_jwt = false
+
+[functions.openai-chat]
+verify_jwt = false

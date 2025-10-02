@@ -6,8 +6,9 @@ import { Badge } from "@/components/ui/badge";
 import { AIToolCard } from "./AIToolCard";
 import { AIHelpAgent } from "@/components/help/AIHelpAgent";
 import { AutomationDashboard } from "@/components/automation/AutomationDashboard";
+import { useNavigate } from "react-router-dom";
 import { 
-  Search, 
+  Search,
   Filter, 
   Brain, 
   Image, 
@@ -21,7 +22,8 @@ import {
   Globe,
   Zap,
   LogOut,
-  Bot
+  Bot,
+  Plug
 } from "lucide-react";
 // Logo will be updated with uploaded image
 
@@ -239,6 +241,7 @@ interface DashboardProps {
 }
 
 export function Dashboard({ userEmail, onLogout }: DashboardProps) {
+  const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [selectedTool, setSelectedTool] = useState<typeof aiTools[0] | null>(null);
@@ -294,6 +297,15 @@ export function Dashboard({ userEmail, onLogout }: DashboardProps) {
                 >
                   <Bot size={16} />
                   Automation
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => navigate('/integrations')}
+                  className="gap-2"
+                >
+                  <Plug size={16} />
+                  Integrations
                 </Button>
               </div>
               <span className="text-sm text-muted-foreground">Welcome, {userEmail}</span>
