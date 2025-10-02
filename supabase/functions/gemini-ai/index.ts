@@ -22,22 +22,15 @@ serve(async (req) => {
     
     console.log('Received request:', { input, toolCategory, toolTitle });
     
-    const openaiApiKey = Deno.env.get('OPENAI_API_KEY');
-    const googleApiKey = Deno.env.get('GOOGLE_API_KEY');
-    console.log('OpenAI API Key exists:', !!openaiApiKey);
-    console.log('Google API Key exists:', !!googleApiKey);
+    const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');
+    console.log('Lovable API Key exists:', !!lovableApiKey);
     
-    // Prefer Google API for certain categories, fallback to OpenAI
-    const useGoogleAI = (toolCategory === "Image Generation" || toolTitle.includes("Gemini")) && googleApiKey;
-    const apiKey = useGoogleAI ? googleApiKey : openaiApiKey;
-    
-    if (!apiKey) {
-      console.error('No API keys found in environment variables');
+    if (!lovableApiKey) {
+      console.error('LOVABLE_API_KEY not found');
       return new Response(
         JSON.stringify({ 
           success: false, 
-          error: 'API keys not configured. Please add OPENAI_API_KEY and/or GOOGLE_API_KEY to your Supabase project secrets.',
-          debug: 'No API keys found in environment'
+          error: 'LOVABLE_API_KEY not configured',
         }),
         { 
           status: 400,
@@ -49,157 +42,90 @@ serve(async (req) => {
       );
     }
 
+    // Handle image generation separately
+    if (toolCategory === "Image Generation") {
+      return await handleImageGeneration(input, lovableApiKey);
+    }
+
     // Generate appropriate prompt based on tool category
-    let prompt = "";
+    let systemPrompt = "";
     
     switch (toolCategory) {
       case "Text & Writing":
-        prompt = `As a professional writing assistant, please help with the following request: ${input}. Provide a well-structured, engaging response that demonstrates high-quality writing and clear communication.`;
+        systemPrompt = "You are a professional writing assistant. Provide well-structured, engaging responses that demonstrate high-quality writing and clear communication.";
         break;
       case "Code Assistant":
-        prompt = `As a senior software engineer, please help with this coding request: ${input}. Provide clean, well-commented code with best practices and explanations. Return ONLY the code with minimal comments, formatted properly for direct use.`;
-        break;
-      case "Image Generation":
-        // For image generation, we'll use OpenAI's image generation API
-        return await handleImageGeneration(input, openaiApiKey);
+        systemPrompt = "You are a senior software engineer. Provide clean, well-commented code with best practices and explanations. Return ONLY the code with minimal comments, formatted properly for direct use.";
         break;
       case "Data Analysis":
-        prompt = `As a data analyst, please analyze and provide insights for: ${input}. Include key findings, patterns, and actionable recommendations.`;
+        systemPrompt = "You are a data analyst. Analyze and provide insights with key findings, patterns, and actionable recommendations.";
         break;
       case "Content Creation":
-        prompt = `As a content creator, help with: ${input}. Create engaging, original content that captures attention and provides value to the audience.`;
+        systemPrompt = "You are a content creator. Create engaging, original content that captures attention and provides value to the audience.";
         break;
       default:
-        prompt = `Using the ${toolTitle} AI tool, please help with: ${input}. Provide a comprehensive and helpful response.`;
+        systemPrompt = "You are a helpful AI assistant. Provide comprehensive and helpful responses.";
     }
 
-    let aiOutput = "";
-    let provider = "";
+    console.log('Making request to Lovable AI...');
     
-    if (useGoogleAI) {
-      console.log('Making request to Google AI API...');
-      provider = "Google AI";
+    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${lovableApiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'google/gemini-2.5-flash',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: input }
+        ],
+      })
+    });
+
+    console.log('Lovable AI response status:', response.status);
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Lovable AI error:', errorText);
       
-      try {
-        if (toolCategory === "Image Generation") {
-          // For image generation, provide detailed description
-          aiOutput = `🎨 **Google AI Image Generation**
-
-**Your Prompt:** "${input}"
-
-## Detailed Image Description:
-A stunning, professionally crafted image based on "${input}" featuring exceptional visual composition, vibrant colors, and artistic excellence. The image would showcase:
-
-• **Composition:** Perfect balance and visual flow
-• **Colors:** Rich, vibrant palette with professional color grading
-• **Lighting:** Dynamic, atmospheric lighting that enhances the subject
-• **Detail:** High-resolution clarity with intricate details
-• **Style:** Modern, polished aesthetic with artistic flair
-
-## Technical Specifications:
-• **Resolution:** 1024x1024px (High Definition)
-• **Format:** PNG/JPEG optimized
-• **Quality:** Gallery-ready professional output
-• **Style:** Photorealistic with artistic enhancement
-
----
-*Generated using Google AI Image Technology*
-*Note: This describes what would be generated with proper Google AI integration.*`;
-        } else {
-          // For text generation, use Google Gemini API
-          const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=${googleApiKey}`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              contents: [{
-                parts: [{
-                  text: prompt
-                }]
-              }],
-              generationConfig: {
-                temperature: 0.7,
-                topK: 40,
-                topP: 0.95,
-                maxOutputTokens: 2048,
-              }
-            })
-          });
-
-          console.log('Google Gemini API response status:', response.status);
-
-          if (response.ok) {
-            const data = await response.json();
-            console.log('Google Gemini API response received:', !!data);
-            
-            if (data.candidates && data.candidates[0] && data.candidates[0].content) {
-              aiOutput = data.candidates[0].content.parts[0].text;
-              console.log('Google AI output generated successfully, length:', aiOutput?.length);
-            } else {
-              throw new Error('Invalid response structure from Google Gemini API');
-            }
-          } else {
-            throw new Error(`Google Gemini API error: ${response.status}`);
+      if (response.status === 429) {
+        return new Response(
+          JSON.stringify({ 
+            success: false, 
+            error: 'Rate limit exceeded. Please try again later.',
+          }),
+          { 
+            status: 429,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
           }
-        }
-      } catch (googleError) {
-        console.log('Google AI API failed, using fallback response:', googleError);
-        aiOutput = generateHighQualityResponse(input, toolCategory, toolTitle);
-        provider = "Google AI (Fallback)";
+        );
       }
-    } else {
-      console.log('Making request to OpenAI API...');
-      provider = "OpenAI";
       
-      try {
-        const response = await fetch('https://api.openai.com/v1/chat/completions', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${openaiApiKey}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            model: 'gpt-4o-mini',
-            messages: [
-              { role: 'system', content: 'You are a helpful AI assistant that provides high-quality responses based on user prompts.' },
-              { role: 'user', content: prompt }
-            ],
-            max_tokens: 2048,
-            temperature: 0.7
-          })
-        });
-
-        console.log('OpenAI API response status:', response.status);
-
-        if (response.ok) {
-          const data = await response.json();
-          console.log('OpenAI API response received:', !!data);
-          
-          if (data.choices && data.choices[0] && data.choices[0].message) {
-            aiOutput = data.choices[0].message.content;
-            console.log('AI output generated successfully, length:', aiOutput?.length);
-          } else {
-            throw new Error('Invalid response structure from OpenAI API');
+      if (response.status === 402) {
+        return new Response(
+          JSON.stringify({ 
+            success: false, 
+            error: 'Payment required. Please add credits to your Lovable AI workspace.',
+          }),
+          { 
+            status: 402,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
           }
-        } else {
-          const errorData = await response.json();
-          console.log('OpenAI API error:', errorData);
-          
-          // If quota exceeded or other API errors, use high-quality mock response
-          if (response.status === 429 || response.status === 401) {
-            console.log('Using fallback response due to API quota/auth issue');
-            aiOutput = generateHighQualityResponse(input, toolCategory, toolTitle);
-            provider = "OpenAI (Fallback)";
-          } else {
-            throw new Error(`OpenAI API error: ${response.status} ${response.statusText}`);
-          }
-        }
-      } catch (fetchError) {
-        console.log('OpenAI API fetch failed, using fallback response:', fetchError);
-        aiOutput = generateHighQualityResponse(input, toolCategory, toolTitle);
-        provider = "OpenAI (Fallback)";
+        );
       }
+      
+      throw new Error(`Lovable AI error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    console.log('Lovable AI response received');
+    
+    const aiOutput = data.choices?.[0]?.message?.content;
+    
+    if (!aiOutput) {
+      throw new Error('No output received from Lovable AI');
     }
 
     return new Response(
@@ -208,7 +134,7 @@ A stunning, professionally crafted image based on "${input}" featuring exception
         output: aiOutput,
         toolCategory,
         toolTitle,
-        provider
+        provider: 'Lovable AI (Gemini 2.5 Flash)'
       }),
       { 
         headers: { 
@@ -239,73 +165,99 @@ A stunning, professionally crafted image based on "${input}" featuring exception
   }
 });
 
-// Handle image generation with OpenAI
-async function handleImageGeneration(prompt: string, openaiApiKey: string | undefined) {
-  if (!openaiApiKey) {
-    return {
-      success: false,
-      error: 'OpenAI API key required for image generation',
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-    };
-  }
-
+// Handle image generation with Lovable AI (Nano banana model)
+async function handleImageGeneration(prompt: string, lovableApiKey: string) {
   try {
-    console.log('Generating image with OpenAI...');
+    console.log('Generating image with Lovable AI (Nano banana)...');
     
-    const response = await fetch('https://api.openai.com/v1/images/generations', {
+    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${openaiApiKey}`,
+        'Authorization': `Bearer ${lovableApiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-image-1',
-        prompt: prompt,
-        n: 1,
-        size: '1024x1024',
-        quality: 'standard',
-        response_format: 'b64_json'
+        model: 'google/gemini-2.5-flash-image-preview',
+        messages: [
+          {
+            role: 'user',
+            content: prompt
+          }
+        ],
+        modalities: ['image', 'text']
       })
     });
 
-    if (response.ok) {
-      const data = await response.json();
-      console.log('Image generated successfully');
+    console.log('Lovable AI image response status:', response.status);
+
+    if (!response.ok) {
+      if (response.status === 429) {
+        return new Response(
+          JSON.stringify({ 
+            success: false, 
+            error: 'Rate limit exceeded. Please try again later.',
+          }),
+          { 
+            status: 429,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          }
+        );
+      }
       
-      return new Response(
-        JSON.stringify({ 
-          success: true, 
-          output: data.data[0].b64_json,
-          outputType: 'image',
-          toolCategory: 'Image Generation',
-          toolTitle: 'AI Image Generator',
-          provider: 'OpenAI'
-        }),
-        { 
-          headers: { 
-            ...corsHeaders, 
-            'Content-Type': 'application/json' 
-          } 
-        }
-      );
-    } else {
-      const errorData = await response.json();
-      console.log('OpenAI Image API error:', errorData);
-      throw new Error(`Image generation failed: ${errorData.error?.message || 'Unknown error'}`);
+      if (response.status === 402) {
+        return new Response(
+          JSON.stringify({ 
+            success: false, 
+            error: 'Payment required. Please add credits to your Lovable AI workspace.',
+          }),
+          { 
+            status: 402,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          }
+        );
+      }
+      
+      throw new Error(`Lovable AI error: ${response.status}`);
     }
-  } catch (error) {
-    console.log('Image generation failed, using fallback:', error);
+
+    const data = await response.json();
+    const imageUrl = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+    
+    if (!imageUrl) {
+      throw new Error('No image received from Lovable AI');
+    }
+
+    // Extract base64 data from data URL
+    const base64Data = imageUrl.replace(/^data:image\/\w+;base64,/, '');
+    
+    console.log('Image generated successfully');
     
     return new Response(
       JSON.stringify({ 
         success: true, 
-        output: generateImageFallback(prompt),
-        outputType: 'text',
+        output: base64Data,
+        outputType: 'image',
         toolCategory: 'Image Generation',
         toolTitle: 'AI Image Generator',
-        provider: 'Fallback'
+        provider: 'Lovable AI (Nano banana)'
       }),
       { 
+        headers: { 
+          ...corsHeaders, 
+          'Content-Type': 'application/json' 
+        } 
+      }
+    );
+  } catch (error) {
+    console.error('Image generation failed:', error);
+    
+    return new Response(
+      JSON.stringify({ 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Image generation failed',
+      }),
+      { 
+        status: 500,
         headers: { 
           ...corsHeaders, 
           'Content-Type': 'application/json' 
@@ -315,31 +267,7 @@ async function handleImageGeneration(prompt: string, openaiApiKey: string | unde
   }
 }
 
-function generateImageFallback(prompt: string): string {
-  return `🎨 **AI Image Generation**
-
-**Your Prompt:** "${prompt}"
-
-## Image Preview Description:
-A high-quality, professional image would be generated here featuring:
-
-• **Subject:** ${prompt}
-• **Style:** Photorealistic with artistic enhancement
-• **Composition:** Professionally balanced and visually appealing
-• **Quality:** 1024x1024px high-resolution
-• **Colors:** Rich, vibrant palette with professional color grading
-
-## Technical Specifications:
-• **Model:** GPT Image-1 (Latest OpenAI model)
-• **Resolution:** 1024x1024px
-• **Format:** PNG/JPEG optimized
-• **Quality:** Gallery-ready professional output
-
----
-*To see actual generated images, ensure your OpenAI API key has sufficient credits for image generation.*`;
-}
-
-// Generate high-quality fallback responses when API is unavailable
+// Delete all fallback functions - we don't need them with Lovable AI
 function generateHighQualityResponse(input: string, category: string, title: string): string {
   const timestamp = new Date().toLocaleString();
   
