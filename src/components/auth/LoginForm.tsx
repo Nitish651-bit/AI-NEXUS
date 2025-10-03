@@ -25,31 +25,38 @@ export function LoginForm({ onLogin, isLoading = false }: LoginFormProps) {
     <div className="min-h-screen flex items-center justify-center p-4">
       <div className="w-full max-w-md space-y-8">
         {/* Logo Section */}
-        <div className="text-center space-y-4">
-          <div className="inline-flex items-center justify-center w-24 h-24 rounded-full animate-float holo-glow overflow-hidden bg-gradient-primary p-2">
-            <img src="/lovable-uploads/c2ed5a9d-749a-43c7-9f54-039c35fd9ee9.png" alt="AI Nexus Logo" className="w-full h-full object-contain rounded-full" />
+        <div className="text-center space-y-6 animate-fade-in">
+          <div className="inline-flex items-center justify-center w-32 h-32 animate-float">
+            <img 
+              src="/src/assets/ai-nexus-logo.png" 
+              alt="AI Nexus - Ultimate AI Platform" 
+              className="w-full h-full object-contain drop-shadow-[0_0_40px_rgba(0,212,255,0.5)]" 
+            />
           </div>
-          <div>
-            <h1 className="text-4xl font-bold bg-gradient-primary bg-clip-text text-transparent">
-              AI Nexus - Your Ultimate AI Tools Platform
+          <div className="space-y-3">
+            <h1 className="text-5xl font-bold bg-gradient-primary bg-clip-text text-transparent leading-tight tracking-tight">
+              AI Nexus
             </h1>
-            <p className="text-muted-foreground mt-2 text-lg">
+            <p className="text-xl font-semibold text-holo-blue">
+              Your Ultimate AI Tools Platform
+            </p>
+            <p className="text-muted-foreground text-base max-w-lg mx-auto leading-relaxed">
               Access 150+ Cutting-Edge AI Tools: ChatGPT, Claude, Midjourney & More
             </p>
-            <p className="text-muted-foreground mt-1 text-sm">
+            <p className="text-muted-foreground/80 text-sm">
               The Best AI Platform for Chat, Coding, Design & Automation
             </p>
           </div>
         </div>
 
         {/* Login Form */}
-        <Card className="glass-card p-8 shadow-card-custom border border-holo-blue/20">
+        <Card className="glass-card p-10 shadow-holo border border-holo-blue/30 backdrop-blur-xl animate-scale-in">
           <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="text-center mb-6">
-              <h2 className="text-2xl font-semibold text-foreground">
+            <div className="text-center mb-8">
+              <h2 className="text-3xl font-bold text-foreground bg-gradient-primary bg-clip-text text-transparent">
                 {isSignUp ? "Create Account" : "Welcome Back"}
               </h2>
-              <p className="text-muted-foreground mt-1">
+              <p className="text-muted-foreground mt-2 text-base">
                 {isSignUp ? "Join thousands of AI enthusiasts" : "Sign in to your account"}
               </p>
             </div>
@@ -124,13 +131,21 @@ export function LoginForm({ onLogin, isLoading = false }: LoginFormProps) {
         </Card>
 
         {/* Feature Preview */}
-        <div className="text-center space-y-2">
-          <p className="text-sm text-muted-foreground">
-            🚀 150+ AI Tools • 🔒 Enterprise-Grade Security • ⚡ Lightning Fast Performance
-          </p>
-          <div className="text-xs text-muted-foreground space-y-1">
-            <p>✨ Featured AI Tools: ChatGPT, Claude, Gemini, Midjourney, GitHub Copilot</p>
-            <p>🎯 Categories: AI Chat, Code Generation, Image Creation, Video Editing & More</p>
+        <div className="text-center space-y-3 animate-fade-in">
+          <div className="glass-card p-4 border border-holo-blue/20 rounded-lg">
+            <p className="text-sm font-medium text-holo-blue-light mb-2">
+              🚀 150+ AI Tools • 🔒 Enterprise-Grade Security • ⚡ Lightning Fast Performance
+            </p>
+            <div className="text-xs text-muted-foreground space-y-1.5">
+              <p className="flex items-center justify-center gap-2">
+                <span className="inline-block w-1 h-1 rounded-full bg-electric-blue"></span>
+                Featured AI Tools: ChatGPT, Claude, Gemini, Midjourney, GitHub Copilot
+              </p>
+              <p className="flex items-center justify-center gap-2">
+                <span className="inline-block w-1 h-1 rounded-full bg-cyber-purple"></span>
+                Categories: AI Chat, Code Generation, Image Creation, Video Editing & More
+              </p>
+            </div>
           </div>
         </div>
       </div>

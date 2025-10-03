@@ -25,7 +25,7 @@ import {
   Bot,
   Plug
 } from "lucide-react";
-// Logo will be updated with uploaded image
+import logo from "@/assets/ai-nexus-logo.png";
 
 const categories = [
   "All", "Chat & Assistants", "Code & Developer Tools", "Search & Research", 
@@ -268,11 +268,17 @@ export function Dashboard({ userEmail, onLogout }: DashboardProps) {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg">
-                  <img src="/lovable-uploads/c2ed5a9d-749a-43c7-9f54-039c35fd9ee9.png" alt="AI Nexus Logo" className="w-full h-full object-contain" />
+                <div className="w-12 h-12 rounded-lg">
+                  <img 
+                    src="/src/assets/ai-nexus-logo.png" 
+                    alt="AI Nexus - Ultimate AI Platform" 
+                    className="w-full h-full object-contain drop-shadow-[0_0_20px_rgba(0,212,255,0.4)]" 
+                  />
                 </div>
                 <div>
-                  <h1 className="text-2xl font-bold text-foreground">AI Nexus</h1>
+                  <h1 className="text-2xl font-bold bg-gradient-primary bg-clip-text text-transparent">
+                    AI Nexus
+                  </h1>
                   <p className="text-sm text-muted-foreground">150+ AI Tools & Automation</p>
                 </div>
               </div>
