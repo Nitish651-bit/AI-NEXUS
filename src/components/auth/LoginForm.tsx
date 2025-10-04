@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { Eye, EyeOff, Zap } from "lucide-react";
+import logo from "@/assets/ai-nexus-logo.png";
 
 interface LoginFormProps {
   onLogin: (email: string, password: string) => void;
@@ -28,7 +29,7 @@ export function LoginForm({ onLogin, isLoading = false }: LoginFormProps) {
         <div className="text-center space-y-6 animate-fade-in">
           <div className="inline-flex items-center justify-center w-32 h-32 animate-float">
             <img 
-              src="/src/assets/ai-nexus-logo.png" 
+              src={logo} 
               alt="AI Nexus - Ultimate AI Platform" 
               className="w-full h-full object-contain drop-shadow-[0_0_40px_rgba(0,212,255,0.5)]" 
             />
