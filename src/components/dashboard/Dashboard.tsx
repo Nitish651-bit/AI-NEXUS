@@ -270,7 +270,7 @@ export function Dashboard({ userEmail, onLogout }: DashboardProps) {
               <div className="flex items-center gap-3">
                 <div className="w-12 h-12 rounded-lg">
                   <img 
-                    src="/src/assets/ai-nexus-logo.png" 
+                    src={logo} 
                     alt="AI Nexus - Ultimate AI Platform" 
                     className="w-full h-full object-contain drop-shadow-[0_0_20px_rgba(0,212,255,0.4)]" 
                   />
