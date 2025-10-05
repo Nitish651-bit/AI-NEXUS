@@ -25,19 +25,19 @@ export function AIToolCard({
   onClick
 }: AIToolCardProps) {
   return (
-    <Card className="card-gradient border border-holo-blue/20 hover:border-holo-blue/50 transition-all duration-300 hover:shadow-glow group cursor-pointer p-6">
-      <div className="space-y-4">
+    <Card className="card-gradient border border-holo-blue/20 hover:border-holo-blue/50 transition-all duration-300 hover:shadow-glow group cursor-pointer overflow-hidden">
+      <div className="p-6 space-y-4">
         {/* Header */}
-        <div className="flex items-start justify-between">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-holo-blue/20 text-holo-blue group-hover:bg-holo-blue/30 transition-colors">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex items-center gap-3 flex-1 min-w-0">
+            <div className="p-2 rounded-lg bg-holo-blue/20 text-holo-blue group-hover:bg-holo-blue/30 transition-colors shrink-0">
               {icon}
             </div>
-            <div>
-              <h3 className="font-semibold text-foreground group-hover:text-holo-blue transition-colors">
+            <div className="min-w-0 flex-1">
+              <h3 className="font-semibold text-foreground group-hover:text-holo-blue transition-colors truncate">
                 {title}
               </h3>
-              <div className="flex items-center gap-2 mt-1">
+              <div className="flex items-center gap-2 mt-1 flex-wrap">
                 <Badge variant="secondary" className="text-xs">
                   {category}
                 </Badge>
@@ -55,14 +55,14 @@ export function AIToolCard({
             </div>
           </div>
           
-          <div className="flex items-center gap-1 text-yellow-400">
+          <div className="flex items-center gap-1 text-yellow-400 shrink-0">
             <Star size={14} className="fill-current" />
             <span className="text-xs font-medium">{rating}</span>
           </div>
         </div>
 
         {/* Description */}
-        <p className="text-muted-foreground text-sm leading-relaxed">
+        <p className="text-muted-foreground text-sm leading-relaxed line-clamp-2">
           {description}
         </p>
 
