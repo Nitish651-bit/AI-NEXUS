@@ -268,11 +268,11 @@ export function Dashboard({ userEmail, onLogout }: DashboardProps) {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-lg">
+                <div className="w-12 h-12">
                   <img 
                     src={logo} 
                     alt="AI Nexus - Ultimate AI Platform" 
-                    className="w-full h-full object-contain drop-shadow-[0_0_20px_rgba(0,212,255,0.4)]" 
+                    className="w-full h-full object-contain rounded-full drop-shadow-[0_0_20px_rgba(0,212,255,0.4)]" 
                   />
                 </div>
                 <div>

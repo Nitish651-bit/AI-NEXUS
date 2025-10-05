@@ -18,7 +18,7 @@ export const Integrations = () => {
               <img 
                 src={logo} 
                 alt="AI Nexus" 
-                className="w-full h-full object-contain drop-shadow-[0_0_20px_rgba(0,212,255,0.4)]" 
+                className="w-full h-full object-contain rounded-full drop-shadow-[0_0_20px_rgba(0,212,255,0.4)]" 
               />
             </div>
             <h1 className="text-2xl font-bold bg-gradient-primary bg-clip-text text-transparent">

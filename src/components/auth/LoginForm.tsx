@@ -31,7 +31,7 @@ export function LoginForm({ onLogin, isLoading = false }: LoginFormProps) {
             <img 
               src={logo} 
               alt="AI Nexus - Ultimate AI Platform" 
-              className="w-full h-full object-contain drop-shadow-[0_0_40px_rgba(0,212,255,0.5)]" 
+              className="w-full h-full object-contain rounded-full drop-shadow-[0_0_40px_rgba(0,212,255,0.5)]" 
             />
           </div>
           <div className="space-y-3">
