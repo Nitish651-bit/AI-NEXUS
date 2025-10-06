@@ -1,6 +1,6 @@
 import { AIToolRouter } from '@/components/integrations/AIToolRouter';
-import { ElevenLabsTTS } from '@/components/integrations/ElevenLabsTTS';
-import { ReplicateImageGen } from '@/components/integrations/ReplicateImageGen';
+import { LovableAIImage } from '@/components/integrations/LovableAIImage';
+import { OpenAITTS } from '@/components/integrations/OpenAITTS';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -40,11 +40,11 @@ export const Integrations = () => {
 
         <div className="grid gap-6 md:grid-cols-2">
           <AIToolRouter />
-          <ElevenLabsTTS />
+          <OpenAITTS />
         </div>
 
         <div className="grid gap-6">
-          <ReplicateImageGen />
+          <LovableAIImage />
         </div>
       </div>
     </div>
