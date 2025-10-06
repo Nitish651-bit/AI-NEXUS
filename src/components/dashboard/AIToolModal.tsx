@@ -1,6 +1,8 @@
 import { useState, useRef } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useGeminiAI } from "@/hooks/useGeminiAI";
+import { useSocialMediaAI } from "@/hooks/useSocialMediaAI";
+import { useEmailGeneratorAI } from "@/hooks/useEmailGeneratorAI";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -48,6 +50,8 @@ export function AIToolModal({ isOpen, onClose, tool }: AIToolModalProps) {
     toolCategory: tool.category,
     toolTitle: tool.title
   });
+  const { generateContent: generateSocialContent, isProcessing: isSocialProcessing } = useSocialMediaAI();
+  const { generateEmail, isProcessing: isEmailProcessing } = useEmailGeneratorAI();
 
   const handleFileUpload = (files: File[]) => {
     const validFiles = files.filter(file => {
@@ -100,7 +104,16 @@ export function AIToolModal({ isOpen, onClose, tool }: AIToolModalProps) {
         prompt += `\n\nAttached files: ${uploadedFiles.map(f => f.name).join(', ')}`;
       }
       
-      const response = await generateContent(prompt);
+      let response: string;
+      
+      // Route to specific AI handlers based on tool category or title
+      if (tool.category === "Marketing & Content" && tool.title.toLowerCase().includes("social")) {
+        response = await generateSocialContent(prompt);
+      } else if (tool.category === "Marketing & Content" && tool.title.toLowerCase().includes("email")) {
+        response = await generateEmail(prompt);
+      } else {
+        response = await generateContent(prompt);
+      }
       
       // Check if response contains structured data
       if (typeof response === 'string') {
@@ -334,11 +347,11 @@ export function AIToolModal({ isOpen, onClose, tool }: AIToolModalProps) {
               
               <Button
                 onClick={handleGenerate}
-                disabled={(!input.trim() && uploadedFiles.length === 0) || isProcessing}
+                disabled={(!input.trim() && uploadedFiles.length === 0) || isProcessing || isSocialProcessing || isEmailProcessing}
                 variant="holo"
                 className="w-full"
               >
-                {isProcessing ? (
+                {(isProcessing || isSocialProcessing || isEmailProcessing) ? (
                   <div className="flex items-center gap-2">
                     <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                     Processing...
@@ -377,8 +390,13 @@ export function AIToolModal({ isOpen, onClose, tool }: AIToolModalProps) {
                   </div>
                 </div>
                 
-                <div className="bg-card border border-holo-blue/30 rounded-lg shadow-lg max-h-80 overflow-hidden">
-                  <div className="p-4 max-h-full overflow-y-auto scrollbar-thin scrollbar-thumb-holo-blue scrollbar-track-muted">
+                <div className="bg-card border border-holo-blue/30 rounded-lg shadow-lg">
+                  <div className="p-4 max-h-80 overflow-y-auto scrollbar-thin scrollbar-thumb-holo-blue/50 scrollbar-track-transparent hover:scrollbar-thumb-holo-blue"
+                    style={{
+                      scrollbarWidth: 'thin',
+                      scrollbarColor: 'hsl(var(--holo-blue) / 0.5) transparent'
+                    }}
+                  >
                     {outputType === 'image' ? (
                       <div className="flex justify-center">
                         <img 

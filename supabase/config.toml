@@ -33,3 +33,9 @@ verify_jwt = false
 
 [functions.openai-tts]
 verify_jwt = false
+
+[functions.social-media-automation]
+verify_jwt = false
+
+[functions.email-generator]
+verify_jwt = false
