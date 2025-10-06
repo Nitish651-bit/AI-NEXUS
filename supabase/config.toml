@@ -1,10 +1,11 @@
 project_id = "afhdmpuwczqnbbxrgytt"
 
-[functions.gemini-ai]
-verify_jwt = false
-
-[functions.google-ai]
-verify_jwt = false
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
 
 [functions.ai-tool-router]
 verify_jwt = false
@@ -12,8 +13,23 @@ verify_jwt = false
 [functions.elevenlabs-tts]
 verify_jwt = false
 
-[functions.replicate-image]
+[functions.gemini-ai]
+verify_jwt = false
+
+[functions.google-ai]
 verify_jwt = false
 
 [functions.openai-chat]
+verify_jwt = false
+
+[functions.replicate-image]
+verify_jwt = false
+
+[functions.lovable-ai-chat]
+verify_jwt = false
+
+[functions.lovable-ai-image]
+verify_jwt = false
+
+[functions.openai-tts]
 verify_jwt = false

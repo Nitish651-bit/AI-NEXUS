@@ -25,10 +25,10 @@ export function useGeminiAI({ toolCategory, toolTitle }: UseGeminiAIProps) {
     setIsProcessing(true);
 
     try {
-      // Use real Gemini AI via Supabase edge function
-      const { data, error } = await supabase.functions.invoke('gemini-ai', {
+      // Use Lovable AI for real-world responses
+      const { data, error } = await supabase.functions.invoke('lovable-ai-chat', {
         body: {
-          input: input.trim(),
+          message: input.trim(),
           toolCategory,
           toolTitle
         }
