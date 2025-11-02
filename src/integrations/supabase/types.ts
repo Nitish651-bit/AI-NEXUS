@@ -14,10 +14,48 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      user_activity: {
+        Row: {
+          created_at: string
+          id: string
+          input_text: string | null
+          output_text: string | null
+          tool_category: string
+          tool_name: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          input_text?: string | null
+          output_text?: string | null
+          tool_category: string
+          tool_name: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          input_text?: string | null
+          output_text?: string | null
+          tool_category?: string
+          tool_name?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
-      [_ in never]: never
+      daily_activity_summary: {
+        Row: {
+          activity_date: string | null
+          tool_category: string | null
+          tool_name: string | null
+          total_activities: number | null
+          unique_users: number | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       [_ in never]: never
