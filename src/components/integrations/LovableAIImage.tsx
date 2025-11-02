@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Image, Loader2 } from "lucide-react";
+import { Image, Loader2, Download } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -107,6 +107,19 @@ export const LovableAIImage = () => {
                 className="w-full h-auto"
               />
             </div>
+            <Button 
+              variant="outline" 
+              className="w-full"
+              onClick={() => {
+                const a = document.createElement('a');
+                a.href = generatedImage;
+                a.download = 'lovable-ai-generated-image.png';
+                a.click();
+              }}
+            >
+              <Download className="mr-2 h-4 w-4" />
+              Download Image
+            </Button>
           </div>
         )}
       </CardContent>
