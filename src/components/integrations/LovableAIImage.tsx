@@ -98,28 +98,30 @@ export const LovableAIImage = () => {
         </Button>
 
         {generatedImage && (
-          <div className="space-y-2">
+          <div className="space-y-3">
             <Label>Generated Image</Label>
-            <div className="relative rounded-lg overflow-hidden border">
-              <img 
-                src={generatedImage} 
-                alt="Generated" 
-                className="w-full h-auto"
-              />
+            <div className="max-h-[500px] overflow-y-auto scrollbar-thin space-y-3">
+              <div className="relative rounded-lg overflow-hidden border">
+                <img 
+                  src={generatedImage} 
+                  alt="Generated" 
+                  className="w-full h-auto"
+                />
+              </div>
+              <Button 
+                variant="outline" 
+                className="w-full"
+                onClick={() => {
+                  const a = document.createElement('a');
+                  a.href = generatedImage;
+                  a.download = 'lovable-ai-generated-image.png';
+                  a.click();
+                }}
+              >
+                <Download className="mr-2 h-4 w-4" />
+                Download Image
+              </Button>
             </div>
-            <Button 
-              variant="outline" 
-              className="w-full"
-              onClick={() => {
-                const a = document.createElement('a');
-                a.href = generatedImage;
-                a.download = 'lovable-ai-generated-image.png';
-                a.click();
-              }}
-            >
-              <Download className="mr-2 h-4 w-4" />
-              Download Image
-            </Button>
           </div>
         )}
       </CardContent>
