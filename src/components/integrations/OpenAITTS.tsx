@@ -9,17 +9,17 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
 const voices = [
-  { id: "9BWtsMINqrJLrRacOk9x", name: "Aria" },
-  { id: "CwhRBWXzGAHq8TQ4Fs17", name: "Roger" },
-  { id: "EXAVITQu4vr4xnSDxMaL", name: "Sarah" },
-  { id: "FGY2WhTYpPnrIDTdsKH5", name: "Laura" },
-  { id: "IKne3meq5aSn9XLyUdCD", name: "Charlie" },
-  { id: "JBFqnCBsd6RMkjVDRZzb", name: "George" },
+  { id: "en-US-Neural2-C", name: "Neural2 C (Female)" },
+  { id: "en-US-Neural2-D", name: "Neural2 D (Male)" },
+  { id: "en-US-Neural2-F", name: "Neural2 F (Female)" },
+  { id: "en-US-Neural2-A", name: "Neural2 A (Male)" },
+  { id: "en-US-Neural2-E", name: "Neural2 E (Female)" },
+  { id: "en-US-Neural2-G", name: "Neural2 G (Female)" },
 ];
 
 export const OpenAITTS = () => {
   const [text, setText] = useState("");
-  const [selectedVoice, setSelectedVoice] = useState("9BWtsMINqrJLrRacOk9x");
+  const [selectedVoice, setSelectedVoice] = useState("en-US-Neural2-C");
   const [audioUrl, setAudioUrl] = useState<string>("");
   const [isGenerating, setIsGenerating] = useState(false);
   const { toast } = useToast();
@@ -38,7 +38,7 @@ export const OpenAITTS = () => {
     setAudioUrl("");
 
     try {
-      const { data, error } = await supabase.functions.invoke('elevenlabs-tts', {
+      const { data, error } = await supabase.functions.invoke('openai-tts', {
         body: { 
           text,
           voice: selectedVoice
@@ -80,7 +80,7 @@ export const OpenAITTS = () => {
           <CardTitle>Text-to-Speech</CardTitle>
         </div>
         <CardDescription>
-          Convert text to natural-sounding speech using ElevenLabs
+          Convert text to natural-sounding speech using Google Cloud TTS
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
