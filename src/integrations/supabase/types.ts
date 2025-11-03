@@ -14,6 +14,114 @@ export type Database = {
   }
   public: {
     Tables: {
+      ai_tool_usage: {
+        Row: {
+          created_at: string
+          id: string
+          prompt: string | null
+          tool_category: string
+          tool_name: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          prompt?: string | null
+          tool_category: string
+          tool_name: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          prompt?: string | null
+          tool_category?: string
+          tool_name?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      image_generations: {
+        Row: {
+          created_at: string
+          id: string
+          image_url: string | null
+          model: string | null
+          prompt: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          model?: string | null
+          prompt: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          model?: string | null
+          prompt?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      text_generations: {
+        Row: {
+          created_at: string
+          id: string
+          input_text: string
+          output_text: string | null
+          tool_name: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          input_text: string
+          output_text?: string | null
+          tool_name: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          input_text?: string
+          output_text?: string | null
+          tool_name?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      tts_usage: {
+        Row: {
+          created_at: string
+          id: string
+          provider: string
+          text: string
+          user_id: string
+          voice_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          provider: string
+          text: string
+          user_id: string
+          voice_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          provider?: string
+          text?: string
+          user_id?: string
+          voice_id?: string | null
+        }
+        Relationships: []
+      }
       user_activity: {
         Row: {
           created_at: string
