@@ -17,49 +17,59 @@ serve(async (req) => {
       throw new Error("Text is required");
     }
 
-    const GOOGLE_API_KEY = Deno.env.get("GOOGLE_API_KEY");
-    if (!GOOGLE_API_KEY) {
-      throw new Error("GOOGLE_API_KEY is not configured");
+    const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
+    if (!OPENAI_API_KEY) {
+      throw new Error("OPENAI_API_KEY is not configured");
     }
 
     console.log("Generating speech for text:", text.substring(0, 50) + "...");
 
-    // Google Cloud Text-to-Speech API
+    // Map Google voice names to OpenAI voices
+    const voiceMap: Record<string, string> = {
+      "en-US-Neural2-C": "nova",
+      "en-US-Neural2-D": "onyx",
+      "en-US-Neural2-F": "shimmer",
+      "en-US-Neural2-A": "echo",
+      "en-US-Neural2-E": "alloy",
+      "en-US-Neural2-G": "fable",
+    };
+
+    const openaiVoice = voiceMap[voice] || "nova";
+
+    // OpenAI Text-to-Speech API
     const response = await fetch(
-      `https://texttospeech.googleapis.com/v1/text:synthesize?key=${GOOGLE_API_KEY}`,
+      "https://api.openai.com/v1/audio/speech",
       {
         method: "POST",
         headers: {
+          "Authorization": `Bearer ${OPENAI_API_KEY}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          input: { text },
-          voice: {
-            languageCode: "en-US",
-            name: voice || "en-US-Neural2-C",
-          },
-          audioConfig: {
-            audioEncoding: "MP3",
-          },
+          model: "tts-1",
+          input: text,
+          voice: openaiVoice,
+          response_format: "mp3",
         }),
       }
     );
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error("Google TTS error:", response.status, errorText);
-      throw new Error(`Google TTS error: ${response.status}`);
+      console.error("OpenAI TTS error:", response.status, errorText);
+      throw new Error(`OpenAI TTS error: ${response.status}`);
     }
 
-    const data = await response.json();
-    if (!data.audioContent) {
-      throw new Error("No audio content received from Google TTS");
-    }
+    // Convert audio buffer to base64
+    const arrayBuffer = await response.arrayBuffer();
+    const base64Audio = btoa(
+      String.fromCharCode(...new Uint8Array(arrayBuffer))
+    );
 
     console.log("Speech generated successfully");
 
     return new Response(
-      JSON.stringify({ success: true, audioContent: data.audioContent }),
+      JSON.stringify({ success: true, audioContent: base64Audio }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {

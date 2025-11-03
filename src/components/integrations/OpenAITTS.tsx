@@ -80,7 +80,7 @@ export const OpenAITTS = () => {
           <CardTitle>Text-to-Speech</CardTitle>
         </div>
         <CardDescription>
-          Convert text to natural-sounding speech using Google Cloud TTS
+          Convert text to natural-sounding speech using OpenAI TTS
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
