@@ -1,13 +1,26 @@
+import { useEffect } from 'react';
 import { AIToolRouter } from '@/components/integrations/AIToolRouter';
 import { LovableAIImage } from '@/components/integrations/LovableAIImage';
 import { OpenAITTS } from '@/components/integrations/OpenAITTS';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
 import logo from "@/assets/ai-nexus-logo.png";
 
 export const Integrations = () => {
   const navigate = useNavigate();
+  const { isLoggedIn } = useAuth();
+
+  useEffect(() => {
+    if (!isLoggedIn) {
+      navigate('/');
+    }
+  }, [isLoggedIn, navigate]);
+
+  if (!isLoggedIn) {
+    return null;
+  }
 
   return (
     <div className="min-h-screen bg-background p-8">
