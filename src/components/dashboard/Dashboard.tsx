@@ -131,7 +131,7 @@ export const Dashboard = ({ userEmail, onLogout }: DashboardProps) => {
                 <Card className="bg-gradient-card border-primary/20 hover:border-primary/50 transition-colors">
                   <CardContent className="pt-6">
                     <div className="text-center">
-                      <p className="text-5xl font-bold text-primary">23</p>
+                      <p className="text-5xl font-bold text-primary">25</p>
                       <p className="text-sm text-muted-foreground mt-2">Categories</p>
                     </div>
                   </CardContent>
