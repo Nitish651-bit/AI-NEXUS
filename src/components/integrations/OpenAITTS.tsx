@@ -9,17 +9,17 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
 const voices = [
-  { id: "alloy", name: "Alloy" },
-  { id: "echo", name: "Echo" },
-  { id: "fable", name: "Fable" },
-  { id: "onyx", name: "Onyx" },
-  { id: "nova", name: "Nova" },
-  { id: "shimmer", name: "Shimmer" },
+  { id: "9BWtsMINqrJLrRacOk9x", name: "Aria" },
+  { id: "CwhRBWXzGAHq8TQ4Fs17", name: "Roger" },
+  { id: "EXAVITQu4vr4xnSDxMaL", name: "Sarah" },
+  { id: "FGY2WhTYpPnrIDTdsKH5", name: "Laura" },
+  { id: "IKne3meq5aSn9XLyUdCD", name: "Charlie" },
+  { id: "JBFqnCBsd6RMkjVDRZzb", name: "George" },
 ];
 
 export const OpenAITTS = () => {
   const [text, setText] = useState("");
-  const [selectedVoice, setSelectedVoice] = useState("alloy");
+  const [selectedVoice, setSelectedVoice] = useState("9BWtsMINqrJLrRacOk9x");
   const [audioUrl, setAudioUrl] = useState<string>("");
   const [isGenerating, setIsGenerating] = useState(false);
   const { toast } = useToast();
@@ -38,7 +38,7 @@ export const OpenAITTS = () => {
     setAudioUrl("");
 
     try {
-      const { data, error } = await supabase.functions.invoke('openai-tts', {
+      const { data, error } = await supabase.functions.invoke('elevenlabs-tts', {
         body: { 
           text,
           voice: selectedVoice
@@ -80,7 +80,7 @@ export const OpenAITTS = () => {
           <CardTitle>Text-to-Speech</CardTitle>
         </div>
         <CardDescription>
-          Convert text to natural-sounding speech using OpenAI TTS
+          Convert text to natural-sounding speech using ElevenLabs
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
