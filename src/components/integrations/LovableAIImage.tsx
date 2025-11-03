@@ -100,27 +100,40 @@ export const LovableAIImage = () => {
         {generatedImage && (
           <div className="space-y-3">
             <Label>Generated Image</Label>
-            <div className="max-h-[500px] overflow-y-auto scrollbar-thin space-y-3">
-              <div className="relative rounded-lg overflow-hidden border">
+            <div className="space-y-3">
+              <div className="relative rounded-lg overflow-hidden border bg-card">
                 <img 
                   src={generatedImage} 
-                  alt="Generated" 
+                  alt="Generated AI Image" 
                   className="w-full h-auto"
                 />
               </div>
-              <Button 
-                variant="outline" 
-                className="w-full"
-                onClick={() => {
-                  const a = document.createElement('a');
-                  a.href = generatedImage;
-                  a.download = 'lovable-ai-generated-image.png';
-                  a.click();
-                }}
-              >
-                <Download className="mr-2 h-4 w-4" />
-                Download Image
-              </Button>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <Button 
+                  variant="default" 
+                  size="lg"
+                  className="w-full"
+                  onClick={() => {
+                    const a = document.createElement('a');
+                    a.href = generatedImage;
+                    a.download = `ai-nexus-image-${Date.now()}.png`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                  }}
+                >
+                  <Download className="mr-2 h-4 w-4" />
+                  Download Image
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="lg"
+                  className="w-full"
+                  onClick={() => setGeneratedImage("")}
+                >
+                  Generate New
+                </Button>
+              </div>
             </div>
           </div>
         )}
