@@ -7,6 +7,7 @@ import { Search, Filter, LogOut } from "lucide-react";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/layout/AppSidebar";
 import { ToolsGrid } from "@/components/tools/ToolsGrid";
+import logo from "@/assets/ai-nexus-logo.png";
 
 interface DashboardProps {
   userEmail: string;
@@ -53,6 +54,19 @@ export const Dashboard = ({ userEmail, onLogout }: DashboardProps) => {
           <header className="sticky top-0 z-40 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
             <div className="flex h-16 items-center gap-4 px-6">
               <SidebarTrigger />
+              
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10">
+                  <img 
+                    src={logo} 
+                    alt="AI Nexus" 
+                    className="w-full h-full object-contain rounded-full drop-shadow-[0_0_20px_rgba(0,212,255,0.4)]" 
+                  />
+                </div>
+                <h1 className="text-xl font-bold bg-gradient-primary bg-clip-text text-transparent">
+                  AI Nexus
+                </h1>
+              </div>
               
               <div className="flex-1" />
               
