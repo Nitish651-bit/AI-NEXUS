@@ -83,22 +83,6 @@ export function AIHelpAgent() {
       };
 
       setMessages(prev => [...prev, assistantMessage]);
-
-      // Log activity to database
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user && data?.output) {
-          await supabase.from('user_activity').insert({
-            user_id: user.id,
-            tool_name: 'AI Help Assistant',
-            tool_category: 'Help & Support',
-            input_text: inputMessage,
-            output_text: data.output
-          });
-        }
-      } catch (logError) {
-        console.error('Failed to log activity:', logError);
-      }
     } catch (error) {
       console.error('Error sending message:', error);
       toast({

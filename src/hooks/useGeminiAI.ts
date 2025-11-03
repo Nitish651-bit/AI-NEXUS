@@ -52,22 +52,6 @@ export function useGeminiAI({ toolCategory, toolTitle }: UseGeminiAIProps) {
         throw new Error('No output received from AI');
       }
 
-      // Log activity to database
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          await supabase.from('user_activity').insert({
-            user_id: user.id,
-            tool_name: toolTitle,
-            tool_category: toolCategory,
-            input_text: input.trim(),
-            output_text: response.output
-          });
-        }
-      } catch (logError) {
-        console.error('Failed to log activity:', logError);
-      }
-
       return response.output;
 
     } catch (error) {

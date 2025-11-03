@@ -9,17 +9,17 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
 const voices = [
-  { id: "en-US-Neural2-C", name: "Neural2 C (Female)" },
-  { id: "en-US-Neural2-D", name: "Neural2 D (Male)" },
-  { id: "en-US-Neural2-F", name: "Neural2 F (Female)" },
-  { id: "en-US-Neural2-A", name: "Neural2 A (Male)" },
-  { id: "en-US-Neural2-E", name: "Neural2 E (Female)" },
-  { id: "en-US-Neural2-G", name: "Neural2 G (Female)" },
+  { id: "alloy", name: "Alloy" },
+  { id: "echo", name: "Echo" },
+  { id: "fable", name: "Fable" },
+  { id: "onyx", name: "Onyx" },
+  { id: "nova", name: "Nova" },
+  { id: "shimmer", name: "Shimmer" },
 ];
 
 export const OpenAITTS = () => {
   const [text, setText] = useState("");
-  const [selectedVoice, setSelectedVoice] = useState("en-US-Neural2-C");
+  const [selectedVoice, setSelectedVoice] = useState("alloy");
   const [audioUrl, setAudioUrl] = useState<string>("");
   const [isGenerating, setIsGenerating] = useState(false);
   const { toast } = useToast();
@@ -80,7 +80,7 @@ export const OpenAITTS = () => {
           <CardTitle>Text-to-Speech</CardTitle>
         </div>
         <CardDescription>
-          Convert text to natural-sounding speech using Google Cloud TTS
+          Convert text to natural-sounding speech using OpenAI TTS
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">

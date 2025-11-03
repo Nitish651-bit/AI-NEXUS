@@ -2,12 +2,12 @@ import { useState } from "react";
 import { LoginForm } from "@/components/auth/LoginForm";
 import { Dashboard } from "@/components/dashboard/Dashboard";
 import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/contexts/AuthContext";
 
 const Index = () => {
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [userEmail, setUserEmail] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
-  const { isLoggedIn, userEmail, login, logout } = useAuth();
 
   const handleLogin = async (email: string, password: string) => {
     setIsLoading(true);
@@ -15,7 +15,8 @@ const Index = () => {
     // Simulate authentication
     await new Promise(resolve => setTimeout(resolve, 1500));
     
-    login(email);
+    setUserEmail(email);
+    setIsLoggedIn(true);
     setIsLoading(false);
     
     toast({
@@ -25,7 +26,8 @@ const Index = () => {
   };
 
   const handleLogout = () => {
-    logout();
+    setIsLoggedIn(false);
+    setUserEmail("");
     toast({
       title: "Logged out",
       description: "See you next time!",
