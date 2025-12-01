@@ -1,58 +1,44 @@
-import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
+import { useState } from "react";
+import { LoginForm } from "@/components/auth/LoginForm";
 import { Dashboard } from "@/components/dashboard/Dashboard";
-import { Session } from "@supabase/supabase-js";
+import { useToast } from "@/hooks/use-toast";
 
 const Index = () => {
-  const [session, setSession] = useState<Session | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const navigate = useNavigate();
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [userEmail, setUserEmail] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const { toast } = useToast();
 
-  useEffect(() => {
-    // Set up auth state listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        setSession(session);
-        if (!session) {
-          navigate("/auth");
-        }
-      }
-    );
-
-    // Check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setIsLoading(false);
-      if (!session) {
-        navigate("/auth");
-      }
+  const handleLogin = async (email: string, password: string) => {
+    setIsLoading(true);
+    
+    // Simulate authentication
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    
+    setUserEmail(email);
+    setIsLoggedIn(true);
+    setIsLoading(false);
+    
+    toast({
+      title: "Welcome to AI Nexus!",
+      description: "You now have access to 700+ AI tools.",
     });
-
-    return () => subscription.unsubscribe();
-  }, [navigate]);
-
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    navigate("/auth");
   };
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-4 text-muted-foreground">Loading...</p>
-        </div>
-      </div>
-    );
+  const handleLogout = () => {
+    setIsLoggedIn(false);
+    setUserEmail("");
+    toast({
+      title: "Logged out",
+      description: "See you next time!",
+    });
+  };
+
+  if (isLoggedIn) {
+    return <Dashboard userEmail={userEmail} onLogout={handleLogout} />;
   }
 
-  if (!session) {
-    return null; // Will redirect to /auth
-  }
-
-  return <Dashboard userEmail={session.user.email || ""} onLogout={handleLogout} />;
+  return <LoginForm onLogin={handleLogin} isLoading={isLoading} />;
 };
 
 export default Index;

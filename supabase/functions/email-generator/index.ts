@@ -11,7 +11,7 @@ serve(async (req) => {
   }
 
   try {
-    const { context, tone, purpose, imageData } = await req.json();
+    const { context, tone, purpose } = await req.json();
     
     if (!context) {
       throw new Error("Context is required");
@@ -22,14 +22,9 @@ serve(async (req) => {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
-    console.log("Generating email response:", { 
-      context, 
-      tone, 
-      purpose, 
-      hasImage: !!imageData 
-    });
+    console.log("Generating email response:", { context, tone, purpose });
 
-    const systemPrompt = `You are a professional email writer with the ability to analyze images and files. Generate clear, professional, and effective email responses.
+    const systemPrompt = `You are a professional email writer. Generate clear, professional, and effective email responses.
 Tone: ${tone || 'Professional'}
 Purpose: ${purpose || 'Response'}
 
@@ -38,39 +33,8 @@ Create email responses that:
 - Use appropriate professional language
 - Have a proper structure (greeting, body, closing)
 - Match the specified tone
-- Address the context effectively
-- When images or files are provided, analyze them thoroughly and incorporate relevant details into your response`;
+- Address the context effectively`;
 
-    // Build messages array with multimodal support
-    const messages: any[] = [
-      { role: "system", content: systemPrompt }
-    ];
-
-    // If image data is provided, use multimodal content format
-    if (imageData) {
-      messages.push({
-        role: "user",
-        content: [
-          {
-            type: "text",
-            text: `Generate an email response for: ${context}\n\nPlease analyze the attached image/file and incorporate relevant information into your response.`
-          },
-          {
-            type: "image_url",
-            image_url: {
-              url: imageData  // Can be data:image/png;base64,... or https://...
-            }
-          }
-        ]
-      });
-    } else {
-      messages.push({
-        role: "user",
-        content: `Generate an email response for: ${context}`
-      });
-    }
-
-    // Use gemini-2.5-flash which supports multimodal inputs
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -79,7 +43,10 @@ Create email responses that:
       },
       body: JSON.stringify({
         model: "google/gemini-2.5-flash",
-        messages: messages,
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: `Generate an email response for: ${context}` }
+        ],
       }),
     });
 
@@ -117,7 +84,7 @@ Create email responses that:
       throw new Error("No response from AI");
     }
 
-    console.log("Email response generated successfully with multimodal support");
+    console.log("Email response generated successfully");
 
     return new Response(
       JSON.stringify({ success: true, output: aiResponse }),

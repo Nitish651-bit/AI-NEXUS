@@ -129,7 +129,8 @@ export const LovableAIImage = () => {
                   variant="outline" 
                   size="lg"
                   className="w-full"
-                  onClick={() => setGeneratedImage("")}
+                  onClick={generateImage}
+                  disabled={isGenerating}
                 >
                   Generate New
                 </Button>
