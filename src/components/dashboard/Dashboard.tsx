@@ -313,6 +313,15 @@ export function Dashboard({ userEmail, onLogout }: DashboardProps) {
                   <Plug size={16} />
                   Integrations
                 </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => navigate('/admin')}
+                  className="gap-2"
+                >
+                  <BarChart3 size={16} />
+                  Admin
+                </Button>
               </div>
               <span className="text-sm text-muted-foreground">Welcome, {userEmail}</span>
               <Button variant="ghost" size="sm" onClick={onLogout}>

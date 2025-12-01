@@ -1,6 +1,7 @@
 import { AIToolRouter } from '@/components/integrations/AIToolRouter';
 import { LovableAIImage } from '@/components/integrations/LovableAIImage';
 import { OpenAITTS } from '@/components/integrations/OpenAITTS';
+import { EmailGenerator } from '@/components/integrations/EmailGenerator';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -40,10 +41,11 @@ export const Integrations = () => {
 
         <div className="grid gap-4 sm:gap-6 grid-cols-1 lg:grid-cols-2">
           <AIToolRouter />
-          <OpenAITTS />
+          <EmailGenerator />
         </div>
 
-        <div className="grid gap-4 sm:gap-6">
+        <div className="grid gap-4 sm:gap-6 grid-cols-1 lg:grid-cols-2">
+          <OpenAITTS />
           <LovableAIImage />
         </div>
       </div>

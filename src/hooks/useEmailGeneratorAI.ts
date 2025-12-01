@@ -17,7 +17,7 @@ export function useEmailGeneratorAI({ tone, purpose }: UseEmailGeneratorAIProps 
   const [isProcessing, setIsProcessing] = useState(false);
   const { toast } = useToast();
 
-  const generateEmail = async (context: string): Promise<string> => {
+  const generateEmail = async (context: string, imageData?: string | null): Promise<string> => {
     if (!context.trim()) {
       throw new Error('Context cannot be empty');
     }
@@ -29,7 +29,8 @@ export function useEmailGeneratorAI({ tone, purpose }: UseEmailGeneratorAIProps 
         body: {
           context: context.trim(),
           tone: tone || 'Professional',
-          purpose: purpose || 'Response'
+          purpose: purpose || 'Response',
+          imageData: imageData || undefined
         }
       });
 
