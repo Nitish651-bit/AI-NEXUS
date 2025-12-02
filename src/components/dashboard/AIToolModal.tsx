@@ -3,6 +3,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useGeminiAI } from "@/hooks/useGeminiAI";
 import { useSocialMediaAI } from "@/hooks/useSocialMediaAI";
 import { useEmailGeneratorAI } from "@/hooks/useEmailGeneratorAI";
+import { extractTextFromFile } from "@/utils/fileTextExtractor";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -99,9 +100,37 @@ export function AIToolModal({ isOpen, onClose, tool }: AIToolModalProps) {
     if (!input.trim() && uploadedFiles.length === 0) return;
     
     try {
-      let prompt = input;
+      let prompt = input.trim();
+
       if (uploadedFiles.length > 0) {
-        prompt += `\n\nAttached files: ${uploadedFiles.map(f => f.name).join(', ')}`;
+        const fileSummaries: string[] = [];
+
+        for (const file of uploadedFiles) {
+          try {
+            const content = await extractTextFromFile(file);
+
+            if (content) {
+              fileSummaries.push(
+                `File: ${file.name}\nType: ${file.type || "unknown"}\n\n${content}`
+              );
+            } else {
+              fileSummaries.push(
+                `File: ${file.name}\nType: ${file.type || "unknown"}\n(Note: This file type cannot be read directly. Use only the filename as context.)`
+              );
+            }
+          } catch (error) {
+            console.error("Failed to read file", file.name, error);
+            fileSummaries.push(
+              `File: ${file.name}\n(Note: There was an error reading this file. Treat only the filename as context.)`
+            );
+          }
+        }
+
+        if (fileSummaries.length > 0) {
+          prompt += `\n\nYou also have access to the following attached file contents. Use them when answering:\n\n${fileSummaries.join(
+            "\n\n---\n\n"
+          )}`;
+        }
       }
       
       let response: string;
