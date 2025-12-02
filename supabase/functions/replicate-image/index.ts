@@ -1,10 +1,17 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Replicate from "https://esm.sh/replicate@0.25.2";
+import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
+
+const inputSchema = z.object({
+  prompt: z.string().trim().min(1, "Prompt cannot be empty").max(2000, "Prompt must be less than 2000 characters").optional(),
+  aspectRatio: z.enum(["1:1", "16:9", "9:16", "4:3", "3:4"]).optional(),
+  predictionId: z.string().optional()
+});
 
 interface ImageRequest {
   prompt: string;
@@ -27,12 +34,13 @@ serve(async (req) => {
       auth: REPLICATE_API_KEY,
     });
 
-    const body: ImageRequest = await req.json();
+    const body = await req.json();
+    const validatedInput = inputSchema.parse(body);
 
     // Check prediction status
-    if (body.predictionId) {
-      console.log("Checking status for prediction:", body.predictionId);
-      const prediction = await replicate.predictions.get(body.predictionId);
+    if (validatedInput.predictionId) {
+      console.log("Checking status for prediction:", validatedInput.predictionId);
+      const prediction = await replicate.predictions.get(validatedInput.predictionId);
       console.log("Prediction status:", prediction.status);
       
       return new Response(JSON.stringify(prediction), {
@@ -41,7 +49,7 @@ serve(async (req) => {
     }
 
     // Generate new image
-    if (!body.prompt) {
+    if (!validatedInput.prompt) {
       return new Response(
         JSON.stringify({ error: "Prompt is required" }), 
         {
@@ -51,17 +59,17 @@ serve(async (req) => {
       );
     }
 
-    console.log("Generating image with Replicate:", body.prompt);
+    console.log("Generating image with Replicate, prompt length:", validatedInput.prompt.length);
     
     const output = await replicate.run(
       "black-forest-labs/flux-schnell",
       {
         input: {
-          prompt: body.prompt,
+          prompt: validatedInput.prompt,
           go_fast: true,
           megapixels: "1",
           num_outputs: 1,
-          aspect_ratio: body.aspectRatio || "1:1",
+          aspect_ratio: validatedInput.aspectRatio || "1:1",
           output_format: "webp",
           output_quality: 80,
           num_inference_steps: 4
@@ -75,8 +83,8 @@ serve(async (req) => {
       JSON.stringify({ 
         success: true, 
         output,
-        prompt: body.prompt,
-      }), 
+        prompt: validatedInput.prompt,
+      }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 200,

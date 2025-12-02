@@ -1,10 +1,18 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
+
+const inputSchema = z.object({
+  input: z.string().trim().min(1, "Input cannot be empty").max(5000, "Input must be less than 5000 characters"),
+  toolCategory: z.string().min(1).max(100),
+  toolTitle: z.string().min(1).max(100),
+  type: z.enum(['text', 'image']).optional()
+});
 
 interface GoogleAIRequest {
   input: string;
@@ -19,9 +27,10 @@ serve(async (req) => {
   }
 
   try {
-    const { input, toolCategory, toolTitle, type = 'text' }: GoogleAIRequest = await req.json();
+    const body = await req.json();
+    const { input, toolCategory, toolTitle, type = 'text' } = inputSchema.parse(body);
     
-    console.log('Received Google AI request:', { input, toolCategory, toolTitle, type });
+    console.log('Received Google AI request:', { inputLength: input.length, toolCategory, toolTitle, type });
     
     const googleApiKey = Deno.env.get('GOOGLE_API_KEY');
     console.log('Google API Key exists:', !!googleApiKey);

@@ -1,9 +1,16 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
+
+const inputSchema = z.object({
+  message: z.string().trim().min(1, "Message cannot be empty").max(4000, "Message must be less than 4000 characters"),
+  toolCategory: z.string().max(100).optional(),
+  toolTitle: z.string().max(100).optional()
+});
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -11,11 +18,8 @@ serve(async (req) => {
   }
 
   try {
-    const { message, toolCategory, toolTitle } = await req.json();
-    
-    if (!message) {
-      throw new Error("Message is required");
-    }
+    const body = await req.json();
+    const { message, toolCategory, toolTitle } = inputSchema.parse(body);
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {

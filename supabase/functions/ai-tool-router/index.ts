@@ -1,10 +1,16 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
+
+const inputSchema = z.object({
+  userRequest: z.string().trim().min(1, "User request cannot be empty").max(1000, "Request must be less than 1000 characters"),
+  availableTools: z.array(z.string()).min(1, "At least one tool must be available").max(100, "Too many tools")
+});
 
 interface RouterRequest {
   userRequest: string;
@@ -17,10 +23,11 @@ serve(async (req) => {
   }
 
   try {
-    const { userRequest, availableTools }: RouterRequest = await req.json();
+    const body = await req.json();
+    const { userRequest, availableTools } = inputSchema.parse(body);
     
-    console.log('AI Tool Router - Analyzing request:', userRequest);
-    console.log('Available tools:', availableTools);
+    console.log('AI Tool Router - Analyzing request, length:', userRequest.length);
+    console.log('Available tools count:', availableTools.length);
 
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     if (!LOVABLE_API_KEY) {
