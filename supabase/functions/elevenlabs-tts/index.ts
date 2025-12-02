@@ -1,9 +1,16 @@
 import { serve } from 'https://deno.land/std@0.190.0/http/server.ts';
+import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
+
+const inputSchema = z.object({
+  text: z.string().trim().min(1, "Text cannot be empty").max(5000, "Text must be less than 5000 characters"),
+  voice: z.string().optional(),
+  model: z.string().optional()
+});
 
 interface TTSRequest {
   text: string;
@@ -17,18 +24,15 @@ serve(async (req) => {
   }
 
   try {
-    const { text, voice = '9BWtsMINqrJLrRacOk9x', model = 'eleven_multilingual_v2' }: TTSRequest = await req.json();
-
-    if (!text) {
-      throw new Error('Text is required');
-    }
+    const body = await req.json();
+    const { text, voice = '9BWtsMINqrJLrRacOk9x', model = 'eleven_multilingual_v2' } = inputSchema.parse(body);
 
     const ELEVENLABS_API_KEY = Deno.env.get('ELEVENLABS_API_KEY');
     if (!ELEVENLABS_API_KEY) {
       throw new Error('ELEVENLABS_API_KEY not configured');
     }
 
-    console.log('Generating speech with ElevenLabs:', { text: text.substring(0, 50), voice, model });
+    console.log('Generating speech with ElevenLabs:', { textLength: text.length, voice, model });
 
     // Generate speech using ElevenLabs API
     const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voice}`, {

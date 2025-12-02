@@ -1,9 +1,16 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
+
+const inputSchema = z.object({
+  context: z.string().trim().min(1, "Context cannot be empty").max(2000, "Context must be less than 2000 characters"),
+  tone: z.enum(["Professional", "Casual", "Formal", "Friendly"]).optional(),
+  purpose: z.enum(["Response", "Request", "Follow-up", "Introduction", "Thank You"]).optional()
+});
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -11,18 +18,15 @@ serve(async (req) => {
   }
 
   try {
-    const { context, tone, purpose } = await req.json();
-    
-    if (!context) {
-      throw new Error("Context is required");
-    }
+    const body = await req.json();
+    const { context, tone, purpose } = inputSchema.parse(body);
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
-    console.log("Generating email response:", { context, tone, purpose });
+    console.log("Generating email response:", { contextLength: context.length, tone, purpose });
 
     const systemPrompt = `You are a professional email writer. Generate clear, professional, and effective email responses.
 Tone: ${tone || 'Professional'}

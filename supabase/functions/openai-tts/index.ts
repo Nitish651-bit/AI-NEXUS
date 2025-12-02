@@ -1,9 +1,15 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
+
+const inputSchema = z.object({
+  text: z.string().trim().min(1, "Text cannot be empty").max(4000, "Text must be less than 4000 characters"),
+  voice: z.enum(["alloy", "echo", "fable", "onyx", "nova", "shimmer"]).optional()
+});
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -11,18 +17,15 @@ serve(async (req) => {
   }
 
   try {
-    const { text, voice } = await req.json();
-    
-    if (!text) {
-      throw new Error("Text is required");
-    }
+    const body = await req.json();
+    const { text, voice } = inputSchema.parse(body);
 
     const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
     if (!OPENAI_API_KEY) {
       throw new Error("OPENAI_API_KEY is not configured");
     }
 
-    console.log("Generating speech for text:", text.substring(0, 50) + "...");
+    console.log("Generating speech, text length:", text.length);
 
     const response = await fetch("https://api.openai.com/v1/audio/speech", {
       method: "POST",

@@ -1,9 +1,16 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
+
+const inputSchema = z.object({
+  topic: z.string().trim().min(1, "Topic cannot be empty").max(1000, "Topic must be less than 1000 characters"),
+  platform: z.enum(["Twitter", "LinkedIn", "Facebook", "Instagram"]).optional(),
+  tone: z.enum(["Professional", "Casual", "Formal", "Humorous", "Inspirational"]).optional()
+});
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -11,18 +18,15 @@ serve(async (req) => {
   }
 
   try {
-    const { topic, platform, tone } = await req.json();
-    
-    if (!topic) {
-      throw new Error("Topic is required");
-    }
+    const body = await req.json();
+    const { topic, platform, tone } = inputSchema.parse(body);
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
-    console.log("Generating social media content:", { topic, platform, tone });
+    console.log("Generating social media content:", { topicLength: topic.length, platform, tone });
 
     const systemPrompt = `You are a professional social media content creator. Generate engaging, platform-optimized content.
 Platform: ${platform || 'Twitter'}

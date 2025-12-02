@@ -1,10 +1,17 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
+
+const inputSchema = z.object({
+  input: z.string().trim().min(1, "Input cannot be empty").max(5000, "Input must be less than 5000 characters"),
+  toolCategory: z.string().min(1).max(100),
+  toolTitle: z.string().min(1).max(100)
+});
 
 interface AIRequest {
   input: string;
@@ -18,9 +25,10 @@ serve(async (req) => {
   }
 
   try {
-    const { input, toolCategory, toolTitle }: AIRequest = await req.json();
+    const body = await req.json();
+    const { input, toolCategory, toolTitle } = inputSchema.parse(body);
     
-    console.log('Received request:', { input, toolCategory, toolTitle });
+    console.log('Received request:', { inputLength: input.length, toolCategory, toolTitle });
     
     const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');
     console.log('Lovable API Key exists:', !!lovableApiKey);

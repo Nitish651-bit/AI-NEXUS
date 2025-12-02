@@ -1,10 +1,22 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
+
+const messageSchema = z.object({
+  role: z.enum(['system', 'user', 'assistant']),
+  content: z.string().trim().min(1).max(10000)
+});
+
+const inputSchema = z.object({
+  messages: z.array(messageSchema).min(1, "At least one message is required").max(50, "Too many messages"),
+  model: z.string().optional(),
+  temperature: z.number().min(0).max(2).optional()
+});
 
 interface ChatRequest {
   messages: Array<{
@@ -21,11 +33,8 @@ serve(async (req) => {
   }
 
   try {
-    const { messages, model = 'gpt-5-mini-2025-08-07', temperature = 0.7 }: ChatRequest = await req.json();
-
-    if (!messages || messages.length === 0) {
-      throw new Error('Messages array is required');
-    }
+    const body = await req.json();
+    const { messages, model = 'gpt-5-mini-2025-08-07', temperature = 0.7 } = inputSchema.parse(body);
 
     const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
     if (!OPENAI_API_KEY) {
