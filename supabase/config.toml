@@ -6,3 +6,9 @@ port = 54321
 schemas = ["public", "graphql_public"]
 extra_search_path = ["public", "extensions"]
 max_rows = 1000
+
+[functions.email-generator]
+verify_jwt = false
+
+[functions.social-media-automation]
+verify_jwt = false
