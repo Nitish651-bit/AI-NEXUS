@@ -3,24 +3,63 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
-import { Eye, EyeOff, Zap } from "lucide-react";
+import { Eye, EyeOff, Zap, Loader2 } from "lucide-react";
 import logo from "@/assets/ai-nexus-logo.png";
 
 interface LoginFormProps {
-  onLogin: (email: string, password: string) => void;
+  onSignIn: (email: string, password: string) => Promise<{ error: Error | null }>;
+  onSignUp: (email: string, password: string, fullName?: string) => Promise<{ error: Error | null }>;
   isLoading?: boolean;
 }
 
-export function LoginForm({ onLogin, isLoading = false }: LoginFormProps) {
+export function LoginForm({ onSignIn, onSignUp, isLoading = false }: LoginFormProps) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [fullName, setFullName] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    onLogin(email, password);
+    setError(null);
+    setSuccessMessage(null);
+    setIsSubmitting(true);
+
+    try {
+      if (isSignUp) {
+        const { error } = await onSignUp(email, password, fullName);
+        if (error) {
+          if (error.message.includes('already registered')) {
+            setError('This email is already registered. Please sign in instead.');
+          } else {
+            setError(error.message);
+          }
+        } else {
+          setSuccessMessage('Account created! Please check your email to confirm your account.');
+        }
+      } else {
+        const { error } = await onSignIn(email, password);
+        if (error) {
+          if (error.message.includes('Invalid login')) {
+            setError('Invalid email or password. Please try again.');
+          } else if (error.message.includes('Email not confirmed')) {
+            setError('Please confirm your email before signing in.');
+          } else {
+            setError(error.message);
+          }
+        }
+      }
+    } catch (err) {
+      setError('An unexpected error occurred. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
+
+  const loading = isLoading || isSubmitting;
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4">
@@ -62,7 +101,33 @@ export function LoginForm({ onLogin, isLoading = false }: LoginFormProps) {
               </p>
             </div>
 
+            {error && (
+              <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-sm">
+                {error}
+              </div>
+            )}
+            
+            {successMessage && (
+              <div className="p-3 rounded-lg bg-green-500/10 border border-green-500/20 text-green-400 text-sm">
+                {successMessage}
+              </div>
+            )}
+
             <div className="space-y-4">
+              {isSignUp && (
+                <div className="space-y-2">
+                  <Label htmlFor="fullName" className="text-foreground">Full Name</Label>
+                  <Input
+                    id="fullName"
+                    type="text"
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                    placeholder="Enter your full name"
+                    className="bg-background/50 border-holo-blue/30 focus:border-holo-blue"
+                  />
+                </div>
+              )}
+
               <div className="space-y-2">
                 <Label htmlFor="email" className="text-foreground">Email</Label>
                 <Input
@@ -86,6 +151,7 @@ export function LoginForm({ onLogin, isLoading = false }: LoginFormProps) {
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="Enter your password"
                     required
+                    minLength={6}
                     className="bg-background/50 border-holo-blue/30 focus:border-holo-blue pr-10"
                   />
                   <button
@@ -96,6 +162,9 @@ export function LoginForm({ onLogin, isLoading = false }: LoginFormProps) {
                     {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                   </button>
                 </div>
+                {isSignUp && (
+                  <p className="text-xs text-muted-foreground">Password must be at least 6 characters</p>
+                )}
               </div>
             </div>
 
@@ -104,12 +173,12 @@ export function LoginForm({ onLogin, isLoading = false }: LoginFormProps) {
               variant="holo"
               size="lg"
               className="w-full"
-              disabled={isLoading}
+              disabled={loading}
             >
-              {isLoading ? (
+              {loading ? (
                 <div className="flex items-center gap-2">
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  Signing {isSignUp ? "up" : "in"}...
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  {isSignUp ? "Creating account..." : "Signing in..."}
                 </div>
               ) : (
                 <div className="flex items-center gap-2">
@@ -122,7 +191,11 @@ export function LoginForm({ onLogin, isLoading = false }: LoginFormProps) {
             <div className="text-center">
               <button
                 type="button"
-                onClick={() => setIsSignUp(!isSignUp)}
+                onClick={() => {
+                  setIsSignUp(!isSignUp);
+                  setError(null);
+                  setSuccessMessage(null);
+                }}
                 className="text-holo-blue hover:text-holo-blue-light transition-colors"
               >
                 {isSignUp ? "Already have an account? Sign in" : "Don't have an account? Sign up"}

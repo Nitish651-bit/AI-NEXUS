@@ -1,44 +1,60 @@
-import { useState } from "react";
 import { LoginForm } from "@/components/auth/LoginForm";
 import { Dashboard } from "@/components/dashboard/Dashboard";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
+import { Loader2 } from "lucide-react";
 
 const Index = () => {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [userEmail, setUserEmail] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
+  const { user, isLoading, isAuthenticated, signIn, signUp, signOut } = useAuth();
   const { toast } = useToast();
 
-  const handleLogin = async (email: string, password: string) => {
-    setIsLoading(true);
-    
-    // Simulate authentication
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
-    setUserEmail(email);
-    setIsLoggedIn(true);
-    setIsLoading(false);
-    
-    toast({
-      title: "Welcome to AI Nexus!",
-      description: "You now have access to 700+ AI tools.",
-    });
+  const handleSignIn = async (email: string, password: string) => {
+    const { error } = await signIn(email, password);
+    if (!error) {
+      toast({
+        title: "Welcome to AI Nexus!",
+        description: "You now have access to 700+ AI tools.",
+      });
+    }
+    return { error };
   };
 
-  const handleLogout = () => {
-    setIsLoggedIn(false);
-    setUserEmail("");
+  const handleSignUp = async (email: string, password: string, fullName?: string) => {
+    const { error } = await signUp(email, password, fullName);
+    if (!error) {
+      toast({
+        title: "Account created!",
+        description: "Please check your email to confirm your account.",
+      });
+    }
+    return { error };
+  };
+
+  const handleLogout = async () => {
+    await signOut();
     toast({
       title: "Logged out",
       description: "See you next time!",
     });
   };
 
-  if (isLoggedIn) {
-    return <Dashboard userEmail={userEmail} onLogout={handleLogout} />;
+  // Show loading state while checking auth
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center space-y-4">
+          <Loader2 className="w-8 h-8 animate-spin mx-auto text-primary" />
+          <p className="text-muted-foreground">Loading AI Nexus...</p>
+        </div>
+      </div>
+    );
   }
 
-  return <LoginForm onLogin={handleLogin} isLoading={isLoading} />;
+  if (isAuthenticated && user) {
+    return <Dashboard userEmail={user.email || ""} onLogout={handleLogout} />;
+  }
+
+  return <LoginForm onSignIn={handleSignIn} onSignUp={handleSignUp} isLoading={isLoading} />;
 };
 
 export default Index;
