@@ -3,21 +3,24 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
-import { Eye, EyeOff, Zap, Loader2 } from "lucide-react";
+import { Eye, EyeOff, Zap, Loader2, ArrowLeft } from "lucide-react";
 import logo from "@/assets/ai-nexus-logo.png";
+
+type FormMode = 'signIn' | 'signUp' | 'forgotPassword';
 
 interface LoginFormProps {
   onSignIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   onSignUp: (email: string, password: string, fullName?: string) => Promise<{ error: Error | null }>;
+  onResetPassword: (email: string) => Promise<{ error: Error | null }>;
   isLoading?: boolean;
 }
 
-export function LoginForm({ onSignIn, onSignUp, isLoading = false }: LoginFormProps) {
+export function LoginForm({ onSignIn, onSignUp, onResetPassword, isLoading = false }: LoginFormProps) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [isSignUp, setIsSignUp] = useState(false);
+  const [mode, setMode] = useState<FormMode>('signIn');
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -29,7 +32,14 @@ export function LoginForm({ onSignIn, onSignUp, isLoading = false }: LoginFormPr
     setIsSubmitting(true);
 
     try {
-      if (isSignUp) {
+      if (mode === 'forgotPassword') {
+        const { error } = await onResetPassword(email);
+        if (error) {
+          setError(error.message);
+        } else {
+          setSuccessMessage('Password reset email sent! Check your inbox and click the link to reset your password.');
+        }
+      } else if (mode === 'signUp') {
         const { error } = await onSignUp(email, password, fullName);
         if (error) {
           if (error.message.includes('already registered')) {
@@ -59,7 +69,44 @@ export function LoginForm({ onSignIn, onSignUp, isLoading = false }: LoginFormPr
     }
   };
 
+  const switchMode = (newMode: FormMode) => {
+    setMode(newMode);
+    setError(null);
+    setSuccessMessage(null);
+  };
+
   const loading = isLoading || isSubmitting;
+
+  const getTitle = () => {
+    switch (mode) {
+      case 'signUp': return 'Create Account';
+      case 'forgotPassword': return 'Reset Password';
+      default: return 'Welcome Back';
+    }
+  };
+
+  const getSubtitle = () => {
+    switch (mode) {
+      case 'signUp': return 'Join thousands of AI enthusiasts';
+      case 'forgotPassword': return 'Enter your email to receive a reset link';
+      default: return 'Sign in to your account';
+    }
+  };
+
+  const getButtonText = () => {
+    if (loading) {
+      switch (mode) {
+        case 'signUp': return 'Creating account...';
+        case 'forgotPassword': return 'Sending reset link...';
+        default: return 'Signing in...';
+      }
+    }
+    switch (mode) {
+      case 'signUp': return 'Create Account';
+      case 'forgotPassword': return 'Send Reset Link';
+      default: return 'Sign In';
+    }
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4">
@@ -83,9 +130,6 @@ export function LoginForm({ onSignIn, onSignUp, isLoading = false }: LoginFormPr
             <p className="text-muted-foreground text-base max-w-lg mx-auto leading-relaxed">
               Access 150+ Cutting-Edge AI Tools: ChatGPT, Claude, Midjourney & More
             </p>
-            <p className="text-muted-foreground/80 text-sm">
-              The Best AI Platform for Chat, Coding, Design & Automation
-            </p>
           </div>
         </div>
 
@@ -93,11 +137,21 @@ export function LoginForm({ onSignIn, onSignUp, isLoading = false }: LoginFormPr
         <Card className="glass-card p-10 shadow-holo border border-holo-blue/30 backdrop-blur-xl animate-scale-in">
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="text-center mb-8">
+              {mode === 'forgotPassword' && (
+                <button
+                  type="button"
+                  onClick={() => switchMode('signIn')}
+                  className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors mb-4 mx-auto"
+                >
+                  <ArrowLeft size={14} />
+                  Back to sign in
+                </button>
+              )}
               <h2 className="text-3xl font-bold text-foreground bg-gradient-primary bg-clip-text text-transparent">
-                {isSignUp ? "Create Account" : "Welcome Back"}
+                {getTitle()}
               </h2>
               <p className="text-muted-foreground mt-2 text-base">
-                {isSignUp ? "Join thousands of AI enthusiasts" : "Sign in to your account"}
+                {getSubtitle()}
               </p>
             </div>
 
@@ -114,7 +168,7 @@ export function LoginForm({ onSignIn, onSignUp, isLoading = false }: LoginFormPr
             )}
 
             <div className="space-y-4">
-              {isSignUp && (
+              {mode === 'signUp' && (
                 <div className="space-y-2">
                   <Label htmlFor="fullName" className="text-foreground">Full Name</Label>
                   <Input
@@ -141,32 +195,46 @@ export function LoginForm({ onSignIn, onSignUp, isLoading = false }: LoginFormPr
                 />
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="password" className="text-foreground">Password</Label>
-                <div className="relative">
-                  <Input
-                    id="password"
-                    type={showPassword ? "text" : "password"}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Enter your password"
-                    required
-                    minLength={6}
-                    className="bg-background/50 border-holo-blue/30 focus:border-holo-blue pr-10"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                  >
-                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                  </button>
+              {mode !== 'forgotPassword' && (
+                <div className="space-y-2">
+                  <Label htmlFor="password" className="text-foreground">Password</Label>
+                  <div className="relative">
+                    <Input
+                      id="password"
+                      type={showPassword ? "text" : "password"}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="Enter your password"
+                      required
+                      minLength={6}
+                      className="bg-background/50 border-holo-blue/30 focus:border-holo-blue pr-10"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    >
+                      {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </button>
+                  </div>
+                  {mode === 'signUp' && (
+                    <p className="text-xs text-muted-foreground">Password must be at least 6 characters</p>
+                  )}
                 </div>
-                {isSignUp && (
-                  <p className="text-xs text-muted-foreground">Password must be at least 6 characters</p>
-                )}
-              </div>
+              )}
             </div>
+
+            {mode === 'signIn' && (
+              <div className="text-right">
+                <button
+                  type="button"
+                  onClick={() => switchMode('forgotPassword')}
+                  className="text-sm text-holo-blue hover:text-holo-blue-light transition-colors"
+                >
+                  Forgot password?
+                </button>
+              </div>
+            )}
 
             <Button
               type="submit"
@@ -178,29 +246,27 @@ export function LoginForm({ onSignIn, onSignUp, isLoading = false }: LoginFormPr
               {loading ? (
                 <div className="flex items-center gap-2">
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  {isSignUp ? "Creating account..." : "Signing in..."}
+                  {getButtonText()}
                 </div>
               ) : (
                 <div className="flex items-center gap-2">
                   <Zap size={16} />
-                  {isSignUp ? "Create Account" : "Sign In"}
+                  {getButtonText()}
                 </div>
               )}
             </Button>
 
-            <div className="text-center">
-              <button
-                type="button"
-                onClick={() => {
-                  setIsSignUp(!isSignUp);
-                  setError(null);
-                  setSuccessMessage(null);
-                }}
-                className="text-holo-blue hover:text-holo-blue-light transition-colors"
-              >
-                {isSignUp ? "Already have an account? Sign in" : "Don't have an account? Sign up"}
-              </button>
-            </div>
+            {mode !== 'forgotPassword' && (
+              <div className="text-center">
+                <button
+                  type="button"
+                  onClick={() => switchMode(mode === 'signIn' ? 'signUp' : 'signIn')}
+                  className="text-holo-blue hover:text-holo-blue-light transition-colors"
+                >
+                  {mode === 'signIn' ? "Don't have an account? Sign up" : "Already have an account? Sign in"}
+                </button>
+              </div>
+            )}
           </form>
         </Card>
 

@@ -5,7 +5,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { Loader2 } from "lucide-react";
 
 const Index = () => {
-  const { user, isLoading, isAuthenticated, signIn, signUp, signOut } = useAuth();
+  const { user, isLoading, isAuthenticated, signIn, signUp, signOut, resetPassword } = useAuth();
   const { toast } = useToast();
 
   const handleSignIn = async (email: string, password: string) => {
@@ -25,6 +25,17 @@ const Index = () => {
       toast({
         title: "Account created!",
         description: "Please check your email to confirm your account.",
+      });
+    }
+    return { error };
+  };
+
+  const handleResetPassword = async (email: string) => {
+    const { error } = await resetPassword(email);
+    if (!error) {
+      toast({
+        title: "Reset email sent!",
+        description: "Check your inbox for the password reset link.",
       });
     }
     return { error };
@@ -54,7 +65,14 @@ const Index = () => {
     return <Dashboard userEmail={user.email || ""} onLogout={handleLogout} />;
   }
 
-  return <LoginForm onSignIn={handleSignIn} onSignUp={handleSignUp} isLoading={isLoading} />;
+  return (
+    <LoginForm 
+      onSignIn={handleSignIn} 
+      onSignUp={handleSignUp} 
+      onResetPassword={handleResetPassword}
+      isLoading={isLoading} 
+    />
+  );
 };
 
 export default Index;
