@@ -3,7 +3,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useGeminiAI } from "@/hooks/useGeminiAI";
 import { useSocialMediaAI } from "@/hooks/useSocialMediaAI";
 import { useEmailGeneratorAI } from "@/hooks/useEmailGeneratorAI";
-import { extractTextFromFile } from "@/utils/fileTextExtractor";
+import { extractTextFromFile, extractFileContent } from "@/utils/fileTextExtractor";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -101,18 +101,27 @@ export function AIToolModal({ isOpen, onClose, tool }: AIToolModalProps) {
     
     try {
       let prompt = input.trim();
+      const images: { url: string; mimeType?: string }[] = [];
+      const fileSummaries: string[] = [];
 
       if (uploadedFiles.length > 0) {
-        const fileSummaries: string[] = [];
-
         for (const file of uploadedFiles) {
           try {
-            const content = await extractTextFromFile(file);
+            const extracted = await extractFileContent(file);
 
-            if (content) {
-              fileSummaries.push(
-                `File: ${file.name}\nType: ${file.type || "unknown"}\n\n${content}`
-              );
+            if (extracted) {
+              if (extracted.type === 'image') {
+                // Add image for vision AI processing
+                images.push({
+                  url: extracted.content,
+                  mimeType: extracted.mimeType
+                });
+              } else {
+                // Text content from PDF or text files
+                fileSummaries.push(
+                  `File: ${file.name}\nType: ${file.type || "unknown"}\n\n${extracted.content}`
+                );
+              }
             } else {
               fileSummaries.push(
                 `File: ${file.name}\nType: ${file.type || "unknown"}\n(Note: This file type cannot be read directly. Use only the filename as context.)`
@@ -141,7 +150,8 @@ export function AIToolModal({ isOpen, onClose, tool }: AIToolModalProps) {
       } else if (tool.category === "Marketing & Content" && tool.title.toLowerCase().includes("email")) {
         response = await generateEmail(prompt);
       } else {
-        response = await generateContent(prompt);
+        // Pass images to the AI for vision processing
+        response = await generateContent(prompt, images.length > 0 ? images : undefined);
       }
       
       // Check if response contains structured data

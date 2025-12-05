@@ -6,10 +6,16 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+const imageSchema = z.object({
+  url: z.string(), // base64 data URL
+  mimeType: z.string().optional()
+});
+
 const inputSchema = z.object({
-  message: z.string().trim().min(1, "Message cannot be empty").max(4000, "Message must be less than 4000 characters"),
+  message: z.string().trim().min(1, "Message cannot be empty").max(50000, "Message must be less than 50000 characters"),
   toolCategory: z.string().max(100).optional(),
-  toolTitle: z.string().max(100).optional()
+  toolTitle: z.string().max(100).optional(),
+  images: z.array(imageSchema).max(5).optional() // Support up to 5 images
 });
 
 serve(async (req) => {
@@ -19,18 +25,41 @@ serve(async (req) => {
 
   try {
     const body = await req.json();
-    const { message, toolCategory, toolTitle } = inputSchema.parse(body);
+    const { message, toolCategory, toolTitle, images } = inputSchema.parse(body);
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
-    console.log("Processing AI request:", { toolCategory, toolTitle, messageLength: message.length });
+    console.log("Processing AI request:", { 
+      toolCategory, 
+      toolTitle, 
+      messageLength: message.length,
+      imageCount: images?.length || 0
+    });
 
     const systemPrompt = `You are a helpful AI assistant specializing in ${toolCategory || 'general tasks'}.
 ${toolTitle ? `Current tool: ${toolTitle}` : ''}
-Provide accurate, helpful, and concise responses based on real-world knowledge.`;
+Provide accurate, helpful, and concise responses based on real-world knowledge.
+When analyzing images, describe what you see in detail and answer any questions about them.`;
+
+    // Build user content - can be text-only or multimodal with images
+    let userContent: any;
+    
+    if (images && images.length > 0) {
+      // Multimodal request with images
+      userContent = [
+        { type: "text", text: message },
+        ...images.map(img => ({
+          type: "image_url",
+          image_url: { url: img.url }
+        }))
+      ];
+    } else {
+      // Text-only request
+      userContent = message;
+    }
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -42,7 +71,7 @@ Provide accurate, helpful, and concise responses based on real-world knowledge.`
         model: "google/gemini-2.5-flash",
         messages: [
           { role: "system", content: systemPrompt },
-          { role: "user", content: message }
+          { role: "user", content: userContent }
         ],
       }),
     });

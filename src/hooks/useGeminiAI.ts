@@ -13,12 +13,17 @@ interface AIResponse {
   error?: string;
 }
 
+interface ImageInput {
+  url: string;
+  mimeType?: string;
+}
+
 export function useGeminiAI({ toolCategory, toolTitle }: UseGeminiAIProps) {
   const [isProcessing, setIsProcessing] = useState(false);
   const { toast } = useToast();
 
-  const generateContent = async (input: string): Promise<string> => {
-    if (!input.trim()) {
+  const generateContent = async (input: string, images?: ImageInput[]): Promise<string> => {
+    if (!input.trim() && (!images || images.length === 0)) {
       throw new Error('Input cannot be empty');
     }
 
@@ -28,9 +33,10 @@ export function useGeminiAI({ toolCategory, toolTitle }: UseGeminiAIProps) {
       // Use Lovable AI for real-world responses
       const { data, error } = await supabase.functions.invoke('lovable-ai-chat', {
         body: {
-          message: input.trim(),
+          message: input.trim() || "Please analyze the attached image(s)",
           toolCategory,
-          toolTitle
+          toolTitle,
+          images: images && images.length > 0 ? images : undefined
         }
       });
 
