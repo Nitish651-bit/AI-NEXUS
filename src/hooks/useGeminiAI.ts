@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { logToolUsage } from '@/hooks/useToolUsageLogger';
 
 interface UseGeminiAIProps {
   toolCategory: string;
@@ -58,12 +59,29 @@ export function useGeminiAI({ toolCategory, toolTitle }: UseGeminiAIProps) {
         throw new Error('No output received from AI');
       }
 
+      // Log successful usage
+      await logToolUsage({
+        toolName: toolTitle,
+        toolCategory,
+        inputText: input.trim(),
+        outputText: response.output,
+        prompt: input.trim(),
+      });
+
       return response.output;
 
     } catch (error) {
       console.error('Gemini AI Error:', error);
       
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      
+      // Log failed usage
+      await logToolUsage({
+        toolName: toolTitle,
+        toolCategory,
+        inputText: input.trim(),
+        error: errorMessage,
+      });
       
       toast({
         title: "AI Processing Failed",
