@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { logToolUsage } from '@/hooks/useToolUsageLogger';
 
 interface UseSocialMediaAIProps {
   platform?: string;
@@ -52,29 +51,12 @@ export function useSocialMediaAI({ platform, tone }: UseSocialMediaAIProps = {})
         throw new Error('No output received from AI');
       }
 
-      // Log successful usage
-      await logToolUsage({
-        toolName: 'Social Media Automation',
-        toolCategory: 'Marketing & Content',
-        inputText: topic.trim(),
-        outputText: response.output,
-        prompt: topic.trim(),
-      });
-
       return response.output;
 
     } catch (error) {
       console.error('Social Media AI Error:', error);
       
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-      
-      // Log failed usage
-      await logToolUsage({
-        toolName: 'Social Media Automation',
-        toolCategory: 'Marketing & Content',
-        inputText: topic.trim(),
-        error: errorMessage,
-      });
       
       toast({
         title: "AI Processing Failed",

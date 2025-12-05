@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { logToolUsage } from '@/hooks/useToolUsageLogger';
 
 interface UseEmailGeneratorAIProps {
   tone?: string;
@@ -52,29 +51,12 @@ export function useEmailGeneratorAI({ tone, purpose }: UseEmailGeneratorAIProps 
         throw new Error('No output received from AI');
       }
 
-      // Log successful usage
-      await logToolUsage({
-        toolName: 'Email Generator',
-        toolCategory: 'Marketing & Content',
-        inputText: context.trim(),
-        outputText: response.output,
-        prompt: context.trim(),
-      });
-
       return response.output;
 
     } catch (error) {
       console.error('Email Generator AI Error:', error);
       
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-      
-      // Log failed usage
-      await logToolUsage({
-        toolName: 'Email Generator',
-        toolCategory: 'Marketing & Content',
-        inputText: context.trim(),
-        error: errorMessage,
-      });
       
       toast({
         title: "AI Processing Failed",

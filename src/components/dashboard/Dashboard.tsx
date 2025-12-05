@@ -6,7 +6,6 @@ import { Badge } from "@/components/ui/badge";
 import { AIToolCard } from "./AIToolCard";
 import { AIHelpAgent } from "@/components/help/AIHelpAgent";
 import { AutomationDashboard } from "@/components/automation/AutomationDashboard";
-import { UsageLogs } from "./UsageLogs";
 import { useNavigate } from "react-router-dom";
 import { 
   Search,
@@ -24,8 +23,7 @@ import {
   Zap,
   LogOut,
   Bot,
-  Plug,
-  ScrollText
+  Plug
 } from "lucide-react";
 import logo from "@/assets/ai-nexus-logo.png";
 
@@ -248,7 +246,7 @@ export function Dashboard({ userEmail, onLogout }: DashboardProps) {
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [selectedTool, setSelectedTool] = useState<typeof aiTools[0] | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<"tools" | "automation" | "logs">("tools");
+  const [activeTab, setActiveTab] = useState<"tools" | "automation">("tools");
 
   const handleToolClick = (tool: typeof aiTools[0]) => {
     setSelectedTool(tool);
@@ -305,15 +303,6 @@ export function Dashboard({ userEmail, onLogout }: DashboardProps) {
                 >
                   <Bot size={16} />
                   Automation
-                </Button>
-                <Button
-                  variant={activeTab === "logs" ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setActiveTab("logs")}
-                  className="gap-2"
-                >
-                  <ScrollText size={16} />
-                  Usage Logs
                 </Button>
                 <Button
                   variant="outline"
@@ -422,10 +411,6 @@ export function Dashboard({ userEmail, onLogout }: DashboardProps) {
 
         {activeTab === "automation" && (
           <AutomationDashboard />
-        )}
-
-        {activeTab === "logs" && (
-          <UsageLogs />
         )}
 
         {/* AI Tool Modal */}
