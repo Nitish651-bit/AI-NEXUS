@@ -6,10 +6,17 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+const imageSchema = z.object({
+  url: z.string(),
+  mimeType: z.string().optional()
+});
+
 const inputSchema = z.object({
-  topic: z.string().trim().min(1, "Topic cannot be empty").max(1000, "Topic must be less than 1000 characters"),
+  topic: z.string().trim().min(1, "Topic cannot be empty").max(5000, "Topic must be less than 5000 characters"),
   platform: z.enum(["Twitter", "LinkedIn", "Facebook", "Instagram"]).optional(),
-  tone: z.enum(["Professional", "Casual", "Formal", "Humorous", "Inspirational"]).optional()
+  tone: z.enum(["Professional", "Casual", "Formal", "Humorous", "Inspirational"]).optional(),
+  images: z.array(imageSchema).max(5).optional(),
+  enableWebSearch: z.boolean().optional()
 });
 
 serve(async (req) => {
@@ -19,16 +26,22 @@ serve(async (req) => {
 
   try {
     const body = await req.json();
-    const { topic, platform, tone } = inputSchema.parse(body);
+    const { topic, platform, tone, images, enableWebSearch } = inputSchema.parse(body);
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
-    console.log("Generating social media content:", { topicLength: topic.length, platform, tone });
+    console.log("Generating social media content:", { 
+      topicLength: topic.length, 
+      platform, 
+      tone, 
+      imageCount: images?.length || 0,
+      enableWebSearch 
+    });
 
-    const systemPrompt = `You are a professional social media content creator. Generate engaging, platform-optimized content.
+    const systemPrompt = `You are a professional social media content creator with access to real-time information. Generate engaging, platform-optimized content.
 Platform: ${platform || 'Twitter'}
 Tone: ${tone || 'Professional'}
 
@@ -37,7 +50,38 @@ Create compelling social media posts that:
 - Include relevant hashtags
 - Are optimized for the platform
 - Match the specified tone
-- Encourage engagement`;
+- Encourage engagement
+${enableWebSearch ? '- Use real-time, up-to-date information from the web when relevant' : ''}
+${images?.length ? '- Reference and describe the uploaded images in the content' : ''}`;
+
+    // Build user content - can be text only or multimodal with images
+    let userContent: any;
+    if (images && images.length > 0) {
+      userContent = [
+        { type: "text", text: `Create 3 social media posts about: ${topic}` }
+      ];
+      for (const img of images) {
+        userContent.push({
+          type: "image_url",
+          image_url: { url: img.url }
+        });
+      }
+    } else {
+      userContent = `Create 3 social media posts about: ${topic}`;
+    }
+
+    const requestBody: any = {
+      model: "google/gemini-2.5-flash",
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userContent }
+      ],
+    };
+
+    // Enable web search via tools if requested
+    if (enableWebSearch) {
+      requestBody.tools = [{ type: "web_search_preview" }];
+    }
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -45,13 +89,7 @@ Create compelling social media posts that:
         Authorization: `Bearer ${LOVABLE_API_KEY}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: `Create 3 social media posts about: ${topic}` }
-        ],
-      }),
+      body: JSON.stringify(requestBody),
     });
 
     if (!response.ok) {
