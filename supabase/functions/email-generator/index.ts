@@ -3,8 +3,27 @@ import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-api-key",
 };
+
+// Validate API key for external automation tools
+function validateApiKey(req: Request): boolean {
+  const apiKey = req.headers.get("x-api-key");
+  const WORKFLOW_API_KEY = Deno.env.get("WORKFLOW_API_KEY");
+  
+  // If WORKFLOW_API_KEY is set, require it for non-authenticated requests
+  if (WORKFLOW_API_KEY && apiKey) {
+    return apiKey === WORKFLOW_API_KEY;
+  }
+  
+  // Check for Supabase auth header (JWT from frontend)
+  const authHeader = req.headers.get("authorization");
+  if (authHeader && authHeader.startsWith("Bearer ")) {
+    return true; // Let Supabase handle JWT validation
+  }
+  
+  return false;
+}
 
 const imageSchema = z.object({
   url: z.string(),
@@ -22,6 +41,15 @@ const inputSchema = z.object({
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
+  }
+
+  // Validate authentication
+  if (!validateApiKey(req)) {
+    console.error("Unauthorized request - missing or invalid API key/JWT");
+    return new Response(
+      JSON.stringify({ success: false, error: "Unauthorized - valid API key or authentication required" }),
+      { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
   }
 
   try {
