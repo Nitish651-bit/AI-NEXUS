@@ -6,8 +6,18 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// Google Cloud TTS voices mapping (similar to OpenAI voices)
+const voiceMapping: Record<string, { name: string; ssmlGender: string }> = {
+  alloy: { name: "en-US-Neural2-C", ssmlGender: "FEMALE" },
+  echo: { name: "en-US-Neural2-D", ssmlGender: "MALE" },
+  fable: { name: "en-GB-Neural2-B", ssmlGender: "MALE" },
+  onyx: { name: "en-US-Neural2-J", ssmlGender: "MALE" },
+  nova: { name: "en-US-Neural2-F", ssmlGender: "FEMALE" },
+  shimmer: { name: "en-US-Neural2-G", ssmlGender: "FEMALE" },
+};
+
 const inputSchema = z.object({
-  text: z.string().trim().min(1, "Text cannot be empty").max(4000, "Text must be less than 4000 characters"),
+  text: z.string().trim().min(1, "Text cannot be empty").max(5000, "Text must be less than 5000 characters"),
   voice: z.enum(["alloy", "echo", "fable", "onyx", "nova", "shimmer"]).optional()
 });
 
@@ -20,37 +30,46 @@ serve(async (req) => {
     const body = await req.json();
     const { text, voice } = inputSchema.parse(body);
 
-    const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
-    if (!OPENAI_API_KEY) {
-      throw new Error("OPENAI_API_KEY is not configured");
+    const GOOGLE_API_KEY = Deno.env.get("GOOGLE_API_KEY");
+    if (!GOOGLE_API_KEY) {
+      throw new Error("GOOGLE_API_KEY is not configured");
     }
 
-    console.log("Generating speech, text length:", text.length);
+    const selectedVoice = voiceMapping[voice || "alloy"];
+    console.log("Generating speech with Google TTS, text length:", text.length, "voice:", selectedVoice.name);
 
-    const response = await fetch("https://api.openai.com/v1/audio/speech", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${OPENAI_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "tts-1",
-        input: text,
-        voice: voice || "alloy",
-        response_format: "mp3",
-      }),
-    });
+    const response = await fetch(
+      `https://texttospeech.googleapis.com/v1/text:synthesize?key=${GOOGLE_API_KEY}`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          input: { text },
+          voice: {
+            languageCode: selectedVoice.name.startsWith("en-GB") ? "en-GB" : "en-US",
+            name: selectedVoice.name,
+            ssmlGender: selectedVoice.ssmlGender,
+          },
+          audioConfig: {
+            audioEncoding: "MP3",
+            speakingRate: 1.0,
+            pitch: 0,
+          },
+        }),
+      }
+    );
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error("OpenAI TTS error:", response.status, errorText);
+      console.error("Google TTS error:", response.status, errorText);
       
-      // Handle specific error codes with user-friendly messages
       if (response.status === 429) {
         return new Response(
           JSON.stringify({ 
             success: false, 
-            error: "Rate limit exceeded. Your OpenAI API key has reached its usage limit. Please wait a moment and try again, or check your OpenAI billing at platform.openai.com.",
+            error: "Rate limit exceeded. Please wait a moment and try again.",
             errorCode: "RATE_LIMIT"
           }),
           {
@@ -60,50 +79,37 @@ serve(async (req) => {
         );
       }
       
-      if (response.status === 401) {
+      if (response.status === 403) {
         return new Response(
           JSON.stringify({ 
             success: false, 
-            error: "Invalid OpenAI API key. Please check your API key configuration.",
-            errorCode: "UNAUTHORIZED"
+            error: "Google Cloud TTS API is not enabled or API key is invalid. Please enable the Text-to-Speech API in Google Cloud Console.",
+            errorCode: "FORBIDDEN"
           }),
           {
-            status: 401,
+            status: 403,
             headers: { ...corsHeaders, "Content-Type": "application/json" },
           }
         );
       }
       
-      if (response.status === 402) {
-        return new Response(
-          JSON.stringify({ 
-            success: false, 
-            error: "OpenAI account has insufficient credits. Please add billing at platform.openai.com.",
-            errorCode: "PAYMENT_REQUIRED"
-          }),
-          {
-            status: 402,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          }
-        );
-      }
-      
-      throw new Error(`OpenAI TTS error: ${response.status}`);
+      throw new Error(`Google TTS error: ${response.status} - ${errorText}`);
     }
 
-    const arrayBuffer = await response.arrayBuffer();
-    const base64Audio = btoa(
-      String.fromCharCode(...new Uint8Array(arrayBuffer))
-    );
+    const data = await response.json();
+    
+    if (!data.audioContent) {
+      throw new Error("No audio content received from Google TTS");
+    }
 
-    console.log("Speech generated successfully");
+    console.log("Speech generated successfully with Google TTS");
 
     return new Response(
-      JSON.stringify({ success: true, audioContent: base64Audio }),
+      JSON.stringify({ success: true, audioContent: data.audioContent }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
-    console.error("Error in openai-tts function:", error);
+    console.error("Error in TTS function:", error);
     return new Response(
       JSON.stringify({ 
         success: false, 
