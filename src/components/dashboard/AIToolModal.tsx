@@ -451,7 +451,7 @@ export function AIToolModal({ isOpen, onClose, tool }: AIToolModalProps) {
                   </div>
                 </div>
                 
-                <div className="bg-card border border-holo-blue/30 rounded-lg shadow-lg">
+                <div className="bg-secondary border border-holo-blue/30 rounded-lg shadow-lg">
                   <div className="p-4 max-h-80 overflow-y-auto scrollbar-thin scrollbar-thumb-holo-blue/50 scrollbar-track-transparent hover:scrollbar-thumb-holo-blue"
                     style={{
                       scrollbarWidth: 'thin',
@@ -467,11 +467,11 @@ export function AIToolModal({ isOpen, onClose, tool }: AIToolModalProps) {
                         />
                       </div>
                     ) : outputType === 'code' ? (
-                      <pre className="text-card-foreground whitespace-pre-wrap font-mono text-sm leading-relaxed bg-muted/50 p-4 rounded-lg overflow-x-auto">
+                      <pre className="text-foreground whitespace-pre-wrap font-mono text-sm leading-relaxed bg-muted p-4 rounded-lg overflow-x-auto">
                         <code>{output}</code>
                       </pre>
                     ) : (
-                      <div className="text-card-foreground whitespace-pre-wrap text-sm leading-relaxed">
+                      <div className="text-foreground whitespace-pre-wrap text-sm leading-relaxed">
                         {output}
                       </div>
                     )}
