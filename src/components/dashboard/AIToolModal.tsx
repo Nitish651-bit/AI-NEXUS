@@ -242,7 +242,7 @@ export function AIToolModal({ isOpen, onClose, tool }: AIToolModalProps) {
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] glass-card border border-holo-blue/20">
+      <DialogContent className="max-w-4xl max-h-[90vh] glass-card border border-holo-blue/20 overflow-hidden flex flex-col">
         <DialogHeader>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -275,7 +275,7 @@ export function AIToolModal({ isOpen, onClose, tool }: AIToolModalProps) {
           </div>
         </DialogHeader>
 
-        <div className="space-y-6">
+        <div className="space-y-6 overflow-y-auto flex-1 pr-2" style={{ maxHeight: 'calc(90vh - 120px)' }}>
           <p className="text-muted-foreground">{tool.description}</p>
           
           <Separator className="bg-holo-blue/20" />
@@ -451,8 +451,8 @@ export function AIToolModal({ isOpen, onClose, tool }: AIToolModalProps) {
                   </div>
                 </div>
                 
-                <div className="bg-secondary border border-holo-blue/30 rounded-lg shadow-lg">
-                  <div className="p-4 max-h-80 overflow-y-auto scrollbar-thin scrollbar-thumb-holo-blue/50 scrollbar-track-transparent hover:scrollbar-thumb-holo-blue"
+                <div className="bg-secondary border-2 border-holo-blue/50 rounded-lg shadow-lg shadow-holo-blue/20">
+                  <div className="p-4 min-h-[120px] max-h-[300px] overflow-y-auto"
                     style={{
                       scrollbarWidth: 'thin',
                       scrollbarColor: 'hsl(var(--holo-blue) / 0.5) transparent'
@@ -471,7 +471,7 @@ export function AIToolModal({ isOpen, onClose, tool }: AIToolModalProps) {
                         <code>{output}</code>
                       </pre>
                     ) : (
-                      <div className="text-foreground whitespace-pre-wrap text-sm leading-relaxed">
+                      <div className="text-foreground whitespace-pre-wrap text-sm leading-relaxed font-medium">
                         {output}
                       </div>
                     )}
