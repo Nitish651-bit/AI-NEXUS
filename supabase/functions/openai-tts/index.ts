@@ -44,6 +44,50 @@ serve(async (req) => {
     if (!response.ok) {
       const errorText = await response.text();
       console.error("OpenAI TTS error:", response.status, errorText);
+      
+      // Handle specific error codes with user-friendly messages
+      if (response.status === 429) {
+        return new Response(
+          JSON.stringify({ 
+            success: false, 
+            error: "Rate limit exceeded. Your OpenAI API key has reached its usage limit. Please wait a moment and try again, or check your OpenAI billing at platform.openai.com.",
+            errorCode: "RATE_LIMIT"
+          }),
+          {
+            status: 429,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          }
+        );
+      }
+      
+      if (response.status === 401) {
+        return new Response(
+          JSON.stringify({ 
+            success: false, 
+            error: "Invalid OpenAI API key. Please check your API key configuration.",
+            errorCode: "UNAUTHORIZED"
+          }),
+          {
+            status: 401,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          }
+        );
+      }
+      
+      if (response.status === 402) {
+        return new Response(
+          JSON.stringify({ 
+            success: false, 
+            error: "OpenAI account has insufficient credits. Please add billing at platform.openai.com.",
+            errorCode: "PAYMENT_REQUIRED"
+          }),
+          {
+            status: 402,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          }
+        );
+      }
+      
       throw new Error(`OpenAI TTS error: ${response.status}`);
     }
 
