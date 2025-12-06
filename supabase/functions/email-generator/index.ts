@@ -6,10 +6,17 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+const imageSchema = z.object({
+  url: z.string(),
+  mimeType: z.string().optional()
+});
+
 const inputSchema = z.object({
-  context: z.string().trim().min(1, "Context cannot be empty").max(2000, "Context must be less than 2000 characters"),
+  context: z.string().trim().min(1, "Context cannot be empty").max(5000, "Context must be less than 5000 characters"),
   tone: z.enum(["Professional", "Casual", "Formal", "Friendly"]).optional(),
-  purpose: z.enum(["Response", "Request", "Follow-up", "Introduction", "Thank You"]).optional()
+  purpose: z.enum(["Response", "Request", "Follow-up", "Introduction", "Thank You"]).optional(),
+  images: z.array(imageSchema).max(5).optional(),
+  enableWebSearch: z.boolean().optional()
 });
 
 serve(async (req) => {
@@ -19,16 +26,22 @@ serve(async (req) => {
 
   try {
     const body = await req.json();
-    const { context, tone, purpose } = inputSchema.parse(body);
+    const { context, tone, purpose, images, enableWebSearch } = inputSchema.parse(body);
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
-    console.log("Generating email response:", { contextLength: context.length, tone, purpose });
+    console.log("Generating email response:", { 
+      contextLength: context.length, 
+      tone, 
+      purpose,
+      imageCount: images?.length || 0,
+      enableWebSearch 
+    });
 
-    const systemPrompt = `You are a professional email writer. Generate clear, professional, and effective email responses.
+    const systemPrompt = `You are a professional email writer with access to real-time information. Generate clear, professional, and effective email responses.
 Tone: ${tone || 'Professional'}
 Purpose: ${purpose || 'Response'}
 
@@ -37,7 +50,38 @@ Create email responses that:
 - Use appropriate professional language
 - Have a proper structure (greeting, body, closing)
 - Match the specified tone
-- Address the context effectively`;
+- Address the context effectively
+${enableWebSearch ? '- Include relevant real-time information when appropriate' : ''}
+${images?.length ? '- Reference any relevant details from the attached images' : ''}`;
+
+    // Build user content - can be text only or multimodal with images
+    let userContent: any;
+    if (images && images.length > 0) {
+      userContent = [
+        { type: "text", text: `Generate an email response for: ${context}` }
+      ];
+      for (const img of images) {
+        userContent.push({
+          type: "image_url",
+          image_url: { url: img.url }
+        });
+      }
+    } else {
+      userContent = `Generate an email response for: ${context}`;
+    }
+
+    const requestBody: any = {
+      model: "google/gemini-2.5-flash",
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userContent }
+      ],
+    };
+
+    // Enable web search via tools if requested
+    if (enableWebSearch) {
+      requestBody.tools = [{ type: "web_search_preview" }];
+    }
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -45,13 +89,7 @@ Create email responses that:
         Authorization: `Bearer ${LOVABLE_API_KEY}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: `Generate an email response for: ${context}` }
-        ],
-      }),
+      body: JSON.stringify(requestBody),
     });
 
     if (!response.ok) {

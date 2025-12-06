@@ -11,6 +11,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { 
   Sparkles, 
   Send, 
@@ -23,7 +25,8 @@ import {
   Camera,
   FileImage,
   Folder,
-  Trash2
+  Trash2,
+  Globe
 } from "lucide-react";
 
 interface AIToolModalProps {
@@ -44,6 +47,7 @@ export function AIToolModal({ isOpen, onClose, tool }: AIToolModalProps) {
   const [output, setOutput] = useState("");
   const [outputType, setOutputType] = useState<"text" | "image" | "code">("text");
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
+  const [enableWebSearch, setEnableWebSearch] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
@@ -146,12 +150,12 @@ export function AIToolModal({ isOpen, onClose, tool }: AIToolModalProps) {
       
       // Route to specific AI handlers based on tool category or title
       if (tool.category === "Marketing & Content" && tool.title.toLowerCase().includes("social")) {
-        response = await generateSocialContent(prompt);
+        response = await generateSocialContent(prompt, images.length > 0 ? images : undefined, enableWebSearch);
       } else if (tool.category === "Marketing & Content" && tool.title.toLowerCase().includes("email")) {
-        response = await generateEmail(prompt);
+        response = await generateEmail(prompt, images.length > 0 ? images : undefined, enableWebSearch);
       } else {
-        // Pass images to the AI for vision processing
-        response = await generateContent(prompt, images.length > 0 ? images : undefined);
+        // Pass images and web search preference to the AI
+        response = await generateContent(prompt, images.length > 0 ? images : undefined, enableWebSearch);
       }
       
       // Check if response contains structured data
@@ -383,6 +387,24 @@ export function AIToolModal({ isOpen, onClose, tool }: AIToolModalProps) {
                   </div>
                 </div>
               )}
+              
+              {/* Web Search Toggle */}
+              <div className="flex items-center justify-between p-3 bg-card border border-holo-blue/30 rounded-lg">
+                <div className="flex items-center gap-2">
+                  <Globe size={16} className="text-holo-blue" />
+                  <Label htmlFor="web-search" className="text-sm font-medium cursor-pointer">
+                    Enable Web Search
+                  </Label>
+                </div>
+                <Switch
+                  id="web-search"
+                  checked={enableWebSearch}
+                  onCheckedChange={setEnableWebSearch}
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Enable to access real-time information from the internet
+              </p>
               
               <Button
                 onClick={handleGenerate}

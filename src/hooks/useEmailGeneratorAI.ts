@@ -2,6 +2,11 @@ import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 
+interface ImageInput {
+  url: string;
+  mimeType?: string;
+}
+
 interface UseEmailGeneratorAIProps {
   tone?: string;
   purpose?: string;
@@ -17,9 +22,13 @@ export function useEmailGeneratorAI({ tone, purpose }: UseEmailGeneratorAIProps 
   const [isProcessing, setIsProcessing] = useState(false);
   const { toast } = useToast();
 
-  const generateEmail = async (context: string): Promise<string> => {
-    if (!context.trim()) {
-      throw new Error('Context cannot be empty');
+  const generateEmail = async (
+    context: string,
+    images?: ImageInput[],
+    enableWebSearch?: boolean
+  ): Promise<string> => {
+    if (!context.trim() && (!images || images.length === 0)) {
+      throw new Error('Context or images must be provided');
     }
 
     setIsProcessing(true);
@@ -27,13 +36,17 @@ export function useEmailGeneratorAI({ tone, purpose }: UseEmailGeneratorAIProps 
     try {
       const { data, error } = await supabase.functions.invoke('email-generator', {
         body: {
-          context: context.trim(),
+          context: context.trim() || 'Generate an email based on the attached images',
           tone: tone || 'Professional',
-          purpose: purpose || 'Response'
+          purpose: purpose || 'Response',
+          images,
+          enableWebSearch
         }
       });
 
-      console.log('Supabase response:', { data, error });
+      if (import.meta.env.DEV) {
+        console.log('Supabase response:', { data, error });
+      }
 
       if (error) {
         console.error('Supabase function error:', error);

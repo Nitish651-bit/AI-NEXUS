@@ -7,15 +7,18 @@ const corsHeaders = {
 };
 
 const imageSchema = z.object({
-  url: z.string(), // base64 data URL
+  url: z.string(),
   mimeType: z.string().optional()
 });
 
 const inputSchema = z.object({
-  message: z.string().trim().min(1, "Message cannot be empty").max(50000, "Message must be less than 50000 characters"),
+  message: z.string().trim().max(50000, "Message must be less than 50000 characters").optional(),
   toolCategory: z.string().max(100).optional(),
   toolTitle: z.string().max(100).optional(),
-  images: z.array(imageSchema).max(5).optional() // Support up to 5 images
+  images: z.array(imageSchema).max(5).optional(),
+  enableWebSearch: z.boolean().optional()
+}).refine(data => data.message || (data.images && data.images.length > 0), {
+  message: "Either message or images must be provided"
 });
 
 serve(async (req) => {
@@ -25,7 +28,7 @@ serve(async (req) => {
 
   try {
     const body = await req.json();
-    const { message, toolCategory, toolTitle, images } = inputSchema.parse(body);
+    const { message, toolCategory, toolTitle, images, enableWebSearch } = inputSchema.parse(body);
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
@@ -35,30 +38,47 @@ serve(async (req) => {
     console.log("Processing AI request:", { 
       toolCategory, 
       toolTitle, 
-      messageLength: message.length,
-      imageCount: images?.length || 0
+      messageLength: message?.length || 0,
+      imageCount: images?.length || 0,
+      enableWebSearch
     });
 
-    const systemPrompt = `You are a helpful AI assistant specializing in ${toolCategory || 'general tasks'}.
+    let systemPrompt = `You are a helpful AI assistant specializing in ${toolCategory || 'general tasks'}.
 ${toolTitle ? `Current tool: ${toolTitle}` : ''}
 Provide accurate, helpful, and concise responses based on real-world knowledge.
 When analyzing images, describe what you see in detail and answer any questions about them.`;
 
+    if (enableWebSearch) {
+      systemPrompt += "\nYou have access to web search and can provide up-to-date information about current events, facts, and real-world data.";
+    }
+
     // Build user content - can be text-only or multimodal with images
     let userContent: any;
+    const textMessage = message || "Please analyze the attached image(s)";
     
     if (images && images.length > 0) {
-      // Multimodal request with images
       userContent = [
-        { type: "text", text: message },
+        { type: "text", text: textMessage },
         ...images.map(img => ({
           type: "image_url",
           image_url: { url: img.url }
         }))
       ];
     } else {
-      // Text-only request
-      userContent = message;
+      userContent = textMessage;
+    }
+
+    const requestBody: any = {
+      model: "google/gemini-2.5-flash",
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userContent }
+      ],
+    };
+
+    // Enable web search via tools if requested
+    if (enableWebSearch) {
+      requestBody.tools = [{ type: "web_search_preview" }];
     }
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -67,13 +87,7 @@ When analyzing images, describe what you see in detail and answer any questions 
         Authorization: `Bearer ${LOVABLE_API_KEY}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userContent }
-        ],
-      }),
+      body: JSON.stringify(requestBody),
     });
 
     if (!response.ok) {

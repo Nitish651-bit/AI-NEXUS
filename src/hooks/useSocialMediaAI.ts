@@ -2,6 +2,11 @@ import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 
+interface ImageInput {
+  url: string;
+  mimeType?: string;
+}
+
 interface UseSocialMediaAIProps {
   platform?: string;
   tone?: string;
@@ -17,9 +22,13 @@ export function useSocialMediaAI({ platform, tone }: UseSocialMediaAIProps = {})
   const [isProcessing, setIsProcessing] = useState(false);
   const { toast } = useToast();
 
-  const generateContent = async (topic: string): Promise<string> => {
-    if (!topic.trim()) {
-      throw new Error('Topic cannot be empty');
+  const generateContent = async (
+    topic: string, 
+    images?: ImageInput[],
+    enableWebSearch?: boolean
+  ): Promise<string> => {
+    if (!topic.trim() && (!images || images.length === 0)) {
+      throw new Error('Topic or images must be provided');
     }
 
     setIsProcessing(true);
@@ -27,13 +36,17 @@ export function useSocialMediaAI({ platform, tone }: UseSocialMediaAIProps = {})
     try {
       const { data, error } = await supabase.functions.invoke('social-media-automation', {
         body: {
-          topic: topic.trim(),
+          topic: topic.trim() || 'Analyze the attached images and create social media posts',
           platform: platform || 'Twitter',
-          tone: tone || 'Professional'
+          tone: tone || 'Professional',
+          images,
+          enableWebSearch
         }
       });
 
-      console.log('Supabase response:', { data, error });
+      if (import.meta.env.DEV) {
+        console.log('Supabase response:', { data, error });
+      }
 
       if (error) {
         console.error('Supabase function error:', error);
