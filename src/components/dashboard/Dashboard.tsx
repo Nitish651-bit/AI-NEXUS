@@ -62,7 +62,7 @@ export function Dashboard({ userEmail, onLogout }: DashboardProps) {
                   <h1 className="text-2xl font-bold bg-gradient-primary bg-clip-text text-transparent">
                     AI Nexus
                   </h1>
-                  <p className="text-sm text-muted-foreground">150+ AI Tools & Automation</p>
+                  <p className="text-sm text-muted-foreground">{aiTools.length}+ AI Tools & Automation</p>
                 </div>
               </div>
             </div>
@@ -149,11 +149,11 @@ export function Dashboard({ userEmail, onLogout }: DashboardProps) {
         {/* Stats */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-8">
           <div className="glass-card p-6 text-center border border-holo-blue/20">
-            <h3 className="text-3xl font-bold text-holo-blue">150</h3>
+            <h3 className="text-3xl font-bold text-holo-blue">{aiTools.length}</h3>
             <p className="text-muted-foreground">AI Tools</p>
           </div>
           <div className="glass-card p-6 text-center border border-holo-blue/20">
-            <h3 className="text-3xl font-bold text-holo-blue">23</h3>
+            <h3 className="text-3xl font-bold text-holo-blue">{categories.length - 1}</h3>
             <p className="text-muted-foreground">Categories</p>
           </div>
           <div className="glass-card p-6 text-center border border-holo-blue/20">
