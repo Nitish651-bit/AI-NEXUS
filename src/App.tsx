@@ -7,6 +7,7 @@ import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import { Integrations } from "./pages/Integrations";
 import ResetPassword from "./pages/ResetPassword";
+import VideoSuite from "./pages/VideoSuite";
 
 const queryClient = new QueryClient();
 
@@ -18,6 +19,7 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Index />} />
+          <Route path="/video-suite" element={<VideoSuite />} />
           <Route path="/integrations" element={<Integrations />} />
           <Route path="/reset-password" element={<ResetPassword />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
