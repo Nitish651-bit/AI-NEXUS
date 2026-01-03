@@ -13,7 +13,8 @@ import {
   Brain, 
   LogOut,
   Bot,
-  Plug
+  Plug,
+  Film
 } from "lucide-react";
 import logo from "@/assets/ai-nexus-logo.png";
 import { aiTools, categories } from "@/data/aiToolsData";
@@ -86,6 +87,15 @@ export function Dashboard({ userEmail, onLogout }: DashboardProps) {
                 >
                   <Bot size={16} />
                   Automation
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => navigate('/video-suite')}
+                  className="gap-2 bg-gradient-to-r from-purple-500/10 to-pink-500/10 border-purple-500/30 hover:border-purple-500"
+                >
+                  <Film size={16} />
+                  Video Suite
                 </Button>
                 <Button
                   variant="outline"
