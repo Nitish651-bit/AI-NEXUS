@@ -775,12 +775,7 @@ export function VideoEditor() {
                   </div>
                 )}
                 
-                <MusicSearch 
-                  onSelectTrack={handleMusicSelect}
-                  clipCount={clips.length}
-                  totalDuration={totalDuration}
-                  appliedFilters={appliedFilters.map(f => f.name)}
-                />
+                <MusicSearch onSelectTrack={handleMusicSelect} />
               </TabsContent>
 
               <TabsContent value="export" className="p-4 m-0">
