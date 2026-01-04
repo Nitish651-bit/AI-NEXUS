@@ -5,7 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
+
 import { Progress } from "@/components/ui/progress";
 import {
   Play,
@@ -229,7 +229,7 @@ export function VideoEditor() {
   const cssFilterString = useMemo(() => combineFilters(appliedFilters), [appliedFilters]);
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div className="h-screen bg-background text-foreground overflow-y-auto overflow-x-hidden">
       {/* Top Toolbar */}
       <div className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-20">
         <div className="flex items-center justify-between px-4 py-3">
@@ -300,7 +300,7 @@ export function VideoEditor() {
         />
       </div>
 
-      <div className="flex h-[calc(100vh-60px)]">
+      <div className="flex min-h-[calc(100vh-60px)]">
         {/* Main Content Area */}
         <div className="flex-1 flex flex-col">
           {/* Video Preview */}
@@ -499,7 +499,7 @@ export function VideoEditor() {
               </TabsTrigger>
             </TabsList>
 
-            <ScrollArea className="flex-1">
+            <div className="flex-1">
               <TabsContent value="trim" className="p-4 m-0">
                 <div className="space-y-4">
                   <h3 className="font-medium">Trim & Cut</h3>
@@ -878,7 +878,7 @@ export function VideoEditor() {
                   </div>
                 </div>
               </TabsContent>
-            </ScrollArea>
+            </div>
           </Tabs>
         </div>
       </div>
