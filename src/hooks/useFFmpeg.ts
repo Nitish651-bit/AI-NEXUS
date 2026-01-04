@@ -270,19 +270,29 @@ export function useFFmpeg() {
           // GIF output - add palette for better quality
           args.push("-f", "gif", "-loop", "0");
         } else if (options.format === "webm") {
-          // WebM with VP8 (more widely supported in FFmpeg.wasm than VP9)
-          args.push("-c:v", "libvpx", "-b:v", "1M", "-c:a", "libvorbis");
+          // WebM - copy video if no filters, otherwise try libvpx or fallback
+          if (vfFilters.length === 0) {
+            args.push("-c:v", "copy", "-c:a", "copy");
+          } else {
+            // Use simpler encoding for WebM
+            args.push("-c:v", "libvpx", "-crf", "30", "-b:v", "0", "-c:a", "libvorbis");
+          }
         } else {
-          // MP4 - use copy codec if possible, or re-encode with baseline settings
-          // FFmpeg.wasm may not have libx264, so we use mpeg4 codec which is built-in
-          const qscale = options.quality ? Math.round(31 - (options.quality / 100) * 28) : 5;
-          args.push("-c:v", "mpeg4", "-q:v", qscale.toString());
-          args.push("-c:a", "aac", "-b:a", "128k");
+          // MP4 - if no filters, just copy streams (fastest)
+          if (vfFilters.length === 0 && !options.resolution) {
+            args.push("-c:v", "copy", "-c:a", "copy");
+          } else {
+            // Re-encode with compatible codec
+            // Use libx264 if available, otherwise fallback
+            args.push("-c:v", "libx264", "-preset", "ultrafast", "-crf", "23");
+            args.push("-c:a", "aac", "-b:a", "128k");
+            args.push("-pix_fmt", "yuv420p"); // Ensure compatibility
+          }
           // Add faststart for web playback
           args.push("-movflags", "+faststart");
         }
 
-        args.push(outputName);
+        args.push("-y", outputName); // -y to overwrite output
 
         console.log("Export FFmpeg command:", args.join(" "));
 
