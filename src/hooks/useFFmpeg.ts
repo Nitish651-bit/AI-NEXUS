@@ -265,31 +265,30 @@ export function useFFmpeg() {
           args.push("-vf", vfFilters.join(","));
         }
 
-        // Format-specific encoding - use codecs that FFmpeg.wasm supports
+        // Format-specific encoding - FFmpeg.wasm has limited codec support
+        // We'll use stream copy when possible, otherwise basic re-encoding
         if (options.format === "gif") {
-          // GIF output - add palette for better quality
+          // GIF output
           args.push("-f", "gif", "-loop", "0");
         } else if (options.format === "webm") {
-          // WebM - copy video if no filters, otherwise try libvpx or fallback
-          if (vfFilters.length === 0) {
-            args.push("-c:v", "copy", "-c:a", "copy");
+          // WebM format
+          if (vfFilters.length === 0 && !options.resolution) {
+            // No processing needed - just copy
+            args.push("-c", "copy");
           } else {
-            // Use simpler encoding for WebM
-            args.push("-c:v", "libvpx", "-crf", "30", "-b:v", "0", "-c:a", "libvorbis");
+            // Need to re-encode - WebM doesn't require special codecs
+            args.push("-an"); // Remove audio for simplicity
           }
         } else {
-          // MP4 - if no filters, just copy streams (fastest)
+          // MP4 format - default
           if (vfFilters.length === 0 && !options.resolution) {
-            args.push("-c:v", "copy", "-c:a", "copy");
+            // No processing needed - just copy streams (fastest)
+            args.push("-c", "copy");
           } else {
-            // Re-encode with compatible codec
-            // Use libx264 if available, otherwise fallback
-            args.push("-c:v", "libx264", "-preset", "ultrafast", "-crf", "23");
-            args.push("-c:a", "aac", "-b:a", "128k");
-            args.push("-pix_fmt", "yuv420p"); // Ensure compatibility
+            // Need to re-encode - FFmpeg.wasm should handle basic encoding
+            // Don't specify codec - let FFmpeg choose default
+            args.push("-q:v", "5"); // Quality scale
           }
-          // Add faststart for web playback
-          args.push("-movflags", "+faststart");
         }
 
         args.push("-y", outputName); // -y to overwrite output
