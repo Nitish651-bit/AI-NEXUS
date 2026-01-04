@@ -1,5 +1,5 @@
 import { useRef, useState, useEffect } from "react";
-import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { 
   Film, 
@@ -171,7 +171,6 @@ export function VideoTimeline({
               </div>
             ))}
           </div>
-          <ScrollBar orientation="horizontal" />
         </ScrollArea>
       </div>
 
@@ -355,7 +354,6 @@ export function VideoTimeline({
               )}
             </div>
           </div>
-          <ScrollBar orientation="horizontal" />
         </ScrollArea>
       </div>
     </div>
