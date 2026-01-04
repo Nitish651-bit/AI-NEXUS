@@ -75,10 +75,11 @@ All colors MUST be HSL.
     @apply border-border;
   }
 
-  body {
+  html, body {
     @apply bg-background text-foreground;
     background: linear-gradient(135deg, hsl(220 25% 6%), hsl(220 20% 8%));
     min-height: 100vh;
+    overflow-x: hidden;
   }
 
   /* Custom scrollbar with smooth styling */
