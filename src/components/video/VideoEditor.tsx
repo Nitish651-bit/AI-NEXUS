@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { Card } from "@/components/ui/card";
@@ -39,6 +39,7 @@ import { VideoTimeline } from "./VideoTimeline";
 import { toast } from "sonner";
 import { VideoFilter } from "@/data/videoFiltersData";
 import { useFFmpeg } from "@/hooks/useFFmpeg";
+import { combineFilters } from "@/utils/cssFilterConverter";
 
 interface VideoClip {
   id: string;
@@ -216,6 +217,9 @@ export function VideoEditor() {
   };
 
   const totalDuration = clips.reduce((acc, clip) => acc + (clip.endTime - clip.startTime), 0);
+  
+  // Compute CSS filter string for real-time preview
+  const cssFilterString = useMemo(() => combineFilters(appliedFilters), [appliedFilters]);
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -294,29 +298,42 @@ export function VideoEditor() {
                 <video
                   ref={videoRef}
                   src={selectedClip.url}
-                  className="max-w-full max-h-[60vh] rounded-lg shadow-2xl"
+                  className="max-w-full max-h-[60vh] rounded-lg shadow-2xl transition-[filter] duration-300"
                   style={{
-                    filter: appliedFilters.length > 0 
-                      ? "contrast(1.1) saturate(1.1)" 
-                      : "none",
+                    filter: cssFilterString,
                   }}
                   onTimeUpdate={(e) => setCurrentTime(e.currentTarget.currentTime)}
                   onEnded={() => setIsPlaying(false)}
                 />
                 
-                {/* Applied Filters Badge */}
+                {/* Applied Filters Badge with remove option */}
                 {appliedFilters.length > 0 && (
-                  <div className="absolute top-4 left-4 flex gap-2 flex-wrap">
-                    {appliedFilters.slice(0, 3).map((filter, i) => (
-                      <Badge key={i} variant="secondary" className="text-xs">
+                  <div className="absolute top-4 left-4 flex gap-2 flex-wrap max-w-[60%]">
+                    {appliedFilters.map((filter, i) => (
+                      <Badge 
+                        key={i} 
+                        variant="secondary" 
+                        className="text-xs cursor-pointer hover:bg-destructive hover:text-destructive-foreground transition-colors group"
+                        onClick={() => {
+                          setAppliedFilters(prev => prev.filter((_, idx) => idx !== i));
+                          toast.info(`Removed ${filter.name} filter`);
+                        }}
+                        title="Click to remove"
+                      >
                         {filter.name}
+                        <span className="ml-1 opacity-0 group-hover:opacity-100">×</span>
                       </Badge>
                     ))}
-                    {appliedFilters.length > 3 && (
-                      <Badge variant="secondary" className="text-xs">
-                        +{appliedFilters.length - 3} more
-                      </Badge>
-                    )}
+                  </div>
+                )}
+                
+                {/* Live preview indicator */}
+                {appliedFilters.length > 0 && (
+                  <div className="absolute bottom-4 right-4">
+                    <Badge variant="outline" className="bg-black/50 text-white border-white/30 text-xs gap-1">
+                      <Sparkles className="w-3 h-3" />
+                      Live Preview
+                    </Badge>
                   </div>
                 )}
               </div>
