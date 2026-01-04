@@ -45,7 +45,7 @@ export function Dashboard({ userEmail, onLogout }: DashboardProps) {
   });
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background overflow-x-hidden">
       {/* Header */}
       <header className="glass-card border-b border-holo-blue/20 sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-6 py-4">
