@@ -33,7 +33,9 @@ import {
   AlertCircle,
   Eye,
   EyeOff,
+  ArrowLeft,
 } from "lucide-react";
+import { Link } from "react-router-dom";
 import { AICreativeDirector } from "./AICreativeDirector";
 import { FilterLibrary } from "./FilterLibrary";
 import { MusicSearch } from "./MusicSearch";
@@ -230,6 +232,11 @@ export function VideoEditor() {
       <div className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-20">
         <div className="flex items-center justify-between px-4 py-3">
           <div className="flex items-center gap-4">
+            <Link to="/">
+              <Button variant="ghost" size="icon" title="Back to AI Nexus">
+                <ArrowLeft className="w-5 h-5" />
+              </Button>
+            </Link>
             <div className="flex items-center gap-2">
               <Film className="w-6 h-6 text-primary" />
               <h1 className="text-xl font-bold bg-gradient-to-r from-primary to-purple-500 bg-clip-text text-transparent">
