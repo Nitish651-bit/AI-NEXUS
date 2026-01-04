@@ -505,7 +505,135 @@ export function VideoEditor() {
                 <FilterLibrary onApplyFilter={handleFilterApply} />
               </TabsContent>
 
-              <TabsContent value="music" className="p-4 m-0">
+              <TabsContent value="music" className="p-4 m-0 space-y-6">
+                {/* Audio Mixer */}
+                {audioTracks.length > 0 && (
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-medium flex items-center gap-2">
+                        <Layers className="w-4 h-4" />
+                        Audio Mixer
+                      </h3>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 text-xs"
+                        onClick={() => {
+                          setAudioTracks([]);
+                          toast.info("Cleared all audio tracks");
+                        }}
+                      >
+                        Clear All
+                      </Button>
+                    </div>
+                    <div className="space-y-2">
+                      {audioTracks.map((track, i) => (
+                        <div 
+                          key={track.id} 
+                          className="p-3 rounded-lg border border-border bg-muted/30 space-y-2"
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <Music className="w-3.5 h-3.5 text-primary shrink-0" />
+                              <span className="text-xs font-medium truncate">{track.name}</span>
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-5 w-5 p-0 text-muted-foreground hover:text-destructive shrink-0"
+                              onClick={() => {
+                                setAudioTracks(prev => prev.filter((_, idx) => idx !== i));
+                                toast.info(`Removed "${track.name}"`);
+                              }}
+                            >
+                              ×
+                            </Button>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Volume2 className="w-3 h-3 text-muted-foreground shrink-0" />
+                            <Slider
+                              value={[track.volume * 100]}
+                              onValueChange={(v) => {
+                                setAudioTracks(prev => prev.map((t, idx) => 
+                                  idx === i ? { ...t, volume: v[0] / 100 } : t
+                                ));
+                              }}
+                              max={100}
+                              step={1}
+                              className="flex-1"
+                            />
+                            <span className="text-xs text-muted-foreground w-8 text-right">
+                              {Math.round(track.volume * 100)}%
+                            </span>
+                          </div>
+                          {/* Mute toggle */}
+                          <div className="flex items-center gap-2">
+                            <Button
+                              variant={track.volume === 0 ? "secondary" : "ghost"}
+                              size="sm"
+                              className="h-6 text-xs px-2"
+                              onClick={() => {
+                                setAudioTracks(prev => prev.map((t, idx) => 
+                                  idx === i ? { ...t, volume: t.volume === 0 ? 0.8 : 0 } : t
+                                ));
+                              }}
+                            >
+                              {track.volume === 0 ? "Unmute" : "Mute"}
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 text-xs px-2"
+                              onClick={() => {
+                                setAudioTracks(prev => prev.map((t, idx) => 
+                                  idx === i ? { ...t, volume: 0.8 } : t
+                                ));
+                              }}
+                            >
+                              Reset
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    
+                    {/* Master Volume */}
+                    <div className="p-3 rounded-lg border border-primary/30 bg-primary/5 space-y-2">
+                      <div className="flex items-center gap-2">
+                        <Volume2 className="w-4 h-4 text-primary" />
+                        <span className="text-xs font-medium">Master Volume</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Slider
+                          value={[isMuted ? 0 : volume * 100]}
+                          onValueChange={(v) => {
+                            const vol = v[0] / 100;
+                            setVolume(vol);
+                            setIsMuted(vol === 0);
+                            if (videoRef.current) {
+                              videoRef.current.volume = vol;
+                            }
+                          }}
+                          max={100}
+                          step={1}
+                          className="flex-1"
+                        />
+                        <span className="text-xs text-muted-foreground w-8 text-right">
+                          {isMuted ? 0 : Math.round(volume * 100)}%
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
+                {audioTracks.length === 0 && (
+                  <div className="text-center py-4 text-muted-foreground text-xs border border-dashed border-border rounded-lg">
+                    <Music className="w-6 h-6 mx-auto mb-2 opacity-50" />
+                    <p>No audio tracks added yet</p>
+                    <p className="text-[10px]">Add music from the library below</p>
+                  </div>
+                )}
+                
                 <MusicSearch onSelectTrack={handleMusicSelect} />
               </TabsContent>
 
