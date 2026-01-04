@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,7 +6,9 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 import { 
   Play, 
   Plus, 
@@ -15,7 +17,10 @@ import {
   Zap, 
   ArrowRight,
   Settings,
-  Save
+  Save,
+  Loader2,
+  CheckCircle,
+  XCircle
 } from "lucide-react";
 
 interface WorkflowStep {
@@ -24,6 +29,14 @@ interface WorkflowStep {
   toolCategory: string;
   prompt: string;
   order: number;
+}
+
+interface WorkflowResult {
+  stepId: string;
+  toolName: string;
+  output: string;
+  success: boolean;
+  error?: string;
 }
 
 interface AutomationWorkflow {
@@ -35,22 +48,29 @@ interface AutomationWorkflow {
   webhookUrl?: string;
   steps: WorkflowStep[];
   isActive: boolean;
+  lastRun?: {
+    timestamp: string;
+    results: WorkflowResult[];
+    success: boolean;
+  };
 }
 
 const aiToolOptions = [
-  { name: "ChatGPT (OpenAI)", category: "Chat & Assistants" },
-  { name: "Claude (Anthropic)", category: "Chat & Assistants" },
-  { name: "GitHub Copilot", category: "Code & Developer Tools" },
-  { name: "DALL·E (OpenAI)", category: "Design & Image Generation" },
-  { name: "Jasper.ai", category: "Marketing & Content" },
-  { name: "Grammarly", category: "Marketing & Content" },
-  { name: "Notion AI", category: "Productivity & Docs" },
+  { name: "ChatGPT (OpenAI)", category: "Chat & Assistants", description: "General-purpose AI assistant" },
+  { name: "Claude (Anthropic)", category: "Chat & Assistants", description: "Helpful, harmless, and honest AI" },
+  { name: "GitHub Copilot", category: "Code & Developer Tools", description: "Code generation and assistance" },
+  { name: "DALL·E (OpenAI)", category: "Design & Image Generation", description: "Image generation from text" },
+  { name: "Jasper.ai", category: "Marketing & Content", description: "Marketing copy and content" },
+  { name: "Grammarly", category: "Marketing & Content", description: "Grammar and writing improvement" },
+  { name: "Notion AI", category: "Productivity & Docs", description: "Document organization and summarization" },
 ];
 
 export const AutomationWorkflow = () => {
   const [workflows, setWorkflows] = useState<AutomationWorkflow[]>([]);
   const [isCreating, setIsCreating] = useState(false);
   const [editingWorkflow, setEditingWorkflow] = useState<AutomationWorkflow | null>(null);
+  const [runningWorkflowId, setRunningWorkflowId] = useState<string | null>(null);
+  const [workflowResults, setWorkflowResults] = useState<Record<string, WorkflowResult[]>>({});
   const { toast } = useToast();
 
   const [newWorkflow, setNewWorkflow] = useState<Partial<AutomationWorkflow>>({
@@ -125,28 +145,81 @@ export const AutomationWorkflow = () => {
     });
   };
 
-  const runWorkflow = async (workflow: AutomationWorkflow) => {
-    toast({
-      title: "Running Workflow",
-      description: `Starting execution of "${workflow.name}"...`,
-    });
-
-    // Simulate workflow execution
-    for (let i = 0; i < workflow.steps.length; i++) {
-      const step = workflow.steps[i];
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
+  const runWorkflow = useCallback(async (workflow: AutomationWorkflow) => {
+    if (runningWorkflowId) {
       toast({
-        title: `Step ${i + 1} Complete`,
-        description: `Executed ${step.toolName} with prompt: ${step.prompt.substring(0, 50)}...`,
+        title: "Workflow Running",
+        description: "Please wait for the current workflow to complete.",
+        variant: "destructive",
       });
+      return;
     }
 
+    setRunningWorkflowId(workflow.id);
+    
     toast({
-      title: "Workflow Complete",
-      description: `"${workflow.name}" executed successfully!`,
+      title: "Running Workflow",
+      description: `Starting execution of "${workflow.name}" with ${workflow.steps.length} step(s)...`,
     });
-  };
+
+    try {
+      const { data, error } = await supabase.functions.invoke('workflow-automation', {
+        body: {
+          workflowName: workflow.name,
+          steps: workflow.steps.map(s => ({
+            id: s.id,
+            toolName: s.toolName,
+            toolCategory: s.toolCategory,
+            prompt: s.prompt,
+            order: s.order
+          }))
+        }
+      });
+
+      if (error) {
+        throw new Error(error.message || 'Failed to execute workflow');
+      }
+
+      if (!data.success) {
+        throw new Error(data.error || 'Workflow execution failed');
+      }
+
+      // Store results
+      setWorkflowResults(prev => ({
+        ...prev,
+        [workflow.id]: data.results
+      }));
+
+      // Update workflow with last run info
+      setWorkflows(prev => prev.map(w => 
+        w.id === workflow.id 
+          ? { 
+              ...w, 
+              lastRun: { 
+                timestamp: new Date().toISOString(), 
+                results: data.results,
+                success: data.success 
+              } 
+            }
+          : w
+      ));
+
+      toast({
+        title: "Workflow Complete",
+        description: `"${workflow.name}" executed successfully! ${data.completedSteps}/${data.totalSteps} steps completed.`,
+      });
+
+    } catch (error) {
+      console.error('Workflow execution error:', error);
+      toast({
+        title: "Workflow Failed",
+        description: error instanceof Error ? error.message : 'Unknown error occurred',
+        variant: "destructive",
+      });
+    } finally {
+      setRunningWorkflowId(null);
+    }
+  }, [runningWorkflowId, toast]);
 
   const triggerZapierWebhook = async () => {
     if (!zapierWebhook) {
@@ -226,56 +299,122 @@ export const AutomationWorkflow = () => {
 
       {/* Existing Workflows */}
       <div className="grid gap-4">
-        {workflows.map((workflow) => (
-          <Card key={workflow.id}>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="flex items-center gap-2">
-                    {workflow.name}
-                    <Badge variant={workflow.isActive ? "default" : "secondary"}>
-                      {workflow.isActive ? "Active" : "Inactive"}
-                    </Badge>
-                  </CardTitle>
-                  <CardDescription>{workflow.description}</CardDescription>
-                </div>
-                <div className="flex gap-2">
-                  <Button 
-                    onClick={() => runWorkflow(workflow)}
-                    size="sm"
-                    className="gap-2"
-                  >
-                    <Play size={14} />
-                    Run
-                  </Button>
-                  <Button variant="outline" size="sm">
-                    <Settings size={14} />
-                  </Button>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Clock size={14} />
-                Trigger: {workflow.trigger}
-                <span className="mx-2">•</span>
-                {workflow.steps.length} steps
-              </div>
-              <div className="flex items-center gap-2 mt-2">
-                {workflow.steps.map((step, index) => (
-                  <div key={step.id} className="flex items-center gap-1">
-                    <Badge variant="outline" className="text-xs">
-                      {step.toolName}
-                    </Badge>
-                    {index < workflow.steps.length - 1 && (
-                      <ArrowRight size={12} className="text-muted-foreground" />
-                    )}
-                  </div>
-                ))}
-              </div>
+        {workflows.length === 0 && (
+          <Card className="border-dashed">
+            <CardContent className="flex flex-col items-center justify-center py-8 text-center">
+              <Zap size={40} className="text-muted-foreground mb-2" />
+              <p className="text-muted-foreground">No workflows yet. Create your first AI automation workflow!</p>
             </CardContent>
           </Card>
-        ))}
+        )}
+        {workflows.map((workflow) => {
+          const isRunning = runningWorkflowId === workflow.id;
+          const results = workflowResults[workflow.id] || workflow.lastRun?.results || [];
+          
+          return (
+            <Card key={workflow.id} className={isRunning ? 'border-primary/50 animate-pulse' : ''}>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="flex items-center gap-2">
+                      {workflow.name}
+                      <Badge variant={workflow.isActive ? "default" : "secondary"}>
+                        {workflow.isActive ? "Active" : "Inactive"}
+                      </Badge>
+                      {workflow.lastRun && (
+                        <Badge variant={workflow.lastRun.success ? "default" : "destructive"} className="text-xs">
+                          {workflow.lastRun.success ? <CheckCircle size={12} className="mr-1" /> : <XCircle size={12} className="mr-1" />}
+                          Last run: {new Date(workflow.lastRun.timestamp).toLocaleString()}
+                        </Badge>
+                      )}
+                    </CardTitle>
+                    <CardDescription>{workflow.description}</CardDescription>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button 
+                      onClick={() => runWorkflow(workflow)}
+                      size="sm"
+                      className="gap-2"
+                      disabled={isRunning}
+                    >
+                      {isRunning ? (
+                        <>
+                          <Loader2 size={14} className="animate-spin" />
+                          Running...
+                        </>
+                      ) : (
+                        <>
+                          <Play size={14} />
+                          Run
+                        </>
+                      )}
+                    </Button>
+                    <Button variant="outline" size="sm">
+                      <Settings size={14} />
+                    </Button>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Clock size={14} />
+                  Trigger: {workflow.trigger}
+                  <span className="mx-2">•</span>
+                  {workflow.steps.length} steps
+                </div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  {workflow.steps.map((step, index) => {
+                    const stepResult = results.find(r => r.stepId === step.id);
+                    return (
+                      <div key={step.id} className="flex items-center gap-1">
+                        <Badge 
+                          variant={stepResult?.success ? "default" : stepResult?.error ? "destructive" : "outline"} 
+                          className="text-xs flex items-center gap-1"
+                        >
+                          {stepResult?.success && <CheckCircle size={10} />}
+                          {stepResult?.error && <XCircle size={10} />}
+                          {step.toolName}
+                        </Badge>
+                        {index < workflow.steps.length - 1 && (
+                          <ArrowRight size={12} className="text-muted-foreground" />
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+                
+                {/* Show Results */}
+                {results.length > 0 && (
+                  <div className="mt-4 space-y-2">
+                    <Label className="text-sm font-medium">Results:</Label>
+                    <ScrollArea className="h-[200px] rounded-md border p-3 bg-muted/30">
+                      {results.map((result, index) => (
+                        <div key={result.stepId} className="mb-4 last:mb-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            {result.success ? (
+                              <CheckCircle size={14} className="text-green-500" />
+                            ) : (
+                              <XCircle size={14} className="text-destructive" />
+                            )}
+                            <span className="font-medium text-sm">{result.toolName}</span>
+                          </div>
+                          {result.success ? (
+                            <pre className="text-xs bg-background p-2 rounded whitespace-pre-wrap break-words max-h-[100px] overflow-y-auto">
+                              {result.output}
+                            </pre>
+                          ) : (
+                            <p className="text-xs text-destructive">{result.error}</p>
+                          )}
+                          {index < results.length - 1 && <hr className="my-2 border-border" />}
+                        </div>
+                      ))}
+                    </ScrollArea>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          );
+        })}
       </div>
 
       {/* Create Workflow Modal */}
