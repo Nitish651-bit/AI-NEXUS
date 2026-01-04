@@ -132,12 +132,10 @@ export function useFFmpeg() {
           args.push("-vf", filterString);
         }
 
-        // Output settings - use mpeg4 codec which is built into FFmpeg.wasm
+        // Output settings - minimal options for FFmpeg.wasm compatibility
         args.push(
-          "-c:v", "mpeg4",
-          "-q:v", "5",
-          "-c:a", "aac",
-          "-b:a", "128k",
+          "-b:v", "2M",
+          "-an", // Skip audio to avoid codec issues
           outputName
         );
 
@@ -264,25 +262,28 @@ export function useFFmpeg() {
           args.push("-vf", vfFilters.join(","));
         }
 
-        // Format-specific encoding - use codecs built into FFmpeg.wasm
+        // Format-specific encoding - FFmpeg.wasm esm build has very limited codecs
+        // Only basic codecs are available, so we use simple options
         if (options.format === "gif") {
-          // GIF output
+          // GIF output - always works
           args.push("-f", "gif", "-loop", "0");
         } else if (options.format === "webm") {
-          // WebM format - use built-in vp8 or copy
+          // WebM - just copy if possible, otherwise skip (limited codec support)
           if (vfFilters.length === 0 && !options.resolution) {
             args.push("-c", "copy");
           } else {
-            // Re-encode for WebM
-            args.push("-c:v", "libvpx", "-b:v", "1M", "-c:a", "libvorbis");
+            // Basic re-encode without specifying codec
+            args.push("-b:v", "1M", "-an");
           }
         } else {
-          // MP4 format - use mpeg4 codec (built into FFmpeg.wasm)
+          // MP4 format
           if (vfFilters.length === 0 && !options.resolution) {
+            // No processing - just copy
             args.push("-c", "copy");
           } else {
-            // Use mpeg4 codec which is always available
-            args.push("-c:v", "mpeg4", "-q:v", "5", "-c:a", "aac", "-b:a", "128k");
+            // Re-encode: don't specify codec, let FFmpeg use defaults
+            // Remove audio to avoid codec issues
+            args.push("-b:v", "2M", "-an");
           }
         }
 
