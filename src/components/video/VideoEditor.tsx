@@ -6,6 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Progress } from "@/components/ui/progress";
 import {
   Play,
   Pause,
@@ -27,6 +28,9 @@ import {
   ZoomIn,
   ZoomOut,
   Search,
+  Loader2,
+  CheckCircle,
+  AlertCircle,
 } from "lucide-react";
 import { AICreativeDirector } from "./AICreativeDirector";
 import { FilterLibrary } from "./FilterLibrary";
@@ -34,6 +38,7 @@ import { MusicSearch } from "./MusicSearch";
 import { VideoTimeline } from "./VideoTimeline";
 import { toast } from "sonner";
 import { VideoFilter } from "@/data/videoFiltersData";
+import { useFFmpeg } from "@/hooks/useFFmpeg";
 
 interface VideoClip {
   id: string;
@@ -64,10 +69,27 @@ export function VideoEditor() {
   const [zoom, setZoom] = useState(1);
   const [activeTab, setActiveTab] = useState<"trim" | "filters" | "music" | "export">("trim");
   const [appliedFilters, setAppliedFilters] = useState<VideoFilter[]>([]);
-  const [isProcessing, setIsProcessing] = useState(false);
+  const [exportResolution, setExportResolution] = useState("1080p");
+  const [exportFormat, setExportFormat] = useState("mp4");
+  const [exportQuality, setExportQuality] = useState(80);
   
   const videoRef = useRef<HTMLVideoElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  const { 
+    isLoaded: ffmpegLoaded, 
+    isLoading: ffmpegLoading, 
+    isProcessing, 
+    progress, 
+    error: ffmpegError, 
+    load: loadFFmpeg, 
+    exportVideo 
+  } = useFFmpeg();
+
+  // Load FFmpeg on mount
+  useEffect(() => {
+    loadFFmpeg();
+  }, [loadFFmpeg]);
 
   const handleFileUpload = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
@@ -153,14 +175,38 @@ export function VideoEditor() {
       toast.error("No video clips to export");
       return;
     }
-    setIsProcessing(true);
-    toast.info("Preparing your video... This may take a moment.");
     
-    // Simulate processing - in real implementation, this would use FFmpeg.wasm
-    setTimeout(() => {
-      setIsProcessing(false);
+    if (!ffmpegLoaded) {
+      toast.error("FFmpeg is still loading. Please wait...");
+      return;
+    }
+
+    const clip = selectedClip || clips[0];
+    toast.info("Processing your video with FFmpeg... This may take a moment.");
+    
+    const blob = await exportVideo(clip.file, appliedFilters, {
+      trimStart: clip.startTime,
+      trimEnd: clip.endTime,
+      resolution: exportResolution,
+      format: exportFormat,
+      quality: exportQuality,
+    });
+
+    if (blob) {
+      // Create download link
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `edited_video.${exportFormat === "webm" ? "webm" : exportFormat === "gif" ? "gif" : "mp4"}`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      
       toast.success("Video exported successfully! 🎬");
-    }, 3000);
+    } else if (ffmpegError) {
+      toast.error(`Export failed: ${ffmpegError}`);
+    }
   };
 
   const formatTime = (seconds: number): string => {
@@ -206,11 +252,25 @@ export function VideoEditor() {
             </Button>
             <Button
               onClick={handleExport}
-              disabled={clips.length === 0 || isProcessing}
+              disabled={clips.length === 0 || isProcessing || !ffmpegLoaded}
               className="gap-2 bg-gradient-to-r from-primary to-purple-500 hover:from-primary/90 hover:to-purple-500/90"
             >
-              <Download className="w-4 h-4" />
-              {isProcessing ? "Processing..." : "Export"}
+              {isProcessing ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  {progress}%
+                </>
+              ) : ffmpegLoading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Loading...
+                </>
+              ) : (
+                <>
+                  <Download className="w-4 h-4" />
+                  Export
+                </>
+              )}
             </Button>
           </div>
         </div>
@@ -434,42 +494,113 @@ export function VideoEditor() {
 
               <TabsContent value="export" className="p-4 m-0">
                 <div className="space-y-4">
-                  <h3 className="font-medium">Export Settings</h3>
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-medium">Export Settings</h3>
+                    {ffmpegLoading && (
+                      <Badge variant="secondary" className="text-xs gap-1">
+                        <Loader2 className="w-3 h-3 animate-spin" />
+                        Loading FFmpeg...
+                      </Badge>
+                    )}
+                    {ffmpegLoaded && !ffmpegLoading && (
+                      <Badge variant="default" className="text-xs gap-1 bg-green-600">
+                        <CheckCircle className="w-3 h-3" />
+                        Ready
+                      </Badge>
+                    )}
+                  </div>
+                  
                   <div className="space-y-3">
                     <div className="space-y-2">
                       <label className="text-sm text-muted-foreground">Resolution</label>
-                      <select className="w-full px-3 py-2 rounded-md border border-input bg-background text-sm">
-                        <option>1080p (1920x1080)</option>
-                        <option>720p (1280x720)</option>
-                        <option>4K (3840x2160)</option>
-                        <option>480p (854x480)</option>
+                      <select 
+                        value={exportResolution}
+                        onChange={(e) => setExportResolution(e.target.value)}
+                        className="w-full px-3 py-2 rounded-md border border-input bg-background text-sm"
+                      >
+                        <option value="1080p">1080p (1920x1080)</option>
+                        <option value="720p">720p (1280x720)</option>
+                        <option value="4k">4K (3840x2160)</option>
+                        <option value="480p">480p (854x480)</option>
                       </select>
                     </div>
                     <div className="space-y-2">
                       <label className="text-sm text-muted-foreground">Format</label>
-                      <select className="w-full px-3 py-2 rounded-md border border-input bg-background text-sm">
-                        <option>MP4 (H.264)</option>
-                        <option>WebM (VP9)</option>
-                        <option>MOV (ProRes)</option>
-                        <option>GIF</option>
+                      <select 
+                        value={exportFormat}
+                        onChange={(e) => setExportFormat(e.target.value)}
+                        className="w-full px-3 py-2 rounded-md border border-input bg-background text-sm"
+                      >
+                        <option value="mp4">MP4 (H.264)</option>
+                        <option value="webm">WebM (VP9)</option>
+                        <option value="gif">GIF</option>
                       </select>
                     </div>
                     <div className="space-y-2">
-                      <label className="text-sm text-muted-foreground">Quality</label>
-                      <Slider defaultValue={[80]} max={100} step={1} />
+                      <label className="text-sm text-muted-foreground">Quality: {exportQuality}%</label>
+                      <Slider 
+                        value={[exportQuality]} 
+                        onValueChange={(v) => setExportQuality(v[0])}
+                        max={100} 
+                        step={1} 
+                      />
                       <div className="flex justify-between text-xs text-muted-foreground">
                         <span>Low</span>
                         <span>High</span>
                       </div>
                     </div>
+                    
+                    {/* Progress bar during processing */}
+                    {isProcessing && (
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-muted-foreground">Processing...</span>
+                          <span className="font-medium">{progress}%</span>
+                        </div>
+                        <Progress value={progress} className="h-2" />
+                      </div>
+                    )}
+                    
+                    {/* Applied filters summary */}
+                    {appliedFilters.length > 0 && (
+                      <div className="space-y-2">
+                        <label className="text-sm text-muted-foreground">
+                          Applied Filters ({appliedFilters.length})
+                        </label>
+                        <div className="flex flex-wrap gap-1">
+                          {appliedFilters.map((filter, i) => (
+                            <Badge key={i} variant="outline" className="text-xs">
+                              {filter.name}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    
                     <Button 
                       onClick={handleExport} 
-                      disabled={clips.length === 0 || isProcessing}
+                      disabled={clips.length === 0 || isProcessing || !ffmpegLoaded}
                       className="w-full gap-2"
                     >
-                      <Download className="w-4 h-4" />
-                      {isProcessing ? "Processing..." : "Export Video"}
+                      {isProcessing ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          Processing... {progress}%
+                        </>
+                      ) : (
+                        <>
+                          <Download className="w-4 h-4" />
+                          Export Video
+                        </>
+                      )}
                     </Button>
+                    
+                    {ffmpegError && (
+                      <div className="flex items-center gap-2 text-sm text-destructive">
+                        <AlertCircle className="w-4 h-4" />
+                        {ffmpegError}
+                      </div>
+                    )}
                   </div>
                 </div>
               </TabsContent>
