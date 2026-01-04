@@ -132,11 +132,10 @@ export function useFFmpeg() {
           args.push("-vf", filterString);
         }
 
-        // Output settings
+        // Output settings - use mpeg4 codec which is built into FFmpeg.wasm
         args.push(
-          "-c:v", "libx264",
-          "-preset", "fast",
-          "-crf", "23",
+          "-c:v", "mpeg4",
+          "-q:v", "5",
           "-c:a", "aac",
           "-b:a", "128k",
           outputName
@@ -265,29 +264,25 @@ export function useFFmpeg() {
           args.push("-vf", vfFilters.join(","));
         }
 
-        // Format-specific encoding - FFmpeg.wasm has limited codec support
-        // We'll use stream copy when possible, otherwise basic re-encoding
+        // Format-specific encoding - use codecs built into FFmpeg.wasm
         if (options.format === "gif") {
           // GIF output
           args.push("-f", "gif", "-loop", "0");
         } else if (options.format === "webm") {
-          // WebM format
+          // WebM format - use built-in vp8 or copy
           if (vfFilters.length === 0 && !options.resolution) {
-            // No processing needed - just copy
             args.push("-c", "copy");
           } else {
-            // Need to re-encode - WebM doesn't require special codecs
-            args.push("-an"); // Remove audio for simplicity
+            // Re-encode for WebM
+            args.push("-c:v", "libvpx", "-b:v", "1M", "-c:a", "libvorbis");
           }
         } else {
-          // MP4 format - default
+          // MP4 format - use mpeg4 codec (built into FFmpeg.wasm)
           if (vfFilters.length === 0 && !options.resolution) {
-            // No processing needed - just copy streams (fastest)
             args.push("-c", "copy");
           } else {
-            // Need to re-encode - FFmpeg.wasm should handle basic encoding
-            // Don't specify codec - let FFmpeg choose default
-            args.push("-q:v", "5"); // Quality scale
+            // Use mpeg4 codec which is always available
+            args.push("-c:v", "mpeg4", "-q:v", "5", "-c:a", "aac", "-b:a", "128k");
           }
         }
 
