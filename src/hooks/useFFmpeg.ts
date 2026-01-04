@@ -34,8 +34,8 @@ export function useFFmpeg() {
         console.log("[FFmpeg]", message);
       });
 
-      // Load FFmpeg with full codec support (umd build includes more codecs than esm)
-      const baseURL = "https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd";
+      // Load FFmpeg with CORS-enabled URLs (ESM build for browser compatibility)
+      const baseURL = "https://unpkg.com/@ffmpeg/core@0.12.6/dist/esm";
       
       await ffmpeg.load({
         coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, "text/javascript"),
@@ -132,11 +132,10 @@ export function useFFmpeg() {
           args.push("-vf", filterString);
         }
 
-        // Output settings with audio support
+        // Output settings - copy audio stream to preserve it
         args.push(
           "-b:v", "2M",
-          "-c:a", "aac",
-          "-b:a", "128k",
+          "-c:a", "copy",
           outputName
         );
 
@@ -263,23 +262,25 @@ export function useFFmpeg() {
           args.push("-vf", vfFilters.join(","));
         }
 
-        // Format-specific encoding with audio support (umd build includes more codecs)
+        // Format-specific encoding - copy audio to preserve it when possible
         if (options.format === "gif") {
           // GIF output - no audio
           args.push("-f", "gif", "-loop", "0");
         } else if (options.format === "webm") {
-          // WebM with VP8 video and Vorbis audio
+          // WebM format
           if (vfFilters.length === 0 && !options.resolution) {
             args.push("-c", "copy");
           } else {
-            args.push("-c:v", "libvpx", "-b:v", "1M", "-c:a", "libvorbis", "-b:a", "128k");
+            // Re-encode video, copy audio
+            args.push("-b:v", "1M", "-c:a", "copy");
           }
         } else {
-          // MP4 format with AAC audio
+          // MP4 format
           if (vfFilters.length === 0 && !options.resolution) {
             args.push("-c", "copy");
           } else {
-            args.push("-c:v", "mpeg4", "-q:v", "5", "-c:a", "aac", "-b:a", "128k");
+            // Re-encode video with mpeg4, copy audio stream
+            args.push("-c:v", "mpeg4", "-q:v", "5", "-c:a", "copy");
           }
         }
 
