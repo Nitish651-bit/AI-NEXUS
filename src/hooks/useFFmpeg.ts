@@ -132,10 +132,10 @@ export function useFFmpeg() {
           args.push("-vf", filterString);
         }
 
-        // Output settings - copy audio stream to preserve it
+        // Output settings - skip audio for FFmpeg.wasm compatibility
         args.push(
           "-b:v", "2M",
-          "-c:a", "copy",
+          "-an",
           outputName
         );
 
@@ -262,7 +262,9 @@ export function useFFmpeg() {
           args.push("-vf", vfFilters.join(","));
         }
 
-        // Format-specific encoding - copy audio to preserve it when possible
+        // Format-specific encoding
+        // Note: FFmpeg.wasm ESM build has limited codec support
+        // We skip audio (-an) to ensure reliable exports
         if (options.format === "gif") {
           // GIF output - no audio
           args.push("-f", "gif", "-loop", "0");
@@ -271,16 +273,16 @@ export function useFFmpeg() {
           if (vfFilters.length === 0 && !options.resolution) {
             args.push("-c", "copy");
           } else {
-            // Re-encode video, copy audio
-            args.push("-b:v", "1M", "-c:a", "copy");
+            // Re-encode video, skip audio for compatibility
+            args.push("-b:v", "1M", "-an");
           }
         } else {
           // MP4 format
           if (vfFilters.length === 0 && !options.resolution) {
             args.push("-c", "copy");
           } else {
-            // Re-encode video with mpeg4, copy audio stream
-            args.push("-c:v", "mpeg4", "-q:v", "5", "-c:a", "copy");
+            // Re-encode video with mpeg4, skip audio for compatibility
+            args.push("-c:v", "mpeg4", "-q:v", "5", "-an");
           }
         }
 
