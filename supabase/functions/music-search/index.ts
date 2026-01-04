@@ -5,15 +5,15 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-interface JamendoTrack {
-  id: string;
-  name: string;
-  artist_name: string;
+interface PixabayTrack {
+  id: number;
+  title: string;
+  description: string;
   duration: number;
-  audio: string;
-  audiodownload: string;
-  image: string;
-  album_name: string;
+  audio_url: string;
+  user: string;
+  user_id: number;
+  tags: string;
 }
 
 serve(async (req) => {
@@ -24,39 +24,41 @@ serve(async (req) => {
   try {
     const { query, category, page = 1, limit = 50 } = await req.json();
     
-    // Jamendo API - Free royalty-free music with 600,000+ tracks
-    // Using client_id for public access (no API key needed for basic access)
-    const clientId = "b6747d04";
+    const apiKey = Deno.env.get("PIXABAY_API_KEY");
+    if (!apiKey) {
+      throw new Error("PIXABAY_API_KEY is not configured");
+    }
     
-    let url = `https://api.jamendo.com/v3.0/tracks/?client_id=${clientId}&format=json&limit=${limit}&offset=${(page - 1) * limit}&include=musicinfo&order=popularity_total`;
+    // Build Pixabay Music API URL
+    let url = `https://pixabay.com/api/music/?key=${apiKey}&per_page=${limit}&page=${page}`;
     
     // Add search query if provided
     if (query && query.trim()) {
-      url += `&search=${encodeURIComponent(query)}`;
+      url += `&q=${encodeURIComponent(query.trim())}`;
     }
     
-    // Map categories to Jamendo tags
-    const categoryTags: Record<string, string> = {
+    // Map categories to Pixabay genres
+    const categoryToGenre: Record<string, string> = {
       "pop": "pop",
       "rock": "rock",
-      "electronic": "electronic",
-      "hiphop": "hiphop",
+      "electronic": "beats",
+      "hiphop": "hip hop",
       "jazz": "jazz",
       "classical": "classical",
       "ambient": "ambient",
       "folk": "folk",
       "country": "country",
-      "rnb": "rnb",
+      "rnb": "r&b",
       "metal": "metal",
       "punk": "punk",
       "reggae": "reggae",
       "blues": "blues",
       "latin": "latin",
       "world": "world",
-      "soundtrack": "soundtrack",
+      "soundtrack": "cinematic",
       "cinematic": "cinematic",
-      "lofi": "lofi",
-      "chillout": "chillout",
+      "lofi": "lo-fi",
+      "chillout": "chill out",
       "dance": "dance",
       "indie": "indie",
       "acoustic": "acoustic",
@@ -66,7 +68,7 @@ serve(async (req) => {
       "romantic": "romantic",
       "happy": "happy",
       "sad": "sad",
-      "energetic": "energetic",
+      "energetic": "upbeat",
       "relaxing": "relaxing",
       "dramatic": "dramatic",
       "uplifting": "uplifting",
@@ -74,39 +76,51 @@ serve(async (req) => {
       "funky": "funky",
     };
     
-    if (category && category !== "all" && categoryTags[category.toLowerCase()]) {
-      url += `&tags=${categoryTags[category.toLowerCase()]}`;
+    // Add genre filter if category is specified
+    if (category && category !== "all") {
+      const genre = categoryToGenre[category.toLowerCase()];
+      if (genre) {
+        // Pixabay uses 'genre' parameter
+        url += `&genre=${encodeURIComponent(genre)}`;
+      }
     }
 
-    console.log("Fetching from Jamendo:", url);
+    console.log("Fetching from Pixabay Music:", url.replace(apiKey, "[REDACTED]"));
     
     const response = await fetch(url);
     
     if (!response.ok) {
-      throw new Error(`Jamendo API error: ${response.status}`);
+      const errorText = await response.text();
+      console.error("Pixabay API error:", response.status, errorText);
+      throw new Error(`Pixabay API error: ${response.status}`);
     }
     
     const data = await response.json();
     
-    // Transform Jamendo response to our format
-    const tracks = data.results.map((track: JamendoTrack) => ({
-      id: track.id,
-      name: track.name,
-      artist: track.artist_name,
-      duration: track.duration,
-      previewUrl: track.audio,
-      downloadUrl: track.audiodownload,
-      image: track.image,
-      album: track.album_name,
-      source: "Jamendo",
+    // Transform Pixabay response to our format
+    const tracks = (data.hits || []).map((track: PixabayTrack) => ({
+      id: track.id.toString(),
+      name: track.title || "Untitled Track",
+      artist: track.user || "Unknown Artist",
+      duration: track.duration || 0,
+      previewUrl: track.audio_url,
+      downloadUrl: track.audio_url,
+      image: `https://pixabay.com/static/img/public/music_placeholder.svg`,
+      album: track.tags ? track.tags.split(",")[0]?.trim() : "Pixabay Music",
+      source: "Pixabay",
+      tags: track.tags,
     }));
+    
+    const total = data.totalHits || tracks.length;
+    
+    console.log(`Found ${tracks.length} tracks from Pixabay (total: ${total})`);
     
     return new Response(
       JSON.stringify({
         tracks,
-        total: data.headers?.results_count || tracks.length,
+        total,
         page,
-        hasMore: tracks.length === limit,
+        hasMore: page * limit < total,
       }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -115,9 +129,15 @@ serve(async (req) => {
   } catch (error) {
     console.error("Music search error:", error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ 
+        error: error.message,
+        tracks: [],
+        total: 0,
+        page: 1,
+        hasMore: false 
+      }),
       {
-        status: 500,
+        status: 200, // Return 200 with empty results to avoid breaking UI
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       }
     );
