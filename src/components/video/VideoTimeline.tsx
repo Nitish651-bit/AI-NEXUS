@@ -67,6 +67,50 @@ export function VideoTimeline({
     return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
 
+  // Generate a seeded random number for consistent waveform
+  const seededRandom = (seed: number): number => {
+    const x = Math.sin(seed * 9999) * 10000;
+    return x - Math.floor(x);
+  };
+
+  // Generate waveform path for audio visualization
+  const generateWaveformPath = (duration: number, centerY: number, position: 'upper' | 'lower', trackId: string): string => {
+    const points: string[] = [];
+    const numPoints = Math.max(50, Math.floor(duration * 8));
+    const width = Math.max(100, duration * 10);
+    const seed = trackId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    
+    for (let i = 0; i <= numPoints; i++) {
+      const x = (i / numPoints) * width;
+      const randomVal = seededRandom(seed + i * 7);
+      const amplitude = (randomVal * 0.7 + 0.3) * 10;
+      const y = position === 'upper' ? centerY - amplitude : centerY + amplitude;
+      points.push(`${i === 0 ? 'M' : 'L'} ${x.toFixed(1)} ${y.toFixed(1)}`);
+    }
+    
+    return points.join(' ');
+  };
+
+  // Generate filled waveform area
+  const generateWaveformFill = (duration: number, centerY: number, trackId: string): string => {
+    const numPoints = Math.max(50, Math.floor(duration * 8));
+    const width = Math.max(100, duration * 10);
+    const seed = trackId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    
+    const upperPoints: string[] = [];
+    const lowerPoints: string[] = [];
+    
+    for (let i = 0; i <= numPoints; i++) {
+      const x = (i / numPoints) * width;
+      const randomVal = seededRandom(seed + i * 7);
+      const amplitude = (randomVal * 0.7 + 0.3) * 10;
+      upperPoints.push(`${x.toFixed(1)},${(centerY - amplitude).toFixed(1)}`);
+      lowerPoints.unshift(`${x.toFixed(1)},${(centerY + amplitude).toFixed(1)}`);
+    }
+    
+    return `M ${upperPoints.join(' L ')} L ${lowerPoints.join(' L ')} Z`;
+  };
+
   const generateTimeMarkers = () => {
     const markers = [];
     const interval = zoom > 1.5 ? 1 : zoom > 0.75 ? 5 : 10;
@@ -277,15 +321,33 @@ export function VideoTimeline({
                         </button>
                       </div>
                       
-                      {/* Waveform placeholder */}
-                      <div className="absolute inset-x-0 bottom-1 h-2 flex items-end justify-around px-1 opacity-50">
-                        {Array.from({ length: Math.min(50, Math.floor(track.duration)) }).map((_, i) => (
-                          <div
-                            key={i}
-                            className="w-0.5 bg-green-500/50"
-                            style={{ height: `${Math.random() * 100}%` }}
+                      {/* Waveform Visualization */}
+                      <div className="absolute inset-0 flex items-center px-1 overflow-hidden pointer-events-none">
+                        <svg
+                          className="w-full h-full"
+                          viewBox={`0 0 ${Math.max(100, track.duration * 10)} 24`}
+                          preserveAspectRatio="none"
+                        >
+                          {/* Upper waveform */}
+                          <path
+                            d={generateWaveformPath(track.duration, 12, 'upper', track.id)}
+                            fill="none"
+                            stroke="rgb(34 197 94 / 0.6)"
+                            strokeWidth="1"
                           />
-                        ))}
+                          {/* Lower waveform (mirrored) */}
+                          <path
+                            d={generateWaveformPath(track.duration, 12, 'lower', track.id)}
+                            fill="none"
+                            stroke="rgb(34 197 94 / 0.6)"
+                            strokeWidth="1"
+                          />
+                          {/* Filled area */}
+                          <path
+                            d={generateWaveformFill(track.duration, 12, track.id)}
+                            fill="rgb(34 197 94 / 0.15)"
+                          />
+                        </svg>
                       </div>
                     </div>
                   ))}
