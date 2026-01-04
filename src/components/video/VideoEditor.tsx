@@ -77,6 +77,7 @@ export function VideoEditor() {
   const [activeTab, setActiveTab] = useState<"trim" | "filters" | "music" | "export">("trim");
   const [appliedFilters, setAppliedFilters] = useState<VideoFilter[]>([]);
   const [showOriginal, setShowOriginal] = useState(false);
+  const [previewMode, setPreviewMode] = useState<"filtered" | "original" | "split">("filtered");
   const [exportResolution, setExportResolution] = useState("1080p");
   const [exportFormat, setExportFormat] = useState("mp4");
   const [exportQuality, setExportQuality] = useState(80);
@@ -359,48 +360,91 @@ export function VideoEditor() {
           <div className="flex-1 flex items-center justify-center bg-black/50 relative min-h-[400px]">
             {selectedClip ? (
               <div className="relative max-w-full max-h-full">
-                <video
-                  ref={videoRef}
-                  src={selectedClip.url}
-                  className="max-w-full max-h-[60vh] rounded-lg shadow-2xl transition-[filter] duration-300"
-                  style={{
-                    filter: showOriginal ? "none" : cssFilterString,
-                  }}
-                  onTimeUpdate={(e) => setCurrentTime(e.currentTarget.currentTime)}
-                  onEnded={() => setIsPlaying(false)}
-                />
+                {/* Split view mode */}
+                {previewMode === "split" && appliedFilters.length > 0 ? (
+                  <div className="relative overflow-hidden rounded-lg shadow-2xl">
+                    {/* Original video (left half) */}
+                    <video
+                      src={selectedClip.url}
+                      className="max-w-full max-h-[60vh]"
+                      style={{ clipPath: "inset(0 50% 0 0)" }}
+                      muted
+                    />
+                    {/* Filtered video (right half, positioned on top) */}
+                    <video
+                      ref={videoRef}
+                      src={selectedClip.url}
+                      className="absolute inset-0 max-w-full max-h-[60vh]"
+                      style={{
+                        filter: cssFilterString,
+                        clipPath: "inset(0 0 0 50%)",
+                      }}
+                      onTimeUpdate={(e) => setCurrentTime(e.currentTarget.currentTime)}
+                      onEnded={() => setIsPlaying(false)}
+                    />
+                    {/* Split line */}
+                    <div className="absolute inset-y-0 left-1/2 w-0.5 bg-white/80 z-10" />
+                    {/* Labels */}
+                    <div className="absolute top-4 left-4 z-10">
+                      <Badge variant="outline" className="bg-black/60 text-white border-white/30 text-xs">
+                        Original
+                      </Badge>
+                    </div>
+                    <div className="absolute top-4 right-4 z-10">
+                      <Badge variant="outline" className="bg-black/60 text-white border-white/30 text-xs">
+                        Filtered
+                      </Badge>
+                    </div>
+                  </div>
+                ) : (
+                  /* Regular single video view */
+                  <video
+                    ref={videoRef}
+                    src={selectedClip.url}
+                    className="max-w-full max-h-[60vh] rounded-lg shadow-2xl transition-[filter] duration-300"
+                    style={{
+                      filter: previewMode === "original" ? "none" : cssFilterString,
+                    }}
+                    onTimeUpdate={(e) => setCurrentTime(e.currentTarget.currentTime)}
+                    onEnded={() => setIsPlaying(false)}
+                  />
+                )}
                 
-                {/* Before/After Toggle Button */}
+                {/* Preview Mode Toggle Buttons */}
                 {appliedFilters.length > 0 && (
-                  <div className="absolute top-4 right-4 flex gap-2">
+                  <div className="absolute top-4 right-4 flex gap-1 bg-black/60 rounded-lg p-1">
                     <Button
-                      variant={showOriginal ? "default" : "secondary"}
+                      variant={previewMode === "filtered" ? "default" : "ghost"}
                       size="sm"
-                      className="gap-1.5 text-xs h-8 bg-black/60 hover:bg-black/80 border border-white/20"
-                      onMouseDown={() => setShowOriginal(true)}
-                      onMouseUp={() => setShowOriginal(false)}
-                      onMouseLeave={() => setShowOriginal(false)}
-                      onTouchStart={() => setShowOriginal(true)}
-                      onTouchEnd={() => setShowOriginal(false)}
-                      title="Hold to see original"
+                      className="h-7 text-xs gap-1"
+                      onClick={() => setPreviewMode("filtered")}
                     >
-                      {showOriginal ? (
-                        <>
-                          <EyeOff className="w-3.5 h-3.5" />
-                          Original
-                        </>
-                      ) : (
-                        <>
-                          <Eye className="w-3.5 h-3.5" />
-                          Filtered
-                        </>
-                      )}
+                      <Eye className="w-3 h-3" />
+                      Filtered
+                    </Button>
+                    <Button
+                      variant={previewMode === "split" ? "default" : "ghost"}
+                      size="sm"
+                      className="h-7 text-xs gap-1"
+                      onClick={() => setPreviewMode("split")}
+                    >
+                      <Layers className="w-3 h-3" />
+                      Split
+                    </Button>
+                    <Button
+                      variant={previewMode === "original" ? "default" : "ghost"}
+                      size="sm"
+                      className="h-7 text-xs gap-1"
+                      onClick={() => setPreviewMode("original")}
+                    >
+                      <EyeOff className="w-3 h-3" />
+                      Original
                     </Button>
                   </div>
                 )}
                 
                 {/* Applied Filters Badge with remove option */}
-                {appliedFilters.length > 0 && !showOriginal && (
+                {appliedFilters.length > 0 && previewMode !== "split" && (
                   <div className="absolute top-4 left-4 flex gap-2 flex-wrap max-w-[50%]">
                     {appliedFilters.map((filter, i) => (
                       <Badge 
@@ -420,18 +464,8 @@ export function VideoEditor() {
                   </div>
                 )}
                 
-                {/* Original indicator when showing original */}
-                {showOriginal && appliedFilters.length > 0 && (
-                  <div className="absolute top-4 left-4">
-                    <Badge variant="outline" className="bg-black/60 text-white border-white/30 text-xs gap-1">
-                      <EyeOff className="w-3 h-3" />
-                      Original (No Filters)
-                    </Badge>
-                  </div>
-                )}
-                
                 {/* Live preview indicator */}
-                {appliedFilters.length > 0 && !showOriginal && (
+                {appliedFilters.length > 0 && previewMode === "filtered" && (
                   <div className="absolute bottom-4 right-4">
                     <Badge variant="outline" className="bg-black/50 text-white border-white/30 text-xs gap-1">
                       <Sparkles className="w-3 h-3" />
