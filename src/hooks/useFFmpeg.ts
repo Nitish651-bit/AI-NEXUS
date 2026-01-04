@@ -34,8 +34,8 @@ export function useFFmpeg() {
         console.log("[FFmpeg]", message);
       });
 
-      // Load FFmpeg with CORS-enabled URLs
-      const baseURL = "https://unpkg.com/@ffmpeg/core@0.12.6/dist/esm";
+      // Load FFmpeg with full codec support (umd build includes more codecs than esm)
+      const baseURL = "https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd";
       
       await ffmpeg.load({
         coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, "text/javascript"),
@@ -132,10 +132,11 @@ export function useFFmpeg() {
           args.push("-vf", filterString);
         }
 
-        // Output settings - minimal options for FFmpeg.wasm compatibility
+        // Output settings with audio support
         args.push(
           "-b:v", "2M",
-          "-an", // Skip audio to avoid codec issues
+          "-c:a", "aac",
+          "-b:a", "128k",
           outputName
         );
 
@@ -262,28 +263,23 @@ export function useFFmpeg() {
           args.push("-vf", vfFilters.join(","));
         }
 
-        // Format-specific encoding - FFmpeg.wasm esm build has very limited codecs
-        // Only basic codecs are available, so we use simple options
+        // Format-specific encoding with audio support (umd build includes more codecs)
         if (options.format === "gif") {
-          // GIF output - always works
+          // GIF output - no audio
           args.push("-f", "gif", "-loop", "0");
         } else if (options.format === "webm") {
-          // WebM - just copy if possible, otherwise skip (limited codec support)
+          // WebM with VP8 video and Vorbis audio
           if (vfFilters.length === 0 && !options.resolution) {
             args.push("-c", "copy");
           } else {
-            // Basic re-encode without specifying codec
-            args.push("-b:v", "1M", "-an");
+            args.push("-c:v", "libvpx", "-b:v", "1M", "-c:a", "libvorbis", "-b:a", "128k");
           }
         } else {
-          // MP4 format
+          // MP4 format with AAC audio
           if (vfFilters.length === 0 && !options.resolution) {
-            // No processing - just copy
             args.push("-c", "copy");
           } else {
-            // Re-encode: don't specify codec, let FFmpeg use defaults
-            // Remove audio to avoid codec issues
-            args.push("-b:v", "2M", "-an");
+            args.push("-c:v", "mpeg4", "-q:v", "5", "-c:a", "aac", "-b:a", "128k");
           }
         }
 
