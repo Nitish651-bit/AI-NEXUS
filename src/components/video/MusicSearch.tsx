@@ -3,6 +3,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Textarea } from "@/components/ui/textarea";
 import { 
   Search, 
   Music, 
@@ -13,7 +14,10 @@ import {
   ExternalLink,
   Loader2,
   ChevronDown,
-  X
+  X,
+  Sparkles,
+  Wand2,
+  Lightbulb
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -32,6 +36,29 @@ interface MusicTrack {
 
 interface MusicSearchProps {
   onSelectTrack: (track: { id: string; name: string; url: string; duration: number; volume: number; fadeIn: number; fadeOut: number }) => void;
+  clipCount?: number;
+  totalDuration?: number;
+  appliedFilters?: string[];
+}
+
+interface AIRecommendation {
+  searchQuery: string;
+  category: string;
+  reason: string;
+  timing: string;
+}
+
+interface AIAnalysis {
+  mood: string;
+  energy: string;
+  pace: string;
+  emotion: string;
+}
+
+interface AIResponse {
+  analysis: AIAnalysis;
+  recommendations: AIRecommendation[];
+  mixingTips: string[];
 }
 
 const CATEGORIES = [
@@ -73,7 +100,7 @@ const CATEGORIES = [
   { id: "funky", name: "Funky", icon: "🪩" },
 ];
 
-export function MusicSearch({ onSelectTrack }: MusicSearchProps) {
+export function MusicSearch({ onSelectTrack, clipCount = 0, totalDuration = 0, appliedFilters = [] }: MusicSearchProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [isLoading, setIsLoading] = useState(false);
@@ -85,17 +112,23 @@ export function MusicSearch({ onSelectTrack }: MusicSearchProps) {
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
   const [showCategories, setShowCategories] = useState(false);
   
+  // AI Recommendations
+  const [showAIPanel, setShowAIPanel] = useState(false);
+  const [videoDescription, setVideoDescription] = useState("");
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [aiResponse, setAiResponse] = useState<AIResponse | null>(null);
+  
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  const fetchTracks = useCallback(async (reset = false) => {
+  const fetchTracks = useCallback(async (reset = false, query?: string, category?: string) => {
     const currentPage = reset ? 1 : page;
     setIsLoading(true);
     
     try {
       const { data, error } = await supabase.functions.invoke("music-search", {
         body: {
-          query: searchQuery,
-          category: selectedCategory,
+          query: query ?? searchQuery,
+          category: category ?? selectedCategory,
           page: currentPage,
           limit: 50,
         },
@@ -120,7 +153,6 @@ export function MusicSearch({ onSelectTrack }: MusicSearchProps) {
     }
   }, [searchQuery, selectedCategory, page]);
 
-  // Fetch tracks on mount and when filters change
   useEffect(() => {
     fetchTracks(true);
   }, [selectedCategory]);
@@ -191,16 +223,182 @@ export function MusicSearch({ onSelectTrack }: MusicSearchProps) {
     });
   };
 
+  const handleAIAnalyze = async () => {
+    if (!videoDescription.trim() && clipCount === 0) {
+      toast.error("Please describe your video or add some clips first");
+      return;
+    }
+
+    setIsAnalyzing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("ai-music-recommend", {
+        body: {
+          videoDescription: videoDescription.trim(),
+          currentFilters: appliedFilters,
+          clipCount,
+          totalDuration,
+        },
+      });
+
+      if (error) throw error;
+
+      if (data.error) {
+        throw new Error(data.error);
+      }
+
+      setAiResponse(data);
+      toast.success("AI analysis complete! 🎵");
+    } catch (error: any) {
+      console.error("AI Analysis error:", error);
+      toast.error(error.message || "Failed to analyze video");
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+
+  const handleApplyRecommendation = (rec: AIRecommendation) => {
+    setSearchQuery(rec.searchQuery);
+    setSelectedCategory(rec.category);
+    setShowAIPanel(false);
+    fetchTracks(true, rec.searchQuery, rec.category);
+    toast.success(`Searching for "${rec.searchQuery}"...`);
+  };
+
   const selectedCategoryData = CATEGORIES.find(c => c.id === selectedCategory);
 
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <h3 className="font-medium">Music Library</h3>
-        <Badge variant="secondary" className="text-xs">
-          {totalTracks > 0 ? `${totalTracks.toLocaleString()}+ tracks` : "600,000+ tracks"}
-        </Badge>
+        <div className="flex items-center gap-2">
+          <Button
+            variant={showAIPanel ? "default" : "outline"}
+            size="sm"
+            onClick={() => setShowAIPanel(!showAIPanel)}
+            className="h-6 text-[10px] gap-1"
+          >
+            <Wand2 className="w-3 h-3" />
+            AI Recommend
+          </Button>
+          <Badge variant="secondary" className="text-[10px]">
+            {totalTracks > 0 ? `${totalTracks.toLocaleString()}+` : "600K+"}
+          </Badge>
+        </div>
       </div>
+
+      {/* AI Recommendation Panel */}
+      {showAIPanel && (
+        <div className="p-3 bg-gradient-to-br from-primary/10 to-purple-500/10 rounded-lg border border-primary/20 space-y-3">
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-primary" />
+            <span className="text-xs font-medium">AI Music Advisor</span>
+          </div>
+          
+          <Textarea
+            placeholder="Describe your video... (e.g., 'A travel vlog showing sunset beaches in Bali with slow-motion waves')"
+            value={videoDescription}
+            onChange={(e) => setVideoDescription(e.target.value)}
+            className="text-xs min-h-[60px] resize-none"
+          />
+          
+          <div className="flex items-center justify-between text-[10px] text-muted-foreground">
+            <span>
+              {clipCount > 0 && `${clipCount} clips • `}
+              {totalDuration > 0 && `${Math.round(totalDuration)}s • `}
+              {appliedFilters.length > 0 && `${appliedFilters.length} filters`}
+            </span>
+            <Button
+              size="sm"
+              onClick={handleAIAnalyze}
+              disabled={isAnalyzing}
+              className="h-7 text-xs gap-1"
+            >
+              {isAnalyzing ? (
+                <>
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                  Analyzing...
+                </>
+              ) : (
+                <>
+                  <Wand2 className="w-3 h-3" />
+                  Get Recommendations
+                </>
+              )}
+            </Button>
+          </div>
+
+          {/* AI Response */}
+          {aiResponse && (
+            <div className="space-y-3 pt-2 border-t border-border/50">
+              {/* Analysis */}
+              <div className="grid grid-cols-4 gap-1">
+                <div className="text-center p-1.5 bg-background/50 rounded">
+                  <p className="text-[9px] text-muted-foreground">Mood</p>
+                  <p className="text-[10px] font-medium capitalize">{aiResponse.analysis.mood}</p>
+                </div>
+                <div className="text-center p-1.5 bg-background/50 rounded">
+                  <p className="text-[9px] text-muted-foreground">Energy</p>
+                  <p className="text-[10px] font-medium capitalize">{aiResponse.analysis.energy}</p>
+                </div>
+                <div className="text-center p-1.5 bg-background/50 rounded">
+                  <p className="text-[9px] text-muted-foreground">Pace</p>
+                  <p className="text-[10px] font-medium capitalize">{aiResponse.analysis.pace}</p>
+                </div>
+                <div className="text-center p-1.5 bg-background/50 rounded">
+                  <p className="text-[9px] text-muted-foreground">Emotion</p>
+                  <p className="text-[10px] font-medium capitalize">{aiResponse.analysis.emotion}</p>
+                </div>
+              </div>
+
+              {/* Recommendations */}
+              <div className="space-y-2">
+                <p className="text-[10px] font-medium flex items-center gap-1">
+                  <Music className="w-3 h-3" />
+                  Recommended Tracks
+                </p>
+                {aiResponse.recommendations.map((rec, i) => (
+                  <div
+                    key={i}
+                    className="p-2 bg-background/50 rounded-lg hover:bg-background/80 transition-colors cursor-pointer group"
+                    onClick={() => handleApplyRecommendation(rec)}
+                  >
+                    <div className="flex items-center justify-between">
+                      <Badge variant="outline" className="text-[9px]">
+                        {CATEGORIES.find(c => c.id === rec.category)?.icon} {rec.category}
+                      </Badge>
+                      <Button variant="ghost" size="sm" className="h-5 text-[9px] opacity-0 group-hover:opacity-100">
+                        <Search className="w-2.5 h-2.5 mr-1" />
+                        Search
+                      </Button>
+                    </div>
+                    <p className="text-[10px] font-medium mt-1">"{rec.searchQuery}"</p>
+                    <p className="text-[9px] text-muted-foreground">{rec.reason}</p>
+                    <p className="text-[9px] text-primary/80 mt-0.5">⏱ {rec.timing}</p>
+                  </div>
+                ))}
+              </div>
+
+              {/* Mixing Tips */}
+              {aiResponse.mixingTips.length > 0 && (
+                <div className="space-y-1">
+                  <p className="text-[10px] font-medium flex items-center gap-1">
+                    <Lightbulb className="w-3 h-3" />
+                    Mixing Tips
+                  </p>
+                  <ul className="space-y-0.5">
+                    {aiResponse.mixingTips.map((tip, i) => (
+                      <li key={i} className="text-[9px] text-muted-foreground flex items-start gap-1">
+                        <span className="text-primary">•</span>
+                        {tip}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Search */}
       <div className="relative">
@@ -210,13 +408,13 @@ export function MusicSearch({ onSelectTrack }: MusicSearchProps) {
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-          className="pl-9 pr-16"
+          className="pl-9 pr-16 h-8 text-xs"
         />
         <Button
           size="sm"
           onClick={handleSearch}
           disabled={isLoading}
-          className="absolute right-1 top-1/2 -translate-y-1/2 h-7 text-xs"
+          className="absolute right-1 top-1/2 -translate-y-1/2 h-6 text-[10px]"
         >
           {isLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : "Search"}
         </Button>
@@ -228,7 +426,7 @@ export function MusicSearch({ onSelectTrack }: MusicSearchProps) {
           variant="outline"
           size="sm"
           onClick={() => setShowCategories(!showCategories)}
-          className="w-full justify-between text-xs h-8"
+          className="w-full justify-between text-xs h-7"
         >
           <span className="flex items-center gap-2">
             <span>{selectedCategoryData?.icon}</span>
@@ -238,7 +436,7 @@ export function MusicSearch({ onSelectTrack }: MusicSearchProps) {
         </Button>
         
         {showCategories && (
-          <div className="grid grid-cols-3 gap-1 p-2 bg-muted/50 rounded-lg max-h-[200px] overflow-y-auto">
+          <div className="grid grid-cols-3 gap-1 p-2 bg-muted/50 rounded-lg max-h-[150px] overflow-y-auto">
             {CATEGORIES.map((category) => (
               <button
                 key={category.id}
@@ -246,7 +444,7 @@ export function MusicSearch({ onSelectTrack }: MusicSearchProps) {
                   setSelectedCategory(category.id);
                   setShowCategories(false);
                 }}
-                className={`flex items-center gap-1.5 px-2 py-1.5 rounded text-[10px] transition-colors ${
+                className={`flex items-center gap-1 px-1.5 py-1 rounded text-[9px] transition-colors ${
                   selectedCategory === category.id
                     ? "bg-primary text-primary-foreground"
                     : "hover:bg-accent"
@@ -264,22 +462,22 @@ export function MusicSearch({ onSelectTrack }: MusicSearchProps) {
       {(selectedCategory !== "all" || searchQuery) && (
         <div className="flex flex-wrap gap-1">
           {selectedCategory !== "all" && (
-            <Badge variant="secondary" className="text-[10px] gap-1">
+            <Badge variant="secondary" className="text-[9px] gap-1 h-5">
               {selectedCategoryData?.icon} {selectedCategoryData?.name}
               <X 
-                className="w-2.5 h-2.5 cursor-pointer" 
+                className="w-2 h-2 cursor-pointer" 
                 onClick={() => setSelectedCategory("all")}
               />
             </Badge>
           )}
           {searchQuery && (
-            <Badge variant="secondary" className="text-[10px] gap-1">
+            <Badge variant="secondary" className="text-[9px] gap-1 h-5">
               "{searchQuery}"
               <X 
-                className="w-2.5 h-2.5 cursor-pointer" 
+                className="w-2 h-2 cursor-pointer" 
                 onClick={() => {
                   setSearchQuery("");
-                  fetchTracks(true);
+                  fetchTracks(true, "", selectedCategory);
                 }}
               />
             </Badge>
@@ -288,15 +486,15 @@ export function MusicSearch({ onSelectTrack }: MusicSearchProps) {
       )}
 
       {/* Track List */}
-      <ScrollArea className="h-[280px]">
-        <div className="space-y-2 pr-2">
+      <ScrollArea className="h-[200px]">
+        <div className="space-y-1.5 pr-2">
           {isLoading && tracks.length === 0 ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="w-6 h-6 animate-spin text-primary" />
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="w-5 h-5 animate-spin text-primary" />
             </div>
           ) : tracks.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground text-sm">
-              <Music className="w-8 h-8 mx-auto mb-2 opacity-50" />
+            <div className="text-center py-6 text-muted-foreground text-xs">
+              <Music className="w-6 h-6 mx-auto mb-2 opacity-50" />
               <p>No tracks found. Try a different search.</p>
             </div>
           ) : (
@@ -304,72 +502,67 @@ export function MusicSearch({ onSelectTrack }: MusicSearchProps) {
               {tracks.map((track) => (
                 <div
                   key={track.id}
-                  className="flex items-center gap-2 p-2 rounded-lg border border-border bg-card hover:bg-accent/50 transition-colors group"
+                  className="flex items-center gap-2 p-1.5 rounded-lg border border-border bg-card hover:bg-accent/50 transition-colors group"
                 >
                   {/* Album Art */}
-                  <div className="relative w-10 h-10 rounded overflow-hidden bg-muted flex-shrink-0">
+                  <div className="relative w-9 h-9 rounded overflow-hidden bg-muted flex-shrink-0">
                     {track.image ? (
                       <img src={track.image} alt={track.name} className="w-full h-full object-cover" />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center">
-                        <Music className="w-4 h-4 text-muted-foreground" />
+                        <Music className="w-3 h-3 text-muted-foreground" />
                       </div>
                     )}
-                    {/* Play overlay */}
                     <button
                       onClick={() => handlePlayPause(track)}
                       className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
                     >
                       {playingTrackId === track.id ? (
-                        <Pause className="w-4 h-4 text-white" />
+                        <Pause className="w-3 h-3 text-white" />
                       ) : (
-                        <Play className="w-4 h-4 text-white" />
+                        <Play className="w-3 h-3 text-white" />
                       )}
                     </button>
                   </div>
 
                   {/* Track Info */}
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs font-medium truncate">{track.name}</p>
-                    <p className="text-[10px] text-muted-foreground truncate">{track.artist}</p>
-                    <p className="text-[10px] text-muted-foreground">{formatDuration(track.duration)}</p>
+                    <p className="text-[10px] font-medium truncate">{track.name}</p>
+                    <p className="text-[9px] text-muted-foreground truncate">{track.artist} • {formatDuration(track.duration)}</p>
                   </div>
 
                   {/* Actions */}
-                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
                     <Button 
                       variant="ghost" 
                       size="icon" 
-                      className="h-6 w-6"
+                      className="h-5 w-5"
                       onClick={() => toggleFavorite(track.id)}
                     >
-                      <Heart className={`w-3 h-3 ${favorites.has(track.id) ? 'fill-red-500 text-red-500' : ''}`} />
+                      <Heart className={`w-2.5 h-2.5 ${favorites.has(track.id) ? 'fill-red-500 text-red-500' : ''}`} />
                     </Button>
                     <Button 
                       variant="default" 
                       size="icon" 
-                      className="h-6 w-6"
+                      className="h-5 w-5"
                       onClick={() => handleAddTrack(track)}
                     >
-                      <Plus className="w-3 h-3" />
+                      <Plus className="w-2.5 h-2.5" />
                     </Button>
                   </div>
                 </div>
               ))}
               
-              {/* Load More */}
               {hasMore && (
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={loadMore}
                   disabled={isLoading}
-                  className="w-full text-xs h-8"
+                  className="w-full text-[10px] h-7"
                 >
-                  {isLoading ? (
-                    <Loader2 className="w-3 h-3 animate-spin mr-2" />
-                  ) : null}
-                  Load More Tracks
+                  {isLoading ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : null}
+                  Load More
                 </Button>
               )}
             </>
@@ -378,15 +571,15 @@ export function MusicSearch({ onSelectTrack }: MusicSearchProps) {
       </ScrollArea>
 
       {/* Attribution */}
-      <div className="flex items-center justify-between text-[10px] text-muted-foreground pt-2 border-t border-border">
-        <span>🎵 Royalty-free music from Jamendo</span>
+      <div className="flex items-center justify-between text-[9px] text-muted-foreground pt-1 border-t border-border">
+        <span>🎵 Royalty-free from Jamendo</span>
         <a 
           href="https://www.jamendo.com/start" 
           target="_blank" 
           rel="noopener noreferrer"
           className="flex items-center gap-1 hover:text-primary"
         >
-          Browse more <ExternalLink className="w-3 h-3" />
+          Browse <ExternalLink className="w-2.5 h-2.5" />
         </a>
       </div>
     </div>
