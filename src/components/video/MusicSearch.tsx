@@ -30,7 +30,7 @@ interface MusicTrack {
 }
 
 interface MusicSearchProps {
-  onSelectTrack: (track: { id: string; name: string; url: string; duration: number; volume: number }) => void;
+  onSelectTrack: (track: { id: string; name: string; url: string; duration: number; volume: number; fadeIn: number; fadeOut: number }) => void;
 }
 
 const SAMPLE_TRACKS: MusicTrack[] = [
@@ -121,6 +121,8 @@ export function MusicSearch({ onSelectTrack }: MusicSearchProps) {
       url: track.previewUrl || "",
       duration: track.duration,
       volume: 0.8,
+      fadeIn: 0,
+      fadeOut: 0,
     });
     toast.success(`Added "${track.name}" to your video! 🎶`);
   };

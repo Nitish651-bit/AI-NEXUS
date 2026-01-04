@@ -61,6 +61,8 @@ interface AudioTrack {
   url: string;
   duration: number;
   volume: number;
+  fadeIn: number;
+  fadeOut: number;
 }
 
 export function VideoEditor() {
@@ -615,6 +617,44 @@ export function VideoEditor() {
                               {Math.round(track.volume * 100)}%
                             </span>
                           </div>
+                          {/* Fade Controls */}
+                          <div className="grid grid-cols-2 gap-2 pt-1 border-t border-border/50">
+                            <div className="space-y-1">
+                              <div className="flex items-center justify-between">
+                                <span className="text-[10px] text-muted-foreground">Fade In</span>
+                                <span className="text-[10px] text-muted-foreground">{track.fadeIn}s</span>
+                              </div>
+                              <Slider
+                                value={[track.fadeIn]}
+                                onValueChange={(v) => {
+                                  setAudioTracks(prev => prev.map((t, idx) => 
+                                    idx === i ? { ...t, fadeIn: v[0] } : t
+                                  ));
+                                }}
+                                max={10}
+                                step={0.5}
+                                className="flex-1"
+                              />
+                            </div>
+                            <div className="space-y-1">
+                              <div className="flex items-center justify-between">
+                                <span className="text-[10px] text-muted-foreground">Fade Out</span>
+                                <span className="text-[10px] text-muted-foreground">{track.fadeOut}s</span>
+                              </div>
+                              <Slider
+                                value={[track.fadeOut]}
+                                onValueChange={(v) => {
+                                  setAudioTracks(prev => prev.map((t, idx) => 
+                                    idx === i ? { ...t, fadeOut: v[0] } : t
+                                  ));
+                                }}
+                                max={10}
+                                step={0.5}
+                                className="flex-1"
+                              />
+                            </div>
+                          </div>
+                          
                           {/* Mute toggle */}
                           <div className="flex items-center gap-2">
                             <Button
@@ -635,7 +675,7 @@ export function VideoEditor() {
                               className="h-6 text-xs px-2"
                               onClick={() => {
                                 setAudioTracks(prev => prev.map((t, idx) => 
-                                  idx === i ? { ...t, volume: 0.8 } : t
+                                  idx === i ? { ...t, volume: 0.8, fadeIn: 0, fadeOut: 0 } : t
                                 ));
                               }}
                             >
