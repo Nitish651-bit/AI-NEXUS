@@ -80,9 +80,11 @@ export function VideoEditor() {
   const [exportResolution, setExportResolution] = useState("1080p");
   const [exportFormat, setExportFormat] = useState("mp4");
   const [exportQuality, setExportQuality] = useState(80);
+  const [isDragging, setIsDragging] = useState(false);
   
   const videoRef = useRef<HTMLVideoElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const dropZoneRef = useRef<HTMLDivElement>(null);
   
   const { 
     isLoaded: ffmpegLoaded, 
@@ -99,10 +101,7 @@ export function VideoEditor() {
     loadFFmpeg();
   }, [loadFFmpeg]);
 
-  const handleFileUpload = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = event.target.files;
-    if (!files) return;
-
+  const addVideoFiles = useCallback((files: FileList | File[]) => {
     Array.from(files).forEach((file) => {
       if (!file.type.startsWith("video/")) {
         toast.error(`${file.name} is not a video file`);
@@ -123,13 +122,49 @@ export function VideoEditor() {
           filters: [],
         };
         setClips((prev) => [...prev, newClip]);
-        if (!selectedClip) {
-          setSelectedClip(newClip);
-        }
+        setSelectedClip((prev) => prev || newClip);
         toast.success(`Added ${file.name} to timeline`);
       };
     });
-  }, [selectedClip]);
+  }, []);
+
+  const handleFileUpload = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (!files) return;
+    addVideoFiles(files);
+  }, [addVideoFiles]);
+
+  // Drag and drop handlers
+  const handleDragEnter = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  }, []);
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    // Only set dragging to false if we're leaving the drop zone entirely
+    if (e.currentTarget === e.target) {
+      setIsDragging(false);
+    }
+  }, []);
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  }, []);
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+
+    const files = e.dataTransfer.files;
+    if (files.length > 0) {
+      addVideoFiles(files);
+    }
+  }, [addVideoFiles]);
 
   const handlePlayPause = () => {
     if (!videoRef.current) return;
@@ -229,7 +264,24 @@ export function VideoEditor() {
   const cssFilterString = useMemo(() => combineFilters(appliedFilters), [appliedFilters]);
 
   return (
-    <div className="h-screen bg-background text-foreground overflow-y-auto overflow-x-hidden">
+    <div 
+      ref={dropZoneRef}
+      className="h-screen bg-background text-foreground overflow-y-auto overflow-x-hidden relative"
+      onDragEnter={handleDragEnter}
+      onDragLeave={handleDragLeave}
+      onDragOver={handleDragOver}
+      onDrop={handleDrop}
+    >
+      {/* Drag overlay */}
+      {isDragging && (
+        <div className="absolute inset-0 z-50 bg-primary/10 backdrop-blur-sm border-2 border-dashed border-primary flex items-center justify-center pointer-events-none">
+          <div className="bg-card/90 backdrop-blur-md rounded-xl p-8 text-center shadow-2xl">
+            <Upload className="w-16 h-16 mx-auto text-primary mb-4" />
+            <h3 className="text-xl font-bold mb-2">Drop videos here</h3>
+            <p className="text-muted-foreground">Release to add to timeline</p>
+          </div>
+        </div>
+      )}
       {/* Top Toolbar */}
       <div className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-20">
         <div className="flex items-center justify-between px-4 py-3">
