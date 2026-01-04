@@ -354,7 +354,7 @@ export function VideoEditor() {
 
       <div className="flex min-h-[calc(100vh-60px)]">
         {/* Main Content Area */}
-        <div className="flex-1 flex flex-col">
+        <div className="flex-1 flex flex-col min-w-0">
           {/* Video Preview */}
           <div className="flex-1 flex items-center justify-center bg-black/50 relative min-h-[400px]">
             {selectedClip ? (
@@ -530,7 +530,7 @@ export function VideoEditor() {
         </div>
 
         {/* Right Sidebar - Editing Tools */}
-        <div className="w-80 border-l border-border bg-card/50 flex flex-col">
+        <div className="w-80 flex-shrink-0 border-l border-border bg-card/50 flex flex-col">
           <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as typeof activeTab)} className="flex-1 flex flex-col">
             <TabsList className="grid grid-cols-4 m-2">
               <TabsTrigger value="trim" className="text-xs gap-1">
