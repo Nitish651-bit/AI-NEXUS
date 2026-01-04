@@ -1,31 +1,32 @@
-import { useState } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Slider } from "@/components/ui/slider";
 import { 
   Search, 
   Music, 
   Play, 
   Pause, 
   Plus, 
-  Volume2,
   Heart,
   ExternalLink,
-  Loader2
+  Loader2,
+  ChevronDown,
+  X
 } from "lucide-react";
-import { useGeminiAI } from "@/hooks/useGeminiAI";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 interface MusicTrack {
   id: string;
   name: string;
   artist: string;
   duration: number;
-  mood: string;
-  genre: string;
   previewUrl?: string;
+  downloadUrl?: string;
+  image?: string;
+  album?: string;
   source: string;
 }
 
@@ -33,80 +34,112 @@ interface MusicSearchProps {
   onSelectTrack: (track: { id: string; name: string; url: string; duration: number; volume: number; fadeIn: number; fadeOut: number }) => void;
 }
 
-const SAMPLE_TRACKS: MusicTrack[] = [
-  { id: "1", name: "Cinematic Epic", artist: "Orchestral Dreams", duration: 180, mood: "Epic", genre: "Orchestral", source: "Pixabay" },
-  { id: "2", name: "Upbeat Energy", artist: "Electronic Vibes", duration: 145, mood: "Happy", genre: "Electronic", source: "Pixabay" },
-  { id: "3", name: "Lo-Fi Chill", artist: "Relaxation Station", duration: 210, mood: "Calm", genre: "Lo-Fi", source: "Pixabay" },
-  { id: "4", name: "Romantic Piano", artist: "Classical Touch", duration: 195, mood: "Romantic", genre: "Classical", source: "Pixabay" },
-  { id: "5", name: "Action Thriller", artist: "Tension Builders", duration: 160, mood: "Intense", genre: "Cinematic", source: "Pixabay" },
-  { id: "6", name: "Happy Acoustic", artist: "Sunny Days", duration: 175, mood: "Happy", genre: "Acoustic", source: "Pixabay" },
-  { id: "7", name: "Mysterious Ambient", artist: "Dark Atmospheres", duration: 240, mood: "Mysterious", genre: "Ambient", source: "Pixabay" },
-  { id: "8", name: "Pop Beat", artist: "Chart Toppers", duration: 185, mood: "Energetic", genre: "Pop", source: "Pixabay" },
-  { id: "9", name: "Dramatic Strings", artist: "Symphony Hall", duration: 220, mood: "Dramatic", genre: "Orchestral", source: "Pixabay" },
-  { id: "10", name: "Funky Groove", artist: "Disco Revival", duration: 155, mood: "Fun", genre: "Funk", source: "Pixabay" },
-  { id: "11", name: "Sad Piano", artist: "Emotional Keys", duration: 200, mood: "Sad", genre: "Classical", source: "Pixabay" },
-  { id: "12", name: "Corporate Inspiring", artist: "Business Beats", duration: 165, mood: "Inspiring", genre: "Corporate", source: "Pixabay" },
+const CATEGORIES = [
+  { id: "all", name: "All Music", icon: "🎵" },
+  { id: "pop", name: "Pop", icon: "🎤" },
+  { id: "rock", name: "Rock", icon: "🎸" },
+  { id: "electronic", name: "Electronic", icon: "🎛️" },
+  { id: "hiphop", name: "Hip Hop", icon: "🎧" },
+  { id: "jazz", name: "Jazz", icon: "🎷" },
+  { id: "classical", name: "Classical", icon: "🎻" },
+  { id: "ambient", name: "Ambient", icon: "🌌" },
+  { id: "folk", name: "Folk", icon: "🪕" },
+  { id: "country", name: "Country", icon: "🤠" },
+  { id: "rnb", name: "R&B", icon: "💜" },
+  { id: "metal", name: "Metal", icon: "🤘" },
+  { id: "punk", name: "Punk", icon: "⚡" },
+  { id: "reggae", name: "Reggae", icon: "🌴" },
+  { id: "blues", name: "Blues", icon: "🎺" },
+  { id: "latin", name: "Latin", icon: "💃" },
+  { id: "world", name: "World", icon: "🌍" },
+  { id: "soundtrack", name: "Soundtrack", icon: "🎬" },
+  { id: "cinematic", name: "Cinematic", icon: "🎥" },
+  { id: "lofi", name: "Lo-Fi", icon: "📻" },
+  { id: "chillout", name: "Chillout", icon: "😌" },
+  { id: "dance", name: "Dance", icon: "🕺" },
+  { id: "indie", name: "Indie", icon: "🎹" },
+  { id: "acoustic", name: "Acoustic", icon: "🪗" },
+  { id: "piano", name: "Piano", icon: "🎹" },
+  { id: "orchestral", name: "Orchestral", icon: "🎼" },
+  { id: "epic", name: "Epic", icon: "⚔️" },
+  { id: "romantic", name: "Romantic", icon: "💕" },
+  { id: "happy", name: "Happy", icon: "😊" },
+  { id: "sad", name: "Sad", icon: "😢" },
+  { id: "energetic", name: "Energetic", icon: "⚡" },
+  { id: "relaxing", name: "Relaxing", icon: "🧘" },
+  { id: "dramatic", name: "Dramatic", icon: "🎭" },
+  { id: "uplifting", name: "Uplifting", icon: "🚀" },
+  { id: "dark", name: "Dark", icon: "🌑" },
+  { id: "funky", name: "Funky", icon: "🪩" },
 ];
-
-const MOOD_OPTIONS = ["All", "Epic", "Happy", "Calm", "Romantic", "Intense", "Mysterious", "Energetic", "Dramatic", "Fun", "Sad", "Inspiring"];
-const GENRE_OPTIONS = ["All", "Orchestral", "Electronic", "Lo-Fi", "Classical", "Cinematic", "Acoustic", "Ambient", "Pop", "Funk", "Corporate"];
 
 export function MusicSearch({ onSelectTrack }: MusicSearchProps) {
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedMood, setSelectedMood] = useState("All");
-  const [selectedGenre, setSelectedGenre] = useState("All");
-  const [isSearching, setIsSearching] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState("all");
+  const [isLoading, setIsLoading] = useState(false);
   const [playingTrackId, setPlayingTrackId] = useState<string | null>(null);
-  const [tracks, setTracks] = useState<MusicTrack[]>(SAMPLE_TRACKS);
+  const [tracks, setTracks] = useState<MusicTrack[]>([]);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [totalTracks, setTotalTracks] = useState(0);
+  const [favorites, setFavorites] = useState<Set<string>>(new Set());
+  const [showCategories, setShowCategories] = useState(false);
   
-  const { generateContent, isProcessing } = useGeminiAI({
-    toolCategory: "Music",
-    toolTitle: "Music Recommendation",
-  });
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  const filteredTracks = tracks.filter((track) => {
-    const matchesSearch = track.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         track.artist.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesMood = selectedMood === "All" || track.mood === selectedMood;
-    const matchesGenre = selectedGenre === "All" || track.genre === selectedGenre;
-    return matchesSearch && matchesMood && matchesGenre;
-  });
-
-  const handleAISearch = async () => {
-    if (!searchQuery.trim()) {
-      toast.error("Please enter a search query");
-      return;
-    }
-
-    setIsSearching(true);
+  const fetchTracks = useCallback(async (reset = false) => {
+    const currentPage = reset ? 1 : page;
+    setIsLoading(true);
+    
     try {
-      const response = await generateContent(
-        `I'm editing a video and need royalty-free music. My video is about: ${searchQuery}. 
-         Suggest 5 types of music tracks that would fit perfectly. For each, provide:
-         - A descriptive track name
-         - Suggested artist style
-         - Mood (Epic, Happy, Calm, Romantic, Intense, Mysterious, Energetic, Dramatic, Fun, Sad, or Inspiring)
-         - Genre (Orchestral, Electronic, Lo-Fi, Classical, Cinematic, Acoustic, Ambient, Pop, Funk, or Corporate)
-         
-         Be creative and specific to the video content.`
-      );
+      const { data, error } = await supabase.functions.invoke("music-search", {
+        body: {
+          query: searchQuery,
+          category: selectedCategory,
+          page: currentPage,
+          limit: 50,
+        },
+      });
 
-      // Parse AI response and add suggested tracks
-      toast.success("AI found some perfect matches! 🎵");
+      if (error) throw error;
+
+      if (reset) {
+        setTracks(data.tracks);
+        setPage(1);
+      } else {
+        setTracks(prev => [...prev, ...data.tracks]);
+      }
       
-      // Add AI-suggested tracks to the list (in real app, would fetch from music API)
-      const aiTracks: MusicTrack[] = [
-        { id: `ai-${Date.now()}-1`, name: `Perfect for: ${searchQuery}`, artist: "AI Curated", duration: 180, mood: "Happy", genre: "Cinematic", source: "AI Suggestion" },
-        { id: `ai-${Date.now()}-2`, name: `${searchQuery} Theme`, artist: "AI Curated", duration: 200, mood: "Epic", genre: "Orchestral", source: "AI Suggestion" },
-      ];
-      
-      setTracks([...aiTracks, ...SAMPLE_TRACKS]);
+      setHasMore(data.hasMore);
+      setTotalTracks(data.total);
     } catch (error) {
-      toast.error("Failed to get AI suggestions");
+      console.error("Error fetching tracks:", error);
+      toast.error("Failed to load music. Please try again.");
     } finally {
-      setIsSearching(false);
+      setIsLoading(false);
+    }
+  }, [searchQuery, selectedCategory, page]);
+
+  // Fetch tracks on mount and when filters change
+  useEffect(() => {
+    fetchTracks(true);
+  }, [selectedCategory]);
+
+  const handleSearch = () => {
+    fetchTracks(true);
+  };
+
+  const loadMore = () => {
+    if (!isLoading && hasMore) {
+      setPage(prev => prev + 1);
     }
   };
+
+  useEffect(() => {
+    if (page > 1) {
+      fetchTracks(false);
+    }
+  }, [page]);
 
   const formatDuration = (seconds: number): string => {
     const mins = Math.floor(seconds / 60);
@@ -114,11 +147,30 @@ export function MusicSearch({ onSelectTrack }: MusicSearchProps) {
     return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
 
+  const handlePlayPause = (track: MusicTrack) => {
+    if (playingTrackId === track.id) {
+      audioRef.current?.pause();
+      setPlayingTrackId(null);
+    } else {
+      if (audioRef.current) {
+        audioRef.current.pause();
+      }
+      if (track.previewUrl) {
+        audioRef.current = new Audio(track.previewUrl);
+        audioRef.current.play();
+        audioRef.current.onended = () => setPlayingTrackId(null);
+        setPlayingTrackId(track.id);
+      } else {
+        toast.error("No preview available for this track");
+      }
+    }
+  };
+
   const handleAddTrack = (track: MusicTrack) => {
     onSelectTrack({
       id: track.id,
       name: `${track.name} - ${track.artist}`,
-      url: track.previewUrl || "",
+      url: track.previewUrl || track.downloadUrl || "",
       duration: track.duration,
       volume: 0.8,
       fadeIn: 0,
@@ -127,140 +179,209 @@ export function MusicSearch({ onSelectTrack }: MusicSearchProps) {
     toast.success(`Added "${track.name}" to your video! 🎶`);
   };
 
+  const toggleFavorite = (trackId: string) => {
+    setFavorites(prev => {
+      const newFavorites = new Set(prev);
+      if (newFavorites.has(trackId)) {
+        newFavorites.delete(trackId);
+      } else {
+        newFavorites.add(trackId);
+      }
+      return newFavorites;
+    });
+  };
+
+  const selectedCategoryData = CATEGORIES.find(c => c.id === selectedCategory);
+
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       <div className="flex items-center justify-between">
         <h3 className="font-medium">Music Library</h3>
         <Badge variant="secondary" className="text-xs">
-          Royalty-Free
+          {totalTracks > 0 ? `${totalTracks.toLocaleString()}+ tracks` : "600,000+ tracks"}
         </Badge>
       </div>
 
-      {/* AI Search */}
-      <div className="space-y-2">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input
-            placeholder="Describe your video for AI suggestions..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            onKeyPress={(e) => e.key === "Enter" && handleAISearch()}
-            className="pl-9 pr-20"
-          />
-          <Button
-            size="sm"
-            onClick={handleAISearch}
-            disabled={isSearching || isProcessing}
-            className="absolute right-1 top-1/2 -translate-y-1/2 h-7 text-xs"
-          >
-            {isSearching ? (
-              <Loader2 className="w-3 h-3 animate-spin" />
-            ) : (
-              "AI Find"
-            )}
-          </Button>
-        </div>
-        <p className="text-[10px] text-muted-foreground">
-          💡 Tip: Describe your video theme for AI-curated suggestions
-        </p>
+      {/* Search */}
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+        <Input
+          placeholder="Search songs, artists..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+          className="pl-9 pr-16"
+        />
+        <Button
+          size="sm"
+          onClick={handleSearch}
+          disabled={isLoading}
+          className="absolute right-1 top-1/2 -translate-y-1/2 h-7 text-xs"
+        >
+          {isLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : "Search"}
+        </Button>
       </div>
 
-      {/* Filters */}
-      <div className="grid grid-cols-2 gap-2">
-        <div className="space-y-1">
-          <label className="text-xs text-muted-foreground">Mood</label>
-          <select
-            value={selectedMood}
-            onChange={(e) => setSelectedMood(e.target.value)}
-            className="w-full px-2 py-1.5 text-xs rounded-md border border-input bg-background"
-          >
-            {MOOD_OPTIONS.map((mood) => (
-              <option key={mood} value={mood}>{mood}</option>
+      {/* Category Selector */}
+      <div className="space-y-2">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setShowCategories(!showCategories)}
+          className="w-full justify-between text-xs h-8"
+        >
+          <span className="flex items-center gap-2">
+            <span>{selectedCategoryData?.icon}</span>
+            <span>{selectedCategoryData?.name}</span>
+          </span>
+          <ChevronDown className={`w-3 h-3 transition-transform ${showCategories ? 'rotate-180' : ''}`} />
+        </Button>
+        
+        {showCategories && (
+          <div className="grid grid-cols-3 gap-1 p-2 bg-muted/50 rounded-lg max-h-[200px] overflow-y-auto">
+            {CATEGORIES.map((category) => (
+              <button
+                key={category.id}
+                onClick={() => {
+                  setSelectedCategory(category.id);
+                  setShowCategories(false);
+                }}
+                className={`flex items-center gap-1.5 px-2 py-1.5 rounded text-[10px] transition-colors ${
+                  selectedCategory === category.id
+                    ? "bg-primary text-primary-foreground"
+                    : "hover:bg-accent"
+                }`}
+              >
+                <span>{category.icon}</span>
+                <span className="truncate">{category.name}</span>
+              </button>
             ))}
-          </select>
-        </div>
-        <div className="space-y-1">
-          <label className="text-xs text-muted-foreground">Genre</label>
-          <select
-            value={selectedGenre}
-            onChange={(e) => setSelectedGenre(e.target.value)}
-            className="w-full px-2 py-1.5 text-xs rounded-md border border-input bg-background"
-          >
-            {GENRE_OPTIONS.map((genre) => (
-              <option key={genre} value={genre}>{genre}</option>
-            ))}
-          </select>
-        </div>
+          </div>
+        )}
       </div>
+
+      {/* Active Filters */}
+      {(selectedCategory !== "all" || searchQuery) && (
+        <div className="flex flex-wrap gap-1">
+          {selectedCategory !== "all" && (
+            <Badge variant="secondary" className="text-[10px] gap-1">
+              {selectedCategoryData?.icon} {selectedCategoryData?.name}
+              <X 
+                className="w-2.5 h-2.5 cursor-pointer" 
+                onClick={() => setSelectedCategory("all")}
+              />
+            </Badge>
+          )}
+          {searchQuery && (
+            <Badge variant="secondary" className="text-[10px] gap-1">
+              "{searchQuery}"
+              <X 
+                className="w-2.5 h-2.5 cursor-pointer" 
+                onClick={() => {
+                  setSearchQuery("");
+                  fetchTracks(true);
+                }}
+              />
+            </Badge>
+          )}
+        </div>
+      )}
 
       {/* Track List */}
-      <ScrollArea className="h-[300px]">
-        <div className="space-y-2">
-          {filteredTracks.map((track) => (
-            <div
-              key={track.id}
-              className="flex items-center gap-3 p-3 rounded-lg border border-border bg-card hover:bg-accent/50 transition-colors group"
-            >
-              {/* Play Button */}
-              <button
-                onClick={() => setPlayingTrackId(playingTrackId === track.id ? null : track.id)}
-                className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center hover:bg-primary/20 transition-colors"
-              >
-                {playingTrackId === track.id ? (
-                  <Pause className="w-4 h-4 text-primary" />
-                ) : (
-                  <Play className="w-4 h-4 text-primary" />
-                )}
-              </button>
-
-              {/* Track Info */}
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <p className="text-sm font-medium truncate">{track.name}</p>
-                  {track.source === "AI Suggestion" && (
-                    <Badge variant="secondary" className="text-[10px] shrink-0">AI</Badge>
-                  )}
-                </div>
-                <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
-                  <span>{track.artist}</span>
-                  <span>•</span>
-                  <span>{formatDuration(track.duration)}</span>
-                  <span>•</span>
-                  <Badge variant="outline" className="text-[9px] px-1 py-0">{track.mood}</Badge>
-                </div>
-              </div>
-
-              {/* Actions */}
-              <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                <Button variant="ghost" size="icon" className="h-7 w-7">
-                  <Heart className="w-3 h-3" />
-                </Button>
-                <Button 
-                  variant="default" 
-                  size="icon" 
-                  className="h-7 w-7"
-                  onClick={() => handleAddTrack(track)}
-                >
-                  <Plus className="w-3 h-3" />
-                </Button>
-              </div>
+      <ScrollArea className="h-[280px]">
+        <div className="space-y-2 pr-2">
+          {isLoading && tracks.length === 0 ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="w-6 h-6 animate-spin text-primary" />
             </div>
-          ))}
-
-          {filteredTracks.length === 0 && (
+          ) : tracks.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground text-sm">
               <Music className="w-8 h-8 mx-auto mb-2 opacity-50" />
-              <p>No tracks found. Try different filters.</p>
+              <p>No tracks found. Try a different search.</p>
             </div>
+          ) : (
+            <>
+              {tracks.map((track) => (
+                <div
+                  key={track.id}
+                  className="flex items-center gap-2 p-2 rounded-lg border border-border bg-card hover:bg-accent/50 transition-colors group"
+                >
+                  {/* Album Art */}
+                  <div className="relative w-10 h-10 rounded overflow-hidden bg-muted flex-shrink-0">
+                    {track.image ? (
+                      <img src={track.image} alt={track.name} className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <Music className="w-4 h-4 text-muted-foreground" />
+                      </div>
+                    )}
+                    {/* Play overlay */}
+                    <button
+                      onClick={() => handlePlayPause(track)}
+                      className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      {playingTrackId === track.id ? (
+                        <Pause className="w-4 h-4 text-white" />
+                      ) : (
+                        <Play className="w-4 h-4 text-white" />
+                      )}
+                    </button>
+                  </div>
+
+                  {/* Track Info */}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-medium truncate">{track.name}</p>
+                    <p className="text-[10px] text-muted-foreground truncate">{track.artist}</p>
+                    <p className="text-[10px] text-muted-foreground">{formatDuration(track.duration)}</p>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="h-6 w-6"
+                      onClick={() => toggleFavorite(track.id)}
+                    >
+                      <Heart className={`w-3 h-3 ${favorites.has(track.id) ? 'fill-red-500 text-red-500' : ''}`} />
+                    </Button>
+                    <Button 
+                      variant="default" 
+                      size="icon" 
+                      className="h-6 w-6"
+                      onClick={() => handleAddTrack(track)}
+                    >
+                      <Plus className="w-3 h-3" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+              
+              {/* Load More */}
+              {hasMore && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={loadMore}
+                  disabled={isLoading}
+                  className="w-full text-xs h-8"
+                >
+                  {isLoading ? (
+                    <Loader2 className="w-3 h-3 animate-spin mr-2" />
+                  ) : null}
+                  Load More Tracks
+                </Button>
+              )}
+            </>
           )}
         </div>
       </ScrollArea>
 
       {/* Attribution */}
       <div className="flex items-center justify-between text-[10px] text-muted-foreground pt-2 border-t border-border">
-        <span>Music sourced from royalty-free libraries</span>
+        <span>🎵 Royalty-free music from Jamendo</span>
         <a 
-          href="https://pixabay.com/music/" 
+          href="https://www.jamendo.com/start" 
           target="_blank" 
           rel="noopener noreferrer"
           className="flex items-center gap-1 hover:text-primary"
