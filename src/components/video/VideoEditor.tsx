@@ -320,7 +320,7 @@ export function VideoEditor() {
                         }}
                         title="Click to remove"
                       >
-                        {filter.name}
+                        {filter.name} ({filter.intensity}%)
                         <span className="ml-1 opacity-0 group-hover:opacity-100">×</span>
                       </Badge>
                     ))}
@@ -578,17 +578,57 @@ export function VideoEditor() {
                       </div>
                     )}
                     
-                    {/* Applied filters summary */}
+                    {/* Applied filters with intensity sliders */}
                     {appliedFilters.length > 0 && (
-                      <div className="space-y-2">
-                        <label className="text-sm text-muted-foreground">
-                          Applied Filters ({appliedFilters.length})
-                        </label>
-                        <div className="flex flex-wrap gap-1">
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <label className="text-sm text-muted-foreground">
+                            Applied Filters ({appliedFilters.length})
+                          </label>
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="h-6 text-xs"
+                            onClick={() => {
+                              setAppliedFilters([]);
+                              toast.info("Cleared all filters");
+                            }}
+                          >
+                            Clear All
+                          </Button>
+                        </div>
+                        <div className="space-y-3">
                           {appliedFilters.map((filter, i) => (
-                            <Badge key={i} variant="outline" className="text-xs">
-                              {filter.name}
-                            </Badge>
+                            <div key={i} className="space-y-1.5 p-2 rounded-md bg-muted/50">
+                              <div className="flex items-center justify-between">
+                                <span className="text-xs font-medium">{filter.name}</span>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-5 w-5 p-0 text-muted-foreground hover:text-destructive"
+                                  onClick={() => {
+                                    setAppliedFilters(prev => prev.filter((_, idx) => idx !== i));
+                                    toast.info(`Removed ${filter.name} filter`);
+                                  }}
+                                >
+                                  ×
+                                </Button>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Slider
+                                  value={[filter.intensity]}
+                                  onValueChange={(v) => {
+                                    setAppliedFilters(prev => prev.map((f, idx) => 
+                                      idx === i ? { ...f, intensity: v[0] } : f
+                                    ));
+                                  }}
+                                  max={100}
+                                  step={1}
+                                  className="flex-1"
+                                />
+                                <span className="text-xs text-muted-foreground w-8">{filter.intensity}%</span>
+                              </div>
+                            </div>
                           ))}
                         </div>
                       </div>

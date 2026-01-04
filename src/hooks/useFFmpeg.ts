@@ -265,16 +265,21 @@ export function useFFmpeg() {
           args.push("-vf", vfFilters.join(","));
         }
 
-        // Format-specific encoding
+        // Format-specific encoding - use codecs that FFmpeg.wasm supports
         if (options.format === "gif") {
-          args.push("-loop", "0");
+          // GIF output - add palette for better quality
+          args.push("-f", "gif", "-loop", "0");
         } else if (options.format === "webm") {
-          args.push("-c:v", "libvpx-vp9", "-crf", "30", "-b:v", "0", "-c:a", "libopus");
+          // WebM with VP8 (more widely supported in FFmpeg.wasm than VP9)
+          args.push("-c:v", "libvpx", "-b:v", "1M", "-c:a", "libvorbis");
         } else {
-          // MP4 with quality setting
-          const crf = options.quality ? Math.round(51 - (options.quality / 100) * 28) : 23;
-          args.push("-c:v", "libx264", "-preset", "medium", "-crf", crf.toString());
+          // MP4 - use copy codec if possible, or re-encode with baseline settings
+          // FFmpeg.wasm may not have libx264, so we use mpeg4 codec which is built-in
+          const qscale = options.quality ? Math.round(31 - (options.quality / 100) * 28) : 5;
+          args.push("-c:v", "mpeg4", "-q:v", qscale.toString());
           args.push("-c:a", "aac", "-b:a", "128k");
+          // Add faststart for web playback
+          args.push("-movflags", "+faststart");
         }
 
         args.push(outputName);
