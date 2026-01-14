@@ -26,7 +26,7 @@ export function useFFmpeg() {
       const ffmpeg = new FFmpeg();
       ffmpegRef.current = ffmpeg;
 
-      ffmpeg.on("progress", ({ progress, time }: FFmpegProgress) => {
+      ffmpeg.on("progress", ({ progress }: FFmpegProgress) => {
         setProgress(Math.round(progress * 100));
       });
 
@@ -165,6 +165,14 @@ export function useFFmpeg() {
     [isLoaded]
   );
 
+  // Audio track interface for export
+  interface AudioTrackExport {
+    url: string;
+    volume: number;
+    fadeIn: number;
+    fadeOut: number;
+  }
+
   const exportVideo = useCallback(
     async (
       inputFile: File,
@@ -175,6 +183,9 @@ export function useFFmpeg() {
         resolution?: string;
         format?: string;
         quality?: number;
+        audioTracks?: AudioTrackExport[];
+        includeOriginalAudio?: boolean;
+        masterVolume?: number;
       } = {}
     ): Promise<Blob | null> => {
       if (!ffmpegRef.current || !isLoaded) {
@@ -204,8 +215,30 @@ export function useFFmpeg() {
 
         // Write input file
         await ffmpeg.writeFile(inputName, await fetchFile(inputFile));
+        
+        // Download and write audio tracks
+        const audioInputs: string[] = [];
+        if (options.audioTracks && options.audioTracks.length > 0) {
+          for (let i = 0; i < options.audioTracks.length; i++) {
+            const track = options.audioTracks[i];
+            try {
+              const audioName = `audio_${i}.mp3`;
+              const audioData = await fetchFile(track.url);
+              await ffmpeg.writeFile(audioName, audioData);
+              audioInputs.push(audioName);
+            } catch (err) {
+              console.warn(`Failed to load audio track ${i}:`, err);
+            }
+          }
+        }
 
+        // Build input arguments
         const args: string[] = ["-i", inputName];
+        
+        // Add audio track inputs
+        for (const audioName of audioInputs) {
+          args.push("-i", audioName);
+        }
 
         // Trim settings
         if (options.trimStart !== undefined && options.trimStart > 0) {
@@ -214,6 +247,11 @@ export function useFFmpeg() {
         if (options.trimEnd !== undefined) {
           args.push("-t", (options.trimEnd - (options.trimStart || 0)).toString());
         }
+        
+        // Calculate video duration for audio mixing
+        const videoDuration = options.trimEnd 
+          ? (options.trimEnd - (options.trimStart || 0)) 
+          : undefined;
 
         // Build video filter chain
         const vfFilters: string[] = [];
@@ -240,14 +278,13 @@ export function useFFmpeg() {
             // Scale colorbalance values by intensity
             const scaled = cmd.replace(
               /=(-?\d+\.?\d*)/g,
-              (match, num) => `=${(parseFloat(num) * intensityScale).toFixed(3)}`
+              (_, num) => `=${(parseFloat(num) * intensityScale).toFixed(3)}`
             );
             vfFilters.push(scaled);
           } else if (cmd === "format=gray") {
             vfFilters.push("format=gray");
           } else if (cmd.includes("eq=")) {
             // Parse and scale eq parameters
-            let eqCmd = cmd;
             const contrastMatch = cmd.match(/contrast=(\d+\.?\d*)/);
             const brightnessMatch = cmd.match(/brightness=(-?\d+\.?\d*)/);
             const saturationMatch = cmd.match(/saturation=(\d+\.?\d*)/);
@@ -300,22 +337,85 @@ export function useFFmpeg() {
           args.push("-vf", vfFilters.join(","));
         }
 
-        // Format-specific encoding
-        // Note: FFmpeg.wasm ESM build has limited codec support
-        // We skip audio (-an) to ensure reliable exports
-        if (options.format === "gif") {
-          // GIF output - need palette for quality
-          args.push("-f", "gif", "-loop", "0");
-        } else if (options.format === "webm") {
-          // WebM format - always re-encode when filters applied
-          args.push("-c:v", "libvpx", "-b:v", "2M", "-an");
-        } else {
-          // MP4 format - use mpeg4 codec for browser compatibility
-          const quality = options.quality ? Math.max(1, Math.min(10, Math.round((100 - options.quality) / 10) + 1)) : 5;
-          args.push("-c:v", "mpeg4", "-q:v", quality.toString(), "-an");
+        // Build audio filter complex for mixing multiple audio tracks
+        const hasAudioTracks = audioInputs.length > 0;
+        const includeOriginalAudio = options.includeOriginalAudio !== false; // Default true
+        const masterVolume = options.masterVolume ?? 1;
+        
+        if (hasAudioTracks && options.format !== "gif") {
+          // Build complex audio filter for mixing
+          const audioFilters: string[] = [];
+          const mixInputs: string[] = [];
+          
+          // Original video audio (input 0)
+          if (includeOriginalAudio) {
+            audioFilters.push(`[0:a]volume=${masterVolume}[orig]`);
+            mixInputs.push("[orig]");
+          }
+          
+          // Additional audio tracks
+          for (let i = 0; i < audioInputs.length; i++) {
+            const track = options.audioTracks![i];
+            const inputIdx = i + 1; // Audio inputs start at index 1
+            const vol = track.volume * masterVolume;
+            
+            // Build volume filter with optional fades
+            let filterChain = `[${inputIdx}:a]volume=${vol.toFixed(2)}`;
+            
+            if (track.fadeIn > 0) {
+              filterChain += `,afade=t=in:st=0:d=${track.fadeIn}`;
+            }
+            if (track.fadeOut > 0 && videoDuration) {
+              const fadeStart = Math.max(0, videoDuration - track.fadeOut);
+              filterChain += `,afade=t=out:st=${fadeStart}:d=${track.fadeOut}`;
+            }
+            
+            filterChain += `[a${i}]`;
+            audioFilters.push(filterChain);
+            mixInputs.push(`[a${i}]`);
+          }
+          
+          // Mix all audio streams
+          if (mixInputs.length > 0) {
+            const mixFilter = `${mixInputs.join('')}amix=inputs=${mixInputs.length}:duration=first:dropout_transition=2[aout]`;
+            audioFilters.push(mixFilter);
+            
+            args.push("-filter_complex", audioFilters.join(";"));
+            args.push("-map", "0:v"); // Video from first input
+            args.push("-map", "[aout]"); // Mixed audio
+          }
+        } else if (includeOriginalAudio && options.format !== "gif") {
+          // No extra audio tracks, just copy original audio with volume
+          if (masterVolume !== 1) {
+            args.push("-af", `volume=${masterVolume}`);
+          }
+          // Don't add -an, let FFmpeg copy audio
         }
 
-        args.push("-y", outputName); // -y to overwrite output
+        // Format-specific encoding
+        if (options.format === "gif") {
+          // GIF output - no audio
+          args.push("-an", "-f", "gif", "-loop", "0");
+        } else if (options.format === "webm") {
+          // WebM format
+          args.push("-c:v", "libvpx", "-b:v", "2M");
+          if (!hasAudioTracks && !includeOriginalAudio) {
+            args.push("-an");
+          } else {
+            args.push("-c:a", "libvorbis", "-b:a", "128k");
+          }
+        } else {
+          // MP4 format
+          const quality = options.quality ? Math.max(1, Math.min(10, Math.round((100 - options.quality) / 10) + 1)) : 5;
+          args.push("-c:v", "mpeg4", "-q:v", quality.toString());
+          if (!hasAudioTracks && !includeOriginalAudio) {
+            args.push("-an");
+          } else {
+            args.push("-c:a", "aac", "-b:a", "128k");
+          }
+        }
+
+        args.push("-y", outputName);
 
         console.log("Export FFmpeg command:", args.join(" "));
 
@@ -327,6 +427,13 @@ export function useFFmpeg() {
         // Cleanup
         await ffmpeg.deleteFile(inputName);
         await ffmpeg.deleteFile(outputName);
+        for (const audioName of audioInputs) {
+          try {
+            await ffmpeg.deleteFile(audioName);
+          } catch (e) {
+            // Ignore cleanup errors
+          }
+        }
 
         setProgress(100);
         return blob;
