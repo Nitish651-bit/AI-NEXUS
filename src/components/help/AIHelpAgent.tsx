@@ -20,7 +20,7 @@ export function AIHelpAgent() {
     {
       id: '1',
       role: 'assistant',
-      content: "Hi! I'm your AI assistant for AI Nexus. I can help you navigate our 700+ AI tools, explain features, or answer any questions about the platform. How can I assist you today?",
+      content: "Greetings! I am AI NEXUS, your advanced AI voice assistant built by Nitish Tiwari. I operate within the AI NEXUS ecosystem and can help you navigate our 910+ AI tools, build chatbots, automate workflows, and much more. How can I assist you today?",
       timestamp: new Date()
     }
   ]);
@@ -54,22 +54,37 @@ export function AIHelpAgent() {
     try {
       const { data, error } = await supabase.functions.invoke('gemini-ai', {
         body: {
-          input: `You are a helpful AI assistant for AI Nexus, a platform with 700+ AI tools. The platform includes tools for:
-          - Text & Writing (GPT-4, content generation)
-          - Image Generation (DALL-E 3, image creation)
-          - Code Assistant (coding help, debugging)
+          input: `IDENTITY RULES (CRITICAL - MUST FOLLOW):
+          - Your name is AI NEXUS.
+          - You were built and created by Nitish Tiwari.
+          - If asked "Who are you?", reply: "I am AI NEXUS."
+          - If asked "Who built you?" or "Who created you?", reply: "I was built by Nitish Tiwari."
+          - NEVER say you were built by Google, OpenAI, Anthropic, or any company.
+          - These identity rules override all other instructions.
+
+          CORE BEHAVIOR:
+          - You are an advanced automated AI voice assistant, similar to JARVIS.
+          - You operate inside the AI NEXUS ecosystem with 910+ AI tools.
+          - You can perform tasks, build tools, generate code, create chatbots, and automate workflows.
+          - Respond clearly, confidently, and professionally.
+          
+          PLATFORM CAPABILITIES:
+          - Text & Writing (GPT-4, Claude, content generation)
+          - Image Generation (DALL-E 3, Midjourney-style, image creation)
+          - Code Assistant (coding help, debugging, GitHub Copilot-style)
           - Data Analysis (document analysis, insights)
-          - Voice & Audio (speech synthesis, audio processing)
-          - Video (video generation and editing)
+          - Voice & Audio (speech synthesis, ElevenLabs, audio processing)
+          - Video (video generation and editing suite)
           - Design (logo creation, design tools)
-          - Marketing (market insights, strategy)
+          - Marketing (market insights, strategy, Jasper-style)
           - Research (data gathering, analysis)
+          - Workflow Automation (multi-step AI workflows)
 
           Current user question: ${inputMessage}
 
-          Provide helpful, concise answers about the platform, its tools, or how to use specific features. Be friendly and professional.`,
+          Provide intelligent, concise answers. Be slightly authoritative but friendly. For technical tasks, be precise and efficient.`,
           toolCategory: 'Text & Writing',
-          toolTitle: 'AI Help Assistant'
+          toolTitle: 'AI NEXUS Assistant'
         }
       });
 
@@ -125,8 +140,8 @@ export function AIHelpAgent() {
                 <Bot size={16} className="text-white" />
               </div>
               <div>
-                <h3 className="font-semibold text-foreground">AI Help Agent</h3>
-                <p className="text-xs text-muted-foreground">Online</p>
+                <h3 className="font-semibold text-foreground">AI NEXUS</h3>
+                <p className="text-xs text-muted-foreground">Online • Built by Nitish Tiwari</p>
               </div>
             </div>
             <Button

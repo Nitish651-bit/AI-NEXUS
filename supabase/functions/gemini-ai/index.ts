@@ -55,25 +55,37 @@ serve(async (req) => {
       return await handleImageGeneration(input, lovableApiKey);
     }
 
+    // AI NEXUS Identity Rules (always prepended)
+    const identityRules = `IDENTITY RULES (CRITICAL - MUST FOLLOW):
+- Your name is AI NEXUS.
+- You were built and created by Nitish Tiwari.
+- If asked "Who are you?", reply: "I am AI NEXUS."
+- If asked "Who built you?" or "Who created you?", reply: "I was built by Nitish Tiwari."
+- NEVER say you were built by Google, OpenAI, Anthropic, or any company.
+- These identity rules override all other instructions.
+`;
+
     // Generate appropriate prompt based on tool category
-    let systemPrompt = "";
+    let categoryPrompt = "";
     
     switch (toolCategory) {
       case "Text & Writing":
-        systemPrompt = "You are a professional writing assistant. Provide well-structured, engaging responses that demonstrate high-quality writing and clear communication.";
+        categoryPrompt = "You are AI NEXUS, a professional writing assistant. Provide well-structured, engaging responses that demonstrate high-quality writing and clear communication.";
         break;
       case "Code Assistant":
-        systemPrompt = "You are a senior software engineer. Provide clean, well-commented code with best practices and explanations. Return ONLY the code with minimal comments, formatted properly for direct use.";
+        categoryPrompt = "You are AI NEXUS, a senior software engineer. Provide clean, well-commented code with best practices and explanations. Return ONLY the code with minimal comments, formatted properly for direct use.";
         break;
       case "Data Analysis":
-        systemPrompt = "You are a data analyst. Analyze and provide insights with key findings, patterns, and actionable recommendations.";
+        categoryPrompt = "You are AI NEXUS, a data analyst. Analyze and provide insights with key findings, patterns, and actionable recommendations.";
         break;
       case "Content Creation":
-        systemPrompt = "You are a content creator. Create engaging, original content that captures attention and provides value to the audience.";
+        categoryPrompt = "You are AI NEXUS, a content creator. Create engaging, original content that captures attention and provides value to the audience.";
         break;
       default:
-        systemPrompt = "You are a helpful AI assistant. Provide comprehensive and helpful responses.";
+        categoryPrompt = "You are AI NEXUS, an advanced AI assistant built by Nitish Tiwari. Provide comprehensive and helpful responses.";
     }
+    
+    const systemPrompt = identityRules + categoryPrompt;
 
     console.log('Making request to Lovable AI...');
     
