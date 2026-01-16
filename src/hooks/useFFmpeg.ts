@@ -218,81 +218,43 @@ export function useFFmpeg() {
         // Build video filter chain
         const vfFilters: string[] = [];
 
-        // Resolution scaling - PRESERVE ASPECT RATIO using -1 for auto-calculation
+        // Resolution scaling
         if (options.resolution) {
           const resMap: Record<string, string> = {
-            "1080p": "scale=-2:1080",  // -2 ensures divisible by 2, auto width
-            "720p": "scale=-2:720",
-            "4k": "scale=-2:2160",
-            "480p": "scale=-2:480",
+            "1080p": "scale=1920:1080",
+            "720p": "scale=1280:720",
+            "4k": "scale=3840:2160",
+            "480p": "scale=854:480",
           };
           if (resMap[options.resolution]) {
             vfFilters.push(resMap[options.resolution]);
           }
         }
 
-        // Apply filters with proper intensity scaling
+        // Apply filters
         filters.forEach((filter) => {
           const intensityScale = filter.intensity / 100;
-          const cmd = filter.ffmpegCommand;
           
-          if (cmd.includes("colorbalance")) {
-            // Scale colorbalance values by intensity
-            const scaled = cmd.replace(
-              /=(-?\d+\.?\d*)/g,
-              (match, num) => `=${(parseFloat(num) * intensityScale).toFixed(3)}`
+          if (filter.ffmpegCommand.includes("colorbalance")) {
+            const scaled = filter.ffmpegCommand.replace(
+              /(-?\d+\.?\d*)/g,
+              (match) => (parseFloat(match) * intensityScale).toFixed(2)
             );
             vfFilters.push(scaled);
-          } else if (cmd === "format=gray") {
+          } else if (filter.ffmpegCommand === "format=gray") {
             vfFilters.push("format=gray");
-          } else if (cmd.includes("eq=")) {
-            // Parse and scale eq parameters
-            let eqCmd = cmd;
-            const contrastMatch = cmd.match(/contrast=(\d+\.?\d*)/);
-            const brightnessMatch = cmd.match(/brightness=(-?\d+\.?\d*)/);
-            const saturationMatch = cmd.match(/saturation=(\d+\.?\d*)/);
-            
-            const parts: string[] = [];
-            if (contrastMatch) {
-              const val = 1 + (parseFloat(contrastMatch[1]) - 1) * intensityScale;
-              parts.push(`contrast=${val.toFixed(2)}`);
-            }
-            if (brightnessMatch) {
-              const val = parseFloat(brightnessMatch[1]) * intensityScale;
-              parts.push(`brightness=${val.toFixed(2)}`);
-            }
-            if (saturationMatch) {
-              const val = 1 + (parseFloat(saturationMatch[1]) - 1) * intensityScale;
-              parts.push(`saturation=${val.toFixed(2)}`);
-            }
-            if (parts.length > 0) {
-              vfFilters.push(`eq=${parts.join(':')}`);
-            } else {
-              vfFilters.push(cmd);
-            }
-          } else if (cmd.includes("gblur") || cmd.includes("sigma=")) {
-            const sigma = Math.max(0.5, 5 * intensityScale);
-            vfFilters.push(`gblur=sigma=${sigma.toFixed(1)}`);
-          } else if (cmd.includes("noise")) {
-            const noise = Math.max(5, Math.round(25 * intensityScale));
-            vfFilters.push(`noise=alls=${noise}:allf=t+u`);
-          } else if (cmd.includes("vignette")) {
-            const angle = Math.max(2, 6 - 4 * intensityScale);
-            vfFilters.push(`vignette=PI/${angle.toFixed(1)}`);
-          } else if (cmd.includes("curves")) {
-            vfFilters.push(cmd);
-          } else if (cmd.includes("hue")) {
-            vfFilters.push(cmd);
-          } else if (cmd.includes("posterize")) {
-            const levels = Math.max(2, Math.round(8 - 4 * intensityScale));
-            vfFilters.push(`posterize=${levels}`);
-          } else if (cmd.includes("edgedetect")) {
-            vfFilters.push("edgedetect=mode=colormix:high=0");
-          } else if (cmd.includes("negate")) {
-            vfFilters.push("negate");
-          } else if (!cmd.includes("setpts") && !cmd.includes("reverse")) {
-            // Skip speed/timing effects, add other filters as-is
-            vfFilters.push(cmd);
+          } else if (filter.ffmpegCommand.includes("eq=")) {
+            vfFilters.push(filter.ffmpegCommand);
+          } else if (filter.ffmpegCommand.includes("gblur")) {
+            vfFilters.push(`gblur=sigma=${Math.max(1, Math.round(5 * intensityScale))}`);
+          } else if (filter.ffmpegCommand.includes("noise")) {
+            vfFilters.push(`noise=alls=${Math.round(20 * intensityScale)}:allf=t+u`);
+          } else if (filter.ffmpegCommand.includes("vignette")) {
+            vfFilters.push(`vignette=PI/${Math.max(2, Math.round(6 - 4 * intensityScale))}`);
+          } else if (filter.ffmpegCommand.includes("curves")) {
+            vfFilters.push(filter.ffmpegCommand);
+          } else if (!filter.ffmpegCommand.includes("setpts")) {
+            vfFilters.push(filter.ffmpegCommand);
           }
         });
 
@@ -304,15 +266,24 @@ export function useFFmpeg() {
         // Note: FFmpeg.wasm ESM build has limited codec support
         // We skip audio (-an) to ensure reliable exports
         if (options.format === "gif") {
-          // GIF output - need palette for quality
+          // GIF output - no audio
           args.push("-f", "gif", "-loop", "0");
         } else if (options.format === "webm") {
-          // WebM format - always re-encode when filters applied
-          args.push("-c:v", "libvpx", "-b:v", "2M", "-an");
+          // WebM format
+          if (vfFilters.length === 0 && !options.resolution) {
+            args.push("-c", "copy");
+          } else {
+            // Re-encode video, skip audio for compatibility
+            args.push("-b:v", "1M", "-an");
+          }
         } else {
-          // MP4 format - use mpeg4 codec for browser compatibility
-          const quality = options.quality ? Math.max(1, Math.min(10, Math.round((100 - options.quality) / 10) + 1)) : 5;
-          args.push("-c:v", "mpeg4", "-q:v", quality.toString(), "-an");
+          // MP4 format
+          if (vfFilters.length === 0 && !options.resolution) {
+            args.push("-c", "copy");
+          } else {
+            // Re-encode video with mpeg4, skip audio for compatibility
+            args.push("-c:v", "mpeg4", "-q:v", "5", "-an");
+          }
         }
 
         args.push("-y", outputName); // -y to overwrite output
