@@ -226,19 +226,7 @@ export function VideoEditor() {
     }
 
     const clip = selectedClip || clips[0];
-    
-    // Prepare audio tracks for export
-    const audioTracksForExport = audioTracks
-      .filter(track => track.volume > 0) // Skip muted tracks
-      .map(track => ({
-        url: track.url,
-        volume: track.volume,
-        fadeIn: track.fadeIn,
-        fadeOut: track.fadeOut,
-      }));
-    
-    const hasAudio = audioTracksForExport.length > 0;
-    toast.info(`Processing your video${hasAudio ? ` with ${audioTracksForExport.length} audio track(s)` : ""}... This may take a moment.`);
+    toast.info("Processing your video with FFmpeg... This may take a moment.");
     
     const blob = await exportVideo(clip.file, appliedFilters, {
       trimStart: clip.startTime,
@@ -246,9 +234,6 @@ export function VideoEditor() {
       resolution: exportResolution,
       format: exportFormat,
       quality: exportQuality,
-      audioTracks: audioTracksForExport,
-      includeOriginalAudio: !isMuted,
-      masterVolume: volume,
     });
 
     if (blob) {
@@ -262,7 +247,7 @@ export function VideoEditor() {
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
       
-      toast.success(`Video exported successfully${hasAudio ? " with audio" : ""}! 🎬`);
+      toast.success("Video exported successfully! 🎬");
     } else if (ffmpegError) {
       toast.error(`Export failed: ${ffmpegError}`);
     }
