@@ -26,7 +26,7 @@ export function useFFmpeg() {
       const ffmpeg = new FFmpeg();
       ffmpegRef.current = ffmpeg;
 
-      ffmpeg.on("progress", ({ progress, time }: FFmpegProgress) => {
+      ffmpeg.on("progress", ({ progress }: FFmpegProgress) => {
         setProgress(Math.round(progress * 100));
       });
 
@@ -165,6 +165,14 @@ export function useFFmpeg() {
     [isLoaded]
   );
 
+  // Audio track interface for export
+  interface AudioTrackExport {
+    url: string;
+    volume: number;
+    fadeIn: number;
+    fadeOut: number;
+  }
+
   const exportVideo = useCallback(
     async (
       inputFile: File,
@@ -175,6 +183,9 @@ export function useFFmpeg() {
         resolution?: string;
         format?: string;
         quality?: number;
+        audioTracks?: AudioTrackExport[];
+        includeOriginalAudio?: boolean;
+        masterVolume?: number;
       } = {}
     ): Promise<Blob | null> => {
       if (!ffmpegRef.current || !isLoaded) {
@@ -204,8 +215,30 @@ export function useFFmpeg() {
 
         // Write input file
         await ffmpeg.writeFile(inputName, await fetchFile(inputFile));
+        
+        // Download and write audio tracks
+        const audioInputs: string[] = [];
+        if (options.audioTracks && options.audioTracks.length > 0) {
+          for (let i = 0; i < options.audioTracks.length; i++) {
+            const track = options.audioTracks[i];
+            try {
+              const audioName = `audio_${i}.mp3`;
+              const audioData = await fetchFile(track.url);
+              await ffmpeg.writeFile(audioName, audioData);
+              audioInputs.push(audioName);
+            } catch (err) {
+              console.warn(`Failed to load audio track ${i}:`, err);
+            }
+          }
+        }
 
+        // Build input arguments
         const args: string[] = ["-i", inputName];
+        
+        // Add audio track inputs
+        for (const audioName of audioInputs) {
+          args.push("-i", audioName);
+        }
 
         // Trim settings
         if (options.trimStart !== undefined && options.trimStart > 0) {
@@ -214,47 +247,89 @@ export function useFFmpeg() {
         if (options.trimEnd !== undefined) {
           args.push("-t", (options.trimEnd - (options.trimStart || 0)).toString());
         }
+        
+        // Calculate video duration for audio mixing
+        const videoDuration = options.trimEnd 
+          ? (options.trimEnd - (options.trimStart || 0)) 
+          : undefined;
 
         // Build video filter chain
         const vfFilters: string[] = [];
 
-        // Resolution scaling
+        // Resolution scaling - PRESERVE ASPECT RATIO using -1 for auto-calculation
         if (options.resolution) {
           const resMap: Record<string, string> = {
-            "1080p": "scale=1920:1080",
-            "720p": "scale=1280:720",
-            "4k": "scale=3840:2160",
-            "480p": "scale=854:480",
+            "1080p": "scale=-2:1080",  // -2 ensures divisible by 2, auto width
+            "720p": "scale=-2:720",
+            "4k": "scale=-2:2160",
+            "480p": "scale=-2:480",
           };
           if (resMap[options.resolution]) {
             vfFilters.push(resMap[options.resolution]);
           }
         }
 
-        // Apply filters
+        // Apply filters with proper intensity scaling
         filters.forEach((filter) => {
           const intensityScale = filter.intensity / 100;
+          const cmd = filter.ffmpegCommand;
           
-          if (filter.ffmpegCommand.includes("colorbalance")) {
-            const scaled = filter.ffmpegCommand.replace(
-              /(-?\d+\.?\d*)/g,
-              (match) => (parseFloat(match) * intensityScale).toFixed(2)
+          if (cmd.includes("colorbalance")) {
+            // Scale colorbalance values by intensity
+            const scaled = cmd.replace(
+              /=(-?\d+\.?\d*)/g,
+              (_, num) => `=${(parseFloat(num) * intensityScale).toFixed(3)}`
             );
             vfFilters.push(scaled);
-          } else if (filter.ffmpegCommand === "format=gray") {
+          } else if (cmd === "format=gray") {
             vfFilters.push("format=gray");
-          } else if (filter.ffmpegCommand.includes("eq=")) {
-            vfFilters.push(filter.ffmpegCommand);
-          } else if (filter.ffmpegCommand.includes("gblur")) {
-            vfFilters.push(`gblur=sigma=${Math.max(1, Math.round(5 * intensityScale))}`);
-          } else if (filter.ffmpegCommand.includes("noise")) {
-            vfFilters.push(`noise=alls=${Math.round(20 * intensityScale)}:allf=t+u`);
-          } else if (filter.ffmpegCommand.includes("vignette")) {
-            vfFilters.push(`vignette=PI/${Math.max(2, Math.round(6 - 4 * intensityScale))}`);
-          } else if (filter.ffmpegCommand.includes("curves")) {
-            vfFilters.push(filter.ffmpegCommand);
-          } else if (!filter.ffmpegCommand.includes("setpts")) {
-            vfFilters.push(filter.ffmpegCommand);
+          } else if (cmd.includes("eq=")) {
+            // Parse and scale eq parameters
+            const contrastMatch = cmd.match(/contrast=(\d+\.?\d*)/);
+            const brightnessMatch = cmd.match(/brightness=(-?\d+\.?\d*)/);
+            const saturationMatch = cmd.match(/saturation=(\d+\.?\d*)/);
+            
+            const parts: string[] = [];
+            if (contrastMatch) {
+              const val = 1 + (parseFloat(contrastMatch[1]) - 1) * intensityScale;
+              parts.push(`contrast=${val.toFixed(2)}`);
+            }
+            if (brightnessMatch) {
+              const val = parseFloat(brightnessMatch[1]) * intensityScale;
+              parts.push(`brightness=${val.toFixed(2)}`);
+            }
+            if (saturationMatch) {
+              const val = 1 + (parseFloat(saturationMatch[1]) - 1) * intensityScale;
+              parts.push(`saturation=${val.toFixed(2)}`);
+            }
+            if (parts.length > 0) {
+              vfFilters.push(`eq=${parts.join(':')}`);
+            } else {
+              vfFilters.push(cmd);
+            }
+          } else if (cmd.includes("gblur") || cmd.includes("sigma=")) {
+            const sigma = Math.max(0.5, 5 * intensityScale);
+            vfFilters.push(`gblur=sigma=${sigma.toFixed(1)}`);
+          } else if (cmd.includes("noise")) {
+            const noise = Math.max(5, Math.round(25 * intensityScale));
+            vfFilters.push(`noise=alls=${noise}:allf=t+u`);
+          } else if (cmd.includes("vignette")) {
+            const angle = Math.max(2, 6 - 4 * intensityScale);
+            vfFilters.push(`vignette=PI/${angle.toFixed(1)}`);
+          } else if (cmd.includes("curves")) {
+            vfFilters.push(cmd);
+          } else if (cmd.includes("hue")) {
+            vfFilters.push(cmd);
+          } else if (cmd.includes("posterize")) {
+            const levels = Math.max(2, Math.round(8 - 4 * intensityScale));
+            vfFilters.push(`posterize=${levels}`);
+          } else if (cmd.includes("edgedetect")) {
+            vfFilters.push("edgedetect=mode=colormix:high=0");
+          } else if (cmd.includes("negate")) {
+            vfFilters.push("negate");
+          } else if (!cmd.includes("setpts") && !cmd.includes("reverse")) {
+            // Skip speed/timing effects, add other filters as-is
+            vfFilters.push(cmd);
           }
         });
 
@@ -262,31 +337,85 @@ export function useFFmpeg() {
           args.push("-vf", vfFilters.join(","));
         }
 
+        // Build audio filter complex for mixing multiple audio tracks
+        const hasAudioTracks = audioInputs.length > 0;
+        const includeOriginalAudio = options.includeOriginalAudio !== false; // Default true
+        const masterVolume = options.masterVolume ?? 1;
+        
+        if (hasAudioTracks && options.format !== "gif") {
+          // Build complex audio filter for mixing
+          const audioFilters: string[] = [];
+          const mixInputs: string[] = [];
+          
+          // Original video audio (input 0)
+          if (includeOriginalAudio) {
+            audioFilters.push(`[0:a]volume=${masterVolume}[orig]`);
+            mixInputs.push("[orig]");
+          }
+          
+          // Additional audio tracks
+          for (let i = 0; i < audioInputs.length; i++) {
+            const track = options.audioTracks![i];
+            const inputIdx = i + 1; // Audio inputs start at index 1
+            const vol = track.volume * masterVolume;
+            
+            // Build volume filter with optional fades
+            let filterChain = `[${inputIdx}:a]volume=${vol.toFixed(2)}`;
+            
+            if (track.fadeIn > 0) {
+              filterChain += `,afade=t=in:st=0:d=${track.fadeIn}`;
+            }
+            if (track.fadeOut > 0 && videoDuration) {
+              const fadeStart = Math.max(0, videoDuration - track.fadeOut);
+              filterChain += `,afade=t=out:st=${fadeStart}:d=${track.fadeOut}`;
+            }
+            
+            filterChain += `[a${i}]`;
+            audioFilters.push(filterChain);
+            mixInputs.push(`[a${i}]`);
+          }
+          
+          // Mix all audio streams
+          if (mixInputs.length > 0) {
+            const mixFilter = `${mixInputs.join('')}amix=inputs=${mixInputs.length}:duration=first:dropout_transition=2[aout]`;
+            audioFilters.push(mixFilter);
+            
+            args.push("-filter_complex", audioFilters.join(";"));
+            args.push("-map", "0:v"); // Video from first input
+            args.push("-map", "[aout]"); // Mixed audio
+          }
+        } else if (includeOriginalAudio && options.format !== "gif") {
+          // No extra audio tracks, just copy original audio with volume
+          if (masterVolume !== 1) {
+            args.push("-af", `volume=${masterVolume}`);
+          }
+          // Don't add -an, let FFmpeg copy audio
+        }
+
         // Format-specific encoding
-        // Note: FFmpeg.wasm ESM build has limited codec support
-        // We skip audio (-an) to ensure reliable exports
         if (options.format === "gif") {
           // GIF output - no audio
-          args.push("-f", "gif", "-loop", "0");
+          args.push("-an", "-f", "gif", "-loop", "0");
         } else if (options.format === "webm") {
           // WebM format
-          if (vfFilters.length === 0 && !options.resolution) {
-            args.push("-c", "copy");
+          args.push("-c:v", "libvpx", "-b:v", "2M");
+          if (!hasAudioTracks && !includeOriginalAudio) {
+            args.push("-an");
           } else {
-            // Re-encode video, skip audio for compatibility
-            args.push("-b:v", "1M", "-an");
+            args.push("-c:a", "libvorbis", "-b:a", "128k");
           }
         } else {
           // MP4 format
-          if (vfFilters.length === 0 && !options.resolution) {
-            args.push("-c", "copy");
+          const quality = options.quality ? Math.max(1, Math.min(10, Math.round((100 - options.quality) / 10) + 1)) : 5;
+          args.push("-c:v", "mpeg4", "-q:v", quality.toString());
+          if (!hasAudioTracks && !includeOriginalAudio) {
+            args.push("-an");
           } else {
-            // Re-encode video with mpeg4, skip audio for compatibility
-            args.push("-c:v", "mpeg4", "-q:v", "5", "-an");
+            args.push("-c:a", "aac", "-b:a", "128k");
           }
         }
 
-        args.push("-y", outputName); // -y to overwrite output
+        args.push("-y", outputName);
 
         console.log("Export FFmpeg command:", args.join(" "));
 
@@ -298,6 +427,13 @@ export function useFFmpeg() {
         // Cleanup
         await ffmpeg.deleteFile(inputName);
         await ffmpeg.deleteFile(outputName);
+        for (const audioName of audioInputs) {
+          try {
+            await ffmpeg.deleteFile(audioName);
+          } catch (e) {
+            // Ignore cleanup errors
+          }
+        }
 
         setProgress(100);
         return blob;
