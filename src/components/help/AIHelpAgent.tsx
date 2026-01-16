@@ -3,10 +3,11 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { HelpCircle, Send, X, Bot, User, Mic, MicOff, Loader2 } from "lucide-react";
+import { HelpCircle, Send, X, Bot, User, Mic, MicOff, Loader2, Maximize2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useVoiceInput } from "@/hooks/useVoiceInput";
+import { JarvisInterface } from "@/components/voice/JarvisInterface";
 
 interface Message {
   id: string;
@@ -17,6 +18,7 @@ interface Message {
 
 export function AIHelpAgent() {
   const [isOpen, setIsOpen] = useState(false);
+  const [isJarvisOpen, setIsJarvisOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
@@ -236,13 +238,26 @@ export function AIHelpAgent() {
                 </p>
               </div>
             </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setIsOpen(false)}
-            >
-              <X size={16} />
-            </Button>
+            <div className="flex items-center gap-1">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setIsOpen(false);
+                  setIsJarvisOpen(true);
+                }}
+                title="Open full-screen voice mode"
+              >
+                <Maximize2 size={16} />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setIsOpen(false)}
+              >
+                <X size={16} />
+              </Button>
+            </div>
           </div>
 
           {/* Messages */}
@@ -341,6 +356,12 @@ export function AIHelpAgent() {
           </div>
         </Card>
       )}
+
+      {/* Full-screen JARVIS Interface */}
+      <JarvisInterface 
+        isOpen={isJarvisOpen} 
+        onClose={() => setIsJarvisOpen(false)} 
+      />
     </>
   );
 }
