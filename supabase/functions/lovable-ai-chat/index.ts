@@ -105,11 +105,26 @@ When analyzing images, describe what you see in detail and answer any questions 
       }
       
       if (response.status === 402) {
+        // Provide a helpful fallback response
+        const userMessage = message || "analyze the image";
+        const fallbackResponse = `I am AI NEXUS, your advanced AI assistant built by Nitish Tiwari. 
+
+I received your request: "${userMessage}"
+
+Currently, AI credits need to be renewed for full AI responses. However, I can still help you with:
+
+• **Navigation**: Browse our 910+ AI tools across categories
+• **Information**: Learn about any tool or feature
+• **Workflow**: Set up automation templates
+• **Voice**: Use voice commands for hands-free operation
+
+How can I assist you today?`;
+        
         return new Response(JSON.stringify({ 
-          success: false, 
-          error: "AI credits exhausted. Please add credits to continue." 
+          success: true, 
+          output: fallbackResponse,
+          creditsRequired: true
         }), {
-          status: 402,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }

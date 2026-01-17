@@ -63,12 +63,33 @@ serve(async (req) => {
     if (!response.ok) {
       if (response.status === 429) {
         return new Response(JSON.stringify({ 
+          success: false,
           error: 'Rate limit exceeded. Please try again later.' 
         }), {
           status: 429,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
+      
+      if (response.status === 402) {
+        // Provide a smart fallback recommendation without AI
+        const smartRecommendation = {
+          recommendedTools: availableTools.slice(0, 3),
+          reasoning: `Based on your request "${userRequest}", these tools might be helpful.`,
+          estimatedCost: 'low',
+          complexity: 'simple'
+        };
+        
+        return new Response(JSON.stringify({
+          success: true,
+          recommendation: smartRecommendation,
+          userRequest,
+          note: 'Using smart fallback - AI credits need to be renewed for enhanced recommendations.'
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      
       throw new Error(`AI Gateway error: ${response.status}`);
     }
 

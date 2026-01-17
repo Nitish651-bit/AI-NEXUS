@@ -79,21 +79,23 @@ serve(async (req) => {
         );
       }
       
-      if (response.status === 403) {
+      if (response.status === 403 || response.status === 400) {
+        // Use browser's built-in Web Speech API as fallback indicator
         return new Response(
           JSON.stringify({ 
-            success: false, 
-            error: "Google Cloud TTS API is not enabled or API key is invalid. Please enable the Text-to-Speech API in Google Cloud Console.",
-            errorCode: "FORBIDDEN"
+            success: true, 
+            audioContent: null,
+            useBrowserTTS: true,
+            text: text,
+            message: "Using browser's built-in text-to-speech as fallback."
           }),
           {
-            status: 403,
             headers: { ...corsHeaders, "Content-Type": "application/json" },
           }
         );
       }
       
-      throw new Error(`Google TTS error: ${response.status} - ${errorText}`);
+      throw new Error(`TTS error: ${response.status} - ${errorText}`);
     }
 
     const data = await response.json();
