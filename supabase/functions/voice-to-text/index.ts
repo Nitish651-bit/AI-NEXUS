@@ -50,6 +50,64 @@ serve(async (req) => {
 
     console.log('Processing voice input for AI NEXUS...');
 
+    // Try Gemini first for audio transcription
+    const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
+    
+    if (GEMINI_API_KEY) {
+      try {
+        console.log('Using Gemini for transcription...');
+        
+        const response = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: [{
+                parts: [
+                  { text: "Transcribe the following audio exactly. Return ONLY the transcribed text with no additional commentary." },
+                  {
+                    inlineData: {
+                      mimeType: "audio/webm",
+                      data: audio
+                    }
+                  }
+                ]
+              }],
+              generationConfig: {
+                temperature: 0.1,
+                maxOutputTokens: 1024,
+              }
+            }),
+          }
+        );
+
+        if (response.ok) {
+          const data = await response.json();
+          const transcription = data.candidates?.[0]?.content?.parts?.[0]?.text;
+          
+          if (transcription) {
+            console.log('Gemini transcription successful');
+            return new Response(
+              JSON.stringify({ success: true, text: transcription.trim(), provider: 'Google Gemini' }),
+              { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
+        }
+        
+        console.log('Gemini transcription failed, falling back to Whisper...');
+      } catch (geminiError) {
+        console.error('Gemini error:', geminiError);
+      }
+    }
+
+    // Fallback to OpenAI Whisper
+    const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
+    
+    if (!OPENAI_API_KEY) {
+      throw new Error('No transcription API configured');
+    }
+
     // Process audio in chunks
     const binaryAudio = processBase64Chunks(audio);
     
@@ -58,12 +116,6 @@ serve(async (req) => {
     const blob = new Blob([binaryAudio], { type: 'audio/webm' });
     formData.append('file', blob, 'audio.webm');
     formData.append('model', 'whisper-1');
-
-    const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
-    
-    if (!OPENAI_API_KEY) {
-      throw new Error('OPENAI_API_KEY not configured');
-    }
 
     // Send to OpenAI Whisper
     const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
@@ -81,12 +133,13 @@ serve(async (req) => {
     }
 
     const result = await response.json();
-    console.log('Voice transcription successful:', result.text?.substring(0, 50));
+    console.log('Whisper transcription successful');
 
     return new Response(
       JSON.stringify({ 
         success: true,
-        text: result.text 
+        text: result.text,
+        provider: 'OpenAI Whisper'
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );

@@ -12,11 +12,6 @@ const inputSchema = z.object({
   availableTools: z.array(z.string()).min(1, "At least one tool must be available").max(100, "Too many tools")
 });
 
-interface RouterRequest {
-  userRequest: string;
-  availableTools: string[];
-}
-
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -29,38 +24,44 @@ serve(async (req) => {
     console.log('AI Tool Router - Analyzing request, length:', userRequest.length);
     console.log('Available tools count:', availableTools.length);
 
-    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
-    if (!LOVABLE_API_KEY) {
-      throw new Error('LOVABLE_API_KEY not configured');
+    const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
+    if (!GEMINI_API_KEY) {
+      throw new Error('GEMINI_API_KEY not configured');
     }
 
-    // Use Lovable AI (Gemini) to analyze and recommend tools
-    const systemPrompt = `You are an AI tool recommendation engine. Analyze the user's request and recommend the most suitable AI tools from the available list. Return a JSON response with:
-- recommendedTools: array of tool names that best match the request
-- reasoning: brief explanation of why these tools were selected
-- estimatedCost: rough cost estimate (low/medium/high)
-- complexity: task complexity (simple/moderate/complex)`;
+    const systemPrompt = `You are an AI tool recommendation engine. Analyze the user's request and recommend the most suitable AI tools from the available list. 
 
-    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'google/gemini-2.5-flash',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { 
-            role: 'user', 
-            content: `User request: "${userRequest}"\n\nAvailable tools: ${availableTools.join(', ')}\n\nRecommend the best tools for this task.` 
+Return ONLY a valid JSON object with this exact structure:
+{
+  "recommendedTools": ["tool1", "tool2"],
+  "reasoning": "brief explanation",
+  "estimatedCost": "low|medium|high",
+  "complexity": "simple|moderate|complex"
+}`;
+
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{
+            parts: [{
+              text: `${systemPrompt}\n\nUser request: "${userRequest}"\n\nAvailable tools: ${availableTools.join(', ')}\n\nRecommend the best tools for this task.`
+            }]
+          }],
+          generationConfig: {
+            temperature: 0.7,
+            maxOutputTokens: 1024,
           }
-        ],
-        temperature: 0.7,
-      }),
-    });
+        }),
+      }
+    );
 
     if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Gemini API error:', response.status, errorText);
+      
       if (response.status === 429) {
         return new Response(JSON.stringify({ 
           success: false,
@@ -71,42 +72,21 @@ serve(async (req) => {
         });
       }
       
-      if (response.status === 402) {
-        // Provide a smart fallback recommendation without AI
-        const smartRecommendation = {
-          recommendedTools: availableTools.slice(0, 3),
-          reasoning: `Based on your request "${userRequest}", these tools might be helpful.`,
-          estimatedCost: 'low',
-          complexity: 'simple'
-        };
-        
-        return new Response(JSON.stringify({
-          success: true,
-          recommendation: smartRecommendation,
-          userRequest,
-          note: 'Using smart fallback - AI credits need to be renewed for enhanced recommendations.'
-        }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      }
-      
-      throw new Error(`AI Gateway error: ${response.status}`);
+      throw new Error(`Gemini API error: ${response.status}`);
     }
 
     const data = await response.json();
-    const aiResponse = data.choices[0].message.content;
+    const aiResponse = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
     
     console.log('AI Router analysis:', aiResponse);
 
     // Parse AI response
     let recommendation;
     try {
-      // Try to extract JSON from the response
       const jsonMatch = aiResponse.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         recommendation = JSON.parse(jsonMatch[0]);
       } else {
-        // Fallback if AI doesn't return JSON
         recommendation = {
           recommendedTools: availableTools.slice(0, 3),
           reasoning: aiResponse,
@@ -129,10 +109,9 @@ serve(async (req) => {
         success: true,
         recommendation,
         userRequest,
+        provider: 'Google Gemini'
       }),
-      {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      }
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
   } catch (error) {
@@ -142,10 +121,7 @@ serve(async (req) => {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error occurred',
       }),
-      {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      }
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
 });

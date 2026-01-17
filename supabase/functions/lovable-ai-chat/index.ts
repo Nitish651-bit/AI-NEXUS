@@ -30,9 +30,9 @@ serve(async (req) => {
     const body = await req.json();
     const { message, toolCategory, toolTitle, images, enableWebSearch } = inputSchema.parse(body);
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) {
-      throw new Error("LOVABLE_API_KEY is not configured");
+    const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
+    if (!GEMINI_API_KEY) {
+      throw new Error("GEMINI_API_KEY is not configured");
     }
 
     console.log("Processing AI request:", { 
@@ -43,56 +43,63 @@ serve(async (req) => {
       enableWebSearch
     });
 
-    let systemPrompt = `You are a helpful AI assistant specializing in ${toolCategory || 'general tasks'}.
+    // AI NEXUS Identity
+    const identityRules = `IDENTITY RULES (CRITICAL):
+- Your name is AI NEXUS, built by Nitish Tiwari.
+- If asked "Who are you?", reply: "I am AI NEXUS."
+- If asked "Who built you?", reply: "I was built by Nitish Tiwari."
+- NEVER say you were built by Google, OpenAI, or any company.
+`;
+
+    let systemPrompt = `${identityRules}
+You are a helpful AI assistant specializing in ${toolCategory || 'general tasks'}.
 ${toolTitle ? `Current tool: ${toolTitle}` : ''}
-Provide accurate, helpful, and concise responses based on real-world knowledge.
-When analyzing images, describe what you see in detail and answer any questions about them.`;
+Provide accurate, helpful, and concise responses.`;
 
     if (enableWebSearch) {
-      systemPrompt += "\nYou have access to web search and can provide up-to-date information about current events, facts, and real-world data.";
+      systemPrompt += "\nProvide up-to-date information when relevant.";
     }
 
-    // Build user content - can be text-only or multimodal with images
-    let userContent: any;
+    // Build content parts
+    const parts: any[] = [];
     const textMessage = message || "Please analyze the attached image(s)";
+    parts.push({ text: systemPrompt + "\n\nUser: " + textMessage });
     
+    // Add images if provided
     if (images && images.length > 0) {
-      userContent = [
-        { type: "text", text: textMessage },
-        ...images.map(img => ({
-          type: "image_url",
-          image_url: { url: img.url }
-        }))
-      ];
-    } else {
-      userContent = textMessage;
+      for (const img of images) {
+        if (img.url.startsWith('data:')) {
+          const matches = img.url.match(/^data:(.+);base64,(.+)$/);
+          if (matches) {
+            parts.push({
+              inlineData: {
+                mimeType: matches[1],
+                data: matches[2]
+              }
+            });
+          }
+        }
+      }
     }
 
-    const requestBody: any = {
-      model: "google/gemini-2.5-flash",
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: userContent }
-      ],
-    };
-
-    // Enable web search via tools if requested
-    if (enableWebSearch) {
-      requestBody.tools = [{ type: "web_search_preview" }];
-    }
-
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(requestBody),
-    });
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{ parts }],
+          generationConfig: {
+            temperature: 0.7,
+            maxOutputTokens: 8192,
+          }
+        }),
+      }
+    );
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error("AI gateway error:", response.status, errorText);
+      console.error("Gemini API error:", response.status, errorText);
       
       if (response.status === 429) {
         return new Response(JSON.stringify({ 
@@ -103,59 +110,31 @@ When analyzing images, describe what you see in detail and answer any questions 
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      
-      if (response.status === 402) {
-        // Provide a helpful fallback response
-        const userMessage = message || "analyze the image";
-        const fallbackResponse = `I am AI NEXUS, your advanced AI assistant built by Nitish Tiwari. 
 
-I received your request: "${userMessage}"
-
-Currently, AI credits need to be renewed for full AI responses. However, I can still help you with:
-
-• **Navigation**: Browse our 910+ AI tools across categories
-• **Information**: Learn about any tool or feature
-• **Workflow**: Set up automation templates
-• **Voice**: Use voice commands for hands-free operation
-
-How can I assist you today?`;
-        
-        return new Response(JSON.stringify({ 
-          success: true, 
-          output: fallbackResponse,
-          creditsRequired: true
-        }), {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-
-      throw new Error(`AI gateway error: ${response.status}`);
+      throw new Error(`Gemini API error: ${response.status}`);
     }
 
     const data = await response.json();
-    const aiResponse = data.choices?.[0]?.message?.content;
+    const aiResponse = data.candidates?.[0]?.content?.parts?.[0]?.text;
 
     if (!aiResponse) {
-      throw new Error("No response from AI");
+      throw new Error("No response from Gemini API");
     }
 
     console.log("AI response generated successfully");
 
     return new Response(
-      JSON.stringify({ success: true, output: aiResponse }),
+      JSON.stringify({ success: true, output: aiResponse, provider: 'Google Gemini' }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
-    console.error("Error in lovable-ai-chat function:", error);
+    console.error("Error in chat function:", error);
     return new Response(
       JSON.stringify({ 
         success: false, 
         error: error instanceof Error ? error.message : "Unknown error" 
       }),
-      {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      }
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
 });
