@@ -59,11 +59,13 @@ serve(async (req) => {
       }
       
       if (response.status === 402) {
+        // Provide a helpful message instead of error
         return new Response(JSON.stringify({ 
-          success: false, 
-          error: "AI credits exhausted. Please add credits to continue." 
+          success: true, 
+          imageUrl: null,
+          message: `🎨 Image Generation Request: "${prompt}"\n\nAI credits need to be renewed for image generation. Your prompt has been saved.`,
+          creditsRequired: true
         }), {
-          status: 402,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }

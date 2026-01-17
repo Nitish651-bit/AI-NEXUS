@@ -24,6 +24,26 @@ export const OpenAITTS = () => {
   const [isGenerating, setIsGenerating] = useState(false);
   const { toast } = useToast();
 
+  const useBrowserTTS = (textToSpeak: string) => {
+    if ('speechSynthesis' in window) {
+      const utterance = new SpeechSynthesisUtterance(textToSpeak);
+      utterance.lang = 'en-US';
+      utterance.rate = 1;
+      utterance.pitch = 1;
+      window.speechSynthesis.speak(utterance);
+      toast({
+        title: "Playing",
+        description: "Using browser's built-in text-to-speech",
+      });
+    } else {
+      toast({
+        title: "Error",
+        description: "Your browser doesn't support text-to-speech",
+        variant: "destructive",
+      });
+    }
+  };
+
   const generateSpeech = async () => {
     if (!text.trim()) {
       toast({
@@ -49,6 +69,16 @@ export const OpenAITTS = () => {
         throw error;
       }
 
+      // Handle browser TTS fallback
+      if (data?.useBrowserTTS) {
+        useBrowserTTS(text);
+        toast({
+          title: "Using Browser TTS",
+          description: data?.message || "Cloud TTS unavailable, using browser fallback",
+        });
+        return;
+      }
+
       if (!data?.success || !data?.audioContent) {
         throw new Error(data?.error || "Failed to generate speech");
       }
@@ -62,11 +92,8 @@ export const OpenAITTS = () => {
       });
     } catch (error) {
       console.error("Error generating speech:", error);
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to generate speech",
-        variant: "destructive",
-      });
+      // Fallback to browser TTS on any error
+      useBrowserTTS(text);
     } finally {
       setIsGenerating(false);
     }
