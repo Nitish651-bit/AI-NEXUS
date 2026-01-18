@@ -93,14 +93,8 @@ Provide accurate, helpful, and concise responses.`;
         if (response.status === 429) {
           console.log("Lovable AI rate limited, will try Gemini fallback");
         } else if (response.status === 402) {
-          return new Response(JSON.stringify({ 
-            success: false, 
-            error: "AI credits exhausted. Please add credits to continue.",
-            creditsRequired: true
-          }), {
-            status: 402,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          });
+          console.log("Lovable AI credits exhausted, will try Gemini fallback");
+          // Don't return here - fall through to Gemini fallback
         } else if (response.ok) {
           const data = await response.json();
           const aiResponse = data.choices?.[0]?.message?.content;
