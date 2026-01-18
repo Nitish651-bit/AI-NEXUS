@@ -30,11 +30,6 @@ serve(async (req) => {
     const body = await req.json();
     const { message, toolCategory, toolTitle, images, enableWebSearch } = inputSchema.parse(body);
 
-    const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
-    if (!GEMINI_API_KEY) {
-      throw new Error("GEMINI_API_KEY is not configured");
-    }
-
     console.log("Processing AI request:", { 
       toolCategory, 
       toolTitle, 
@@ -51,21 +46,90 @@ serve(async (req) => {
 - NEVER say you were built by Google, OpenAI, or any company.
 `;
 
-    let systemPrompt = `${identityRules}
+    const systemPrompt = `${identityRules}
 You are a helpful AI assistant specializing in ${toolCategory || 'general tasks'}.
 ${toolTitle ? `Current tool: ${toolTitle}` : ''}
+${enableWebSearch ? 'Provide up-to-date information when relevant.' : ''}
 Provide accurate, helpful, and concise responses.`;
 
-    if (enableWebSearch) {
-      systemPrompt += "\nProvide up-to-date information when relevant.";
+    const textMessage = message || "Please analyze the attached image(s)";
+
+    // Try Lovable AI Gateway first (better rate limits)
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    
+    if (LOVABLE_API_KEY) {
+      try {
+        console.log("Using Lovable AI Gateway");
+        
+        // Build messages for Lovable AI
+        const userContent: any[] = [{ type: "text", text: textMessage }];
+        
+        if (images && images.length > 0) {
+          for (const img of images) {
+            if (img.url.startsWith('data:') || img.url.startsWith('http')) {
+              userContent.push({
+                type: "image_url",
+                image_url: { url: img.url }
+              });
+            }
+          }
+        }
+
+        const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${LOVABLE_API_KEY}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            model: "google/gemini-2.5-flash",
+            messages: [
+              { role: "system", content: systemPrompt },
+              { role: "user", content: userContent.length === 1 ? textMessage : userContent }
+            ],
+          }),
+        });
+
+        if (response.status === 429) {
+          console.log("Lovable AI rate limited, will try Gemini fallback");
+        } else if (response.status === 402) {
+          return new Response(JSON.stringify({ 
+            success: false, 
+            error: "AI credits exhausted. Please add credits to continue.",
+            creditsRequired: true
+          }), {
+            status: 402,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        } else if (response.ok) {
+          const data = await response.json();
+          const aiResponse = data.choices?.[0]?.message?.content;
+
+          if (aiResponse) {
+            console.log("Lovable AI response generated successfully");
+            return new Response(
+              JSON.stringify({ success: true, output: aiResponse, provider: 'Lovable AI' }),
+              { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            );
+          }
+        }
+      } catch (lovableError) {
+        console.error("Lovable AI error, falling back to Gemini:", lovableError);
+      }
     }
 
-    // Build content parts
+    // Fallback to direct Gemini API
+    const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
+    if (!GEMINI_API_KEY) {
+      throw new Error("No AI provider available. Please configure GEMINI_API_KEY or ensure LOVABLE_API_KEY is valid.");
+    }
+
+    console.log("Using Gemini API fallback");
+
+    // Build content parts for Gemini
     const parts: any[] = [];
-    const textMessage = message || "Please analyze the attached image(s)";
     parts.push({ text: systemPrompt + "\n\nUser: " + textMessage });
     
-    // Add images if provided
     if (images && images.length > 0) {
       for (const img of images) {
         if (img.url.startsWith('data:')) {
@@ -82,7 +146,7 @@ Provide accurate, helpful, and concise responses.`;
       }
     }
 
-    const response = await fetch(
+    const geminiResponse = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,
       {
         method: "POST",
@@ -97,31 +161,31 @@ Provide accurate, helpful, and concise responses.`;
       }
     );
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error("Gemini API error:", response.status, errorText);
+    if (!geminiResponse.ok) {
+      const errorText = await geminiResponse.text();
+      console.error("Gemini API error:", geminiResponse.status, errorText);
       
-      if (response.status === 429) {
+      if (geminiResponse.status === 429) {
         return new Response(JSON.stringify({ 
           success: false, 
-          error: "Rate limit exceeded. Please try again in a moment." 
+          error: "All AI services are temporarily busy. Please wait a moment and try again." 
         }), {
           status: 429,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
 
-      throw new Error(`Gemini API error: ${response.status}`);
+      throw new Error(`Gemini API error: ${geminiResponse.status}`);
     }
 
-    const data = await response.json();
+    const data = await geminiResponse.json();
     const aiResponse = data.candidates?.[0]?.content?.parts?.[0]?.text;
 
     if (!aiResponse) {
-      throw new Error("No response from Gemini API");
+      throw new Error("No response from AI");
     }
 
-    console.log("AI response generated successfully");
+    console.log("Gemini response generated successfully");
 
     return new Response(
       JSON.stringify({ success: true, output: aiResponse, provider: 'Google Gemini' }),
