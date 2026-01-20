@@ -15,3 +15,6 @@ verify_jwt = true
 
 [functions.workflow-automation]
 verify_jwt = false
+
+[functions.nexus-backend-connector]
+verify_jwt = false
