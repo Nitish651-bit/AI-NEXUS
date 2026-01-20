@@ -8,6 +8,7 @@ import NotFound from "./pages/NotFound";
 import { Integrations } from "./pages/Integrations";
 import ResetPassword from "./pages/ResetPassword";
 import VideoSuite from "./pages/VideoSuite";
+import NexusSettings from "./pages/NexusSettings";
 
 const queryClient = new QueryClient();
 
@@ -22,6 +23,7 @@ const App = () => (
           <Route path="/video-suite" element={<VideoSuite />} />
           <Route path="/integrations" element={<Integrations />} />
           <Route path="/reset-password" element={<ResetPassword />} />
+          <Route path="/nexus-settings" element={<NexusSettings />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
