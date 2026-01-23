@@ -13,8 +13,6 @@ export const LovableAIImage = () => {
   const [isGenerating, setIsGenerating] = useState(false);
   const { toast } = useToast();
 
-  const [message, setMessage] = useState<string>("");
-
   const generateImage = async () => {
     if (!prompt.trim()) {
       toast({
@@ -27,7 +25,6 @@ export const LovableAIImage = () => {
 
     setIsGenerating(true);
     setGeneratedImage("");
-    setMessage("");
 
     try {
       const { data, error } = await supabase.functions.invoke('lovable-ai-image', {
@@ -36,16 +33,6 @@ export const LovableAIImage = () => {
 
       if (error) {
         throw error;
-      }
-
-      // Handle credits required case
-      if (data?.creditsRequired) {
-        setMessage(data?.message || "AI credits need to be renewed for image generation.");
-        toast({
-          title: "Credits Required",
-          description: "Image generation requires AI credits to be renewed.",
-        });
-        return;
       }
 
       if (!data?.success || !data?.imageUrl) {
@@ -109,12 +96,6 @@ export const LovableAIImage = () => {
             </>
           )}
         </Button>
-
-        {message && !generatedImage && (
-          <div className="p-4 rounded-lg bg-secondary/50 border border-border">
-            <p className="text-sm text-muted-foreground whitespace-pre-line">{message}</p>
-          </div>
-        )}
 
         {generatedImage && (
           <div className="space-y-3">
