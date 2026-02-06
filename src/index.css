@@ -79,7 +79,10 @@ All colors MUST be HSL.
     @apply bg-background text-foreground;
     background: linear-gradient(135deg, hsl(220 25% 6%), hsl(220 20% 8%));
     min-height: 100vh;
+    min-height: 100dvh;
     overflow-x: hidden;
+    -webkit-text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
   }
 
   /* Custom scrollbar with smooth styling */
@@ -181,5 +184,27 @@ All colors MUST be HSL.
 
   .animate-scale-in {
     animation: scale-in 0.4s ease-out;
+  }
+}
+
+/* Responsive scaling for large screens (TV / 4K) */
+@media (min-width: 2560px) {
+  html {
+    font-size: 20px;
+  }
+}
+
+@media (min-width: 3840px) {
+  html {
+    font-size: 24px;
+  }
+}
+
+/* Safe area insets for mobile notch / bottom bar */
+@supports (padding: env(safe-area-inset-bottom)) {
+  body {
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
   }
 }

@@ -48,76 +48,76 @@ export function Dashboard({ userEmail, onLogout }: DashboardProps) {
     <div className="min-h-screen bg-background overflow-x-hidden">
       {/* Header */}
       <header className="glass-card border-b border-holo-blue/20 sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12">
+        <div className="max-w-[1920px] mx-auto px-3 sm:px-6 py-3 sm:py-4">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 sm:gap-4 min-w-0">
+              <div className="flex items-center gap-2 sm:gap-3">
+                <div className="w-8 h-8 sm:w-12 sm:h-12 shrink-0">
                   <img 
                     src={logo} 
                     alt="AI Nexus - Ultimate AI Platform" 
                     className="w-full h-full object-contain rounded-full drop-shadow-[0_0_20px_rgba(0,212,255,0.4)]" 
                   />
                 </div>
-                <div>
-                  <h1 className="text-2xl font-bold bg-gradient-primary bg-clip-text text-transparent">
+                <div className="min-w-0">
+                  <h1 className="text-lg sm:text-2xl font-bold bg-gradient-primary bg-clip-text text-transparent truncate">
                     AI Nexus
                   </h1>
-                  <p className="text-sm text-muted-foreground">{aiTools.length}+ AI Tools & Automation</p>
+                  <p className="text-xs sm:text-sm text-muted-foreground hidden xs:block">{aiTools.length}+ AI Tools & Automation</p>
                 </div>
               </div>
             </div>
             
-            <div className="flex items-center gap-4">
-              <div className="flex gap-2">
+            <div className="flex items-center gap-1 sm:gap-4 shrink-0">
+              <div className="flex gap-1 sm:gap-2 flex-wrap justify-end">
                 <Button
                   variant={activeTab === "tools" ? "default" : "outline"}
                   size="sm"
                   onClick={() => setActiveTab("tools")}
-                  className="gap-2"
+                  className="gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3"
                 >
-                  <Brain size={16} />
-                  AI Tools
+                  <Brain size={14} className="sm:w-4 sm:h-4" />
+                  <span className="hidden sm:inline">AI Tools</span>
                 </Button>
                 <Button
                   variant={activeTab === "automation" ? "default" : "outline"}
                   size="sm"
                   onClick={() => setActiveTab("automation")}
-                  className="gap-2"
+                  className="gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3"
                 >
-                  <Bot size={16} />
-                  Automation
+                  <Bot size={14} className="sm:w-4 sm:h-4" />
+                  <span className="hidden sm:inline">Automation</span>
                 </Button>
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => navigate('/video-suite')}
-                  className="gap-2 bg-gradient-to-r from-purple-500/10 to-pink-500/10 border-purple-500/30 hover:border-purple-500"
+                  className="gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3 bg-gradient-to-r from-purple-500/10 to-pink-500/10 border-purple-500/30 hover:border-purple-500"
                 >
-                  <Film size={16} />
-                  Video Suite
+                  <Film size={14} className="sm:w-4 sm:h-4" />
+                  <span className="hidden md:inline">Video Suite</span>
                 </Button>
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => navigate('/integrations')}
-                  className="gap-2"
+                  className="gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3"
                 >
-                  <Plug size={16} />
-                  Integrations
+                  <Plug size={14} className="sm:w-4 sm:h-4" />
+                  <span className="hidden md:inline">Integrations</span>
                 </Button>
               </div>
-              <span className="text-sm text-muted-foreground">Welcome, {userEmail}</span>
-              <Button variant="ghost" size="sm" onClick={onLogout}>
-                <LogOut size={16} />
-                Logout
+              <span className="text-xs sm:text-sm text-muted-foreground hidden lg:block truncate max-w-[150px]">Welcome, {userEmail}</span>
+              <Button variant="ghost" size="sm" onClick={onLogout} className="px-2 sm:px-3">
+                <LogOut size={14} className="sm:w-4 sm:h-4" />
+                <span className="hidden sm:inline ml-1">Logout</span>
               </Button>
             </div>
           </div>
         </div>
       </header>
 
-      <div className="max-w-7xl mx-auto px-6 py-8">
+      <div className="max-w-[1920px] mx-auto px-3 sm:px-6 py-4 sm:py-8">
         {activeTab === "tools" && (
         <>
         {/* Search and Filters */}
@@ -157,7 +157,7 @@ export function Dashboard({ userEmail, onLogout }: DashboardProps) {
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-6 mb-6 sm:mb-8">
           <div className="glass-card p-6 text-center border border-holo-blue/20">
             <h3 className="text-3xl font-bold text-holo-blue">{aiTools.length}</h3>
             <p className="text-muted-foreground">AI Tools</p>
@@ -183,7 +183,7 @@ export function Dashboard({ userEmail, onLogout }: DashboardProps) {
             </span>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 sm:gap-6">
             {filteredTools.map((tool) => (
               <AIToolCard
                 key={tool.id}
