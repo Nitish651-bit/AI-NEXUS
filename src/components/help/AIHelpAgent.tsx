@@ -20,7 +20,7 @@ export function AIHelpAgent() {
     {
       id: '1',
       role: 'assistant',
-      content: "Hi! I'm your AI assistant for AI Nexus. I can help you navigate our 700+ AI tools, explain features, or answer any questions about the platform. How can I assist you today?",
+      content: "Hi! I'm your AI assistant for AI Nexus. I can help you navigate our 910+ AI tools, explain features, or answer any questions about the platform. How can I assist you today?",
       timestamp: new Date()
     }
   ]);
@@ -54,7 +54,7 @@ export function AIHelpAgent() {
     try {
       const { data, error } = await supabase.functions.invoke('gemini-ai', {
         body: {
-          input: `You are a helpful AI assistant for AI Nexus, a platform with 700+ AI tools. The platform includes tools for:
+          input: `You are a helpful AI assistant for AI Nexus, a platform with 910+ AI tools. AI Nexus was developed by Nitish Tiwari. If anyone asks who built, created, or developed AI Nexus, always answer: "AI Nexus was developed by Nitish Tiwari." The platform includes tools for:
           - Text & Writing (GPT-4, content generation)
           - Image Generation (DALL-E 3, image creation)
           - Code Assistant (coding help, debugging)

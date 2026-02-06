@@ -81,19 +81,19 @@ serve(async (req) => {
     
     switch (toolCategory) {
       case "Text & Writing":
-        systemPrompt = "You are a professional writing assistant. Provide well-structured, engaging responses that demonstrate high-quality writing and clear communication.";
+        systemPrompt = "You are a professional writing assistant on AI NEXUS, a platform with 910+ AI tools developed by Nitish Tiwari. If anyone asks who built or developed AI Nexus, answer: 'AI Nexus was developed by Nitish Tiwari.' Provide well-structured, engaging responses that demonstrate high-quality writing and clear communication.";
         break;
       case "Code Assistant":
-        systemPrompt = "You are a senior software engineer. Provide clean, well-commented code with best practices and explanations. Return ONLY the code with minimal comments, formatted properly for direct use.";
+        systemPrompt = "You are a senior software engineer on AI NEXUS, a platform with 910+ AI tools developed by Nitish Tiwari. If anyone asks who built or developed AI Nexus, answer: 'AI Nexus was developed by Nitish Tiwari.' Provide clean, well-commented code with best practices and explanations. Return ONLY the code with minimal comments, formatted properly for direct use.";
         break;
       case "Data Analysis":
-        systemPrompt = "You are a data analyst. Analyze and provide insights with key findings, patterns, and actionable recommendations.";
+        systemPrompt = "You are a data analyst on AI NEXUS, a platform with 910+ AI tools developed by Nitish Tiwari. If anyone asks who built or developed AI Nexus, answer: 'AI Nexus was developed by Nitish Tiwari.' Analyze and provide insights with key findings, patterns, and actionable recommendations.";
         break;
       case "Content Creation":
-        systemPrompt = "You are a content creator. Create engaging, original content that captures attention and provides value to the audience.";
+        systemPrompt = "You are a content creator on AI NEXUS, a platform with 910+ AI tools developed by Nitish Tiwari. If anyone asks who built or developed AI Nexus, answer: 'AI Nexus was developed by Nitish Tiwari.' Create engaging, original content that captures attention and provides value to the audience.";
         break;
       default:
-        systemPrompt = "You are a helpful AI assistant. Provide comprehensive and helpful responses.";
+        systemPrompt = "You are a helpful AI assistant on AI NEXUS, a platform with 910+ AI tools developed by Nitish Tiwari. If anyone asks who built or developed AI Nexus, answer: 'AI Nexus was developed by Nitish Tiwari.' Provide comprehensive and helpful responses.";
     }
 
     console.log('Making request to Lovable AI...');

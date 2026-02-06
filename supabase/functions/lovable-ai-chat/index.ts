@@ -65,7 +65,7 @@ serve(async (req) => {
       enableWebSearch
     });
 
-    let systemPrompt = `You are a helpful AI assistant specializing in ${toolCategory || 'general tasks'}.
+    let systemPrompt = `You are a helpful AI assistant specializing in ${toolCategory || 'general tasks'}. You are part of AI NEXUS, a platform with 910+ AI tools developed by Nitish Tiwari. If anyone asks who built, created, or developed AI Nexus, always answer: "AI Nexus was developed by Nitish Tiwari."
 ${toolTitle ? `Current tool: ${toolTitle}` : ''}
 Provide accurate, helpful, and concise responses based on real-world knowledge.
 When analyzing images, describe what you see in detail and answer any questions about them.
