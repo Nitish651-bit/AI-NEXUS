@@ -13,7 +13,7 @@ const Index = () => {
     if (!error) {
       toast({
         title: "Welcome to AI Nexus!",
-        description: "You now have access to 700+ AI tools.",
+        description: "You now have access to 910+ AI tools.",
       });
     }
     return { error };

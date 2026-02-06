@@ -128,7 +128,7 @@ export function LoginForm({ onSignIn, onSignUp, onResetPassword, isLoading = fal
               Your Ultimate AI Tools Platform
             </p>
             <p className="text-muted-foreground text-base max-w-lg mx-auto leading-relaxed">
-              Access 150+ Cutting-Edge AI Tools: ChatGPT, Claude, Midjourney & More
+              Access 910+ Cutting-Edge AI Tools: ChatGPT, Claude, Midjourney & More
             </p>
           </div>
         </div>
@@ -274,7 +274,7 @@ export function LoginForm({ onSignIn, onSignUp, onResetPassword, isLoading = fal
         <div className="text-center space-y-3 animate-fade-in">
           <div className="glass-card p-4 border border-holo-blue/20 rounded-lg">
             <p className="text-sm font-medium text-holo-blue-light mb-2">
-              🚀 150+ AI Tools • 🔒 Enterprise-Grade Security • ⚡ Lightning Fast Performance
+              🚀 910+ AI Tools • 🔒 Enterprise-Grade Security • ⚡ Lightning Fast Performance
             </p>
             <div className="text-xs text-muted-foreground space-y-1.5">
               <p className="flex items-center justify-center gap-2">
