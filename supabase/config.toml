@@ -15,3 +15,36 @@ verify_jwt = false
 
 [functions.workflow-automation]
 verify_jwt = false
+
+[functions.lovable-ai-chat]
+verify_jwt = false
+
+[functions.lovable-ai-image]
+verify_jwt = false
+
+[functions.replicate-image]
+verify_jwt = false
+
+[functions.ai-tool-router]
+verify_jwt = false
+
+[functions.elevenlabs-tts]
+verify_jwt = false
+
+[functions.openai-tts]
+verify_jwt = false
+
+[functions.openai-chat]
+verify_jwt = false
+
+[functions.gemini-ai]
+verify_jwt = false
+
+[functions.google-ai]
+verify_jwt = false
+
+[functions.music-search]
+verify_jwt = false
+
+[functions.ai-music-recommend]
+verify_jwt = false
