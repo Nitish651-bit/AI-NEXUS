@@ -108,16 +108,16 @@ export function AIHelpAgent() {
       {!isOpen && (
         <Button
           onClick={() => setIsOpen(true)}
-          className="fixed bottom-6 right-6 w-14 h-14 rounded-full bg-primary hover:bg-primary/90 shadow-lg z-50"
+          className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-primary hover:bg-primary/90 shadow-lg z-50"
           size="lg"
         >
-          <HelpCircle size={24} />
+          <HelpCircle size={20} className="sm:w-6 sm:h-6" />
         </Button>
       )}
 
       {/* Chat Widget */}
       {isOpen && (
-        <Card className="fixed bottom-6 right-6 w-96 h-[500px] glass-card border border-holo-blue/20 shadow-card-custom z-50 flex flex-col">
+        <Card className="fixed bottom-0 right-0 w-full h-[85dvh] sm:bottom-6 sm:right-6 sm:w-96 sm:h-[500px] glass-card border border-holo-blue/20 shadow-card-custom z-50 flex flex-col sm:rounded-xl rounded-t-xl">
           {/* Header */}
           <div className="flex items-center justify-between p-4 border-b border-holo-blue/20">
             <div className="flex items-center gap-2">

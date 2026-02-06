@@ -242,7 +242,7 @@ export function AIToolModal({ isOpen, onClose, tool }: AIToolModalProps) {
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] glass-card border border-holo-blue/20 overflow-hidden flex flex-col">
+      <DialogContent className="w-[95vw] max-w-4xl max-h-[90vh] max-h-[90dvh] glass-card border border-holo-blue/20 overflow-hidden flex flex-col p-4 sm:p-6">
         <DialogHeader>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -275,7 +275,7 @@ export function AIToolModal({ isOpen, onClose, tool }: AIToolModalProps) {
           </div>
         </DialogHeader>
 
-        <div className="space-y-6 overflow-y-auto flex-1 pr-2" style={{ maxHeight: 'calc(90vh - 120px)' }}>
+        <div className="space-y-4 sm:space-y-6 overflow-y-auto flex-1 pr-1 sm:pr-2" style={{ maxHeight: 'calc(90dvh - 120px)' }}>
           <p className="text-muted-foreground">{tool.description}</p>
           
           <Separator className="bg-holo-blue/20" />

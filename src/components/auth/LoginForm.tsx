@@ -109,32 +109,32 @@ export function LoginForm({ onSignIn, onSignUp, onResetPassword, isLoading = fal
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4">
-      <div className="w-full max-w-md space-y-8">
+    <div className="min-h-screen flex items-center justify-center p-3 sm:p-4">
+      <div className="w-full max-w-sm sm:max-w-md space-y-6 sm:space-y-8">
         {/* Logo Section */}
-        <div className="text-center space-y-6 animate-fade-in">
-          <div className="inline-flex items-center justify-center w-32 h-32 animate-float">
+        <div className="text-center space-y-4 sm:space-y-6 animate-fade-in">
+          <div className="inline-flex items-center justify-center w-20 h-20 sm:w-32 sm:h-32 animate-float">
             <img 
               src={logo} 
               alt="AI Nexus - Ultimate AI Platform" 
               className="w-full h-full object-contain rounded-full drop-shadow-[0_0_40px_rgba(0,212,255,0.5)]" 
             />
           </div>
-          <div className="space-y-3">
-            <h1 className="text-5xl font-bold bg-gradient-primary bg-clip-text text-transparent leading-tight tracking-tight">
+          <div className="space-y-2 sm:space-y-3">
+            <h1 className="text-3xl sm:text-5xl font-bold bg-gradient-primary bg-clip-text text-transparent leading-tight tracking-tight">
               AI Nexus
             </h1>
-            <p className="text-xl font-semibold text-holo-blue">
+            <p className="text-base sm:text-xl font-semibold text-holo-blue">
               Your Ultimate AI Tools Platform
             </p>
-            <p className="text-muted-foreground text-base max-w-lg mx-auto leading-relaxed">
+            <p className="text-muted-foreground text-sm sm:text-base max-w-lg mx-auto leading-relaxed">
               Access 910+ Cutting-Edge AI Tools: ChatGPT, Claude, Midjourney & More
             </p>
           </div>
         </div>
 
         {/* Login Form */}
-        <Card className="glass-card p-10 shadow-holo border border-holo-blue/30 backdrop-blur-xl animate-scale-in">
+        <Card className="glass-card p-6 sm:p-10 shadow-holo border border-holo-blue/30 backdrop-blur-xl animate-scale-in">
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="text-center mb-8">
               {mode === 'forgotPassword' && (
