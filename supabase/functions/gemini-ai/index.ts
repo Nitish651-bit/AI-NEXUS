@@ -110,6 +110,7 @@ serve(async (req) => {
           { role: 'system', content: systemPrompt },
           { role: 'user', content: input }
         ],
+        tools: [{ type: "web_search_preview" }],
       })
     });
 
