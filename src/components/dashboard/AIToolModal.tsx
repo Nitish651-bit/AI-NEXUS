@@ -13,6 +13,7 @@ import { Separator } from "@/components/ui/separator";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { supabase } from "@/integrations/supabase/client";
 import { 
   Sparkles, 
   Send, 
@@ -26,7 +27,10 @@ import {
   FileImage,
   Folder,
   Trash2,
-  Globe
+  Globe,
+  Volume2,
+  VolumeX,
+  Loader2
 } from "lucide-react";
 
 interface AIToolModalProps {
@@ -47,7 +51,10 @@ export function AIToolModal({ isOpen, onClose, tool }: AIToolModalProps) {
   const [output, setOutput] = useState("");
   const [outputType, setOutputType] = useState<"text" | "image" | "code">("text");
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
-  const [enableWebSearch, setEnableWebSearch] = useState(false);
+  const [enableWebSearch, setEnableWebSearch] = useState(true);
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [isLoadingTTS, setIsLoadingTTS] = useState(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
@@ -186,6 +193,54 @@ export function AIToolModal({ isOpen, onClose, tool }: AIToolModalProps) {
     } catch (error) {
       // Error handling is done in the hook
       console.error('Failed to generate content:', error);
+    }
+  };
+
+  const handleReadAloud = async () => {
+    if (isSpeaking && audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+      setIsSpeaking(false);
+      return;
+    }
+
+    if (!output || outputType === "image") return;
+
+    setIsLoadingTTS(true);
+    try {
+      // Truncate to 5000 chars for TTS
+      const ttsText = output.slice(0, 5000).replace(/[#*`_~\[\]()>]/g, "");
+      
+      const { data, error } = await supabase.functions.invoke("openai-tts", {
+        body: { text: ttsText, voice: "nova" },
+      });
+
+      if (error) throw error;
+      if (!data?.success || !data?.audioContent) {
+        throw new Error(data?.error || "TTS failed");
+      }
+
+      const audioSrc = `data:audio/mp3;base64,${data.audioContent}`;
+      const audio = new Audio(audioSrc);
+      audioRef.current = audio;
+      
+      audio.onended = () => setIsSpeaking(false);
+      audio.onerror = () => {
+        setIsSpeaking(false);
+        toast({ title: "Audio playback failed", variant: "destructive" });
+      };
+
+      await audio.play();
+      setIsSpeaking(true);
+    } catch (error) {
+      console.error("TTS error:", error);
+      toast({
+        title: "Read Aloud Failed",
+        description: error instanceof Error ? error.message : "Could not generate speech",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoadingTTS(false);
     }
   };
 
@@ -388,12 +443,12 @@ export function AIToolModal({ isOpen, onClose, tool }: AIToolModalProps) {
                 </div>
               )}
               
-              {/* Web Search Toggle */}
-              <div className="flex items-center justify-between p-3 bg-card border border-holo-blue/30 rounded-lg">
+              {/* Google Search Toggle */}
+              <div className="flex items-center justify-between p-3 bg-card border border-primary/30 rounded-lg">
                 <div className="flex items-center gap-2">
-                  <Globe size={16} className="text-holo-blue" />
+                  <Globe size={16} className="text-primary" />
                   <Label htmlFor="web-search" className="text-sm font-medium cursor-pointer">
-                    Enable Web Search
+                    Google Search (Real-time)
                   </Label>
                 </div>
                 <Switch
@@ -403,7 +458,7 @@ export function AIToolModal({ isOpen, onClose, tool }: AIToolModalProps) {
                 />
               </div>
               <p className="text-xs text-muted-foreground">
-                Enable to access real-time information from the internet
+                Google Search is enabled by default for real-time, accurate results
               </p>
               
               <Button
@@ -440,6 +495,24 @@ export function AIToolModal({ isOpen, onClose, tool }: AIToolModalProps) {
                   </div>
                   
                   <div className="flex gap-2">
+                    {outputType !== "image" && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleReadAloud}
+                        disabled={isLoadingTTS}
+                        className={isSpeaking ? "border-primary text-primary" : ""}
+                      >
+                        {isLoadingTTS ? (
+                          <Loader2 size={14} className="animate-spin" />
+                        ) : isSpeaking ? (
+                          <VolumeX size={14} />
+                        ) : (
+                          <Volume2 size={14} />
+                        )}
+                        {isSpeaking ? "Stop" : "Read Aloud"}
+                      </Button>
+                    )}
                     <Button variant="outline" size="sm" onClick={copyToClipboard}>
                       <Copy size={14} />
                       Copy
