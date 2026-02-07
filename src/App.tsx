@@ -8,6 +8,7 @@ import NotFound from "./pages/NotFound";
 import { Integrations } from "./pages/Integrations";
 import ResetPassword from "./pages/ResetPassword";
 import VideoSuite from "./pages/VideoSuite";
+import PWAInstallPrompt from "./components/pwa/PWAInstallPrompt";
 
 const queryClient = new QueryClient();
 
@@ -16,6 +17,7 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
+      <PWAInstallPrompt />
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Index />} />
