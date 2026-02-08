@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { AIToolModal } from "./AIToolModal";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { AIToolCard } from "./AIToolCard";
 import { AIHelpAgent } from "@/components/help/AIHelpAgent";
 import { AutomationDashboard } from "@/components/automation/AutomationDashboard";
+import { JarvisInterface } from "@/components/voice/JarvisInterface";
 import { useNavigate } from "react-router-dom";
 import { 
   Search,
@@ -14,7 +15,8 @@ import {
   LogOut,
   Bot,
   Plug,
-  Film
+  Film,
+  Mic
 } from "lucide-react";
 import logo from "@/assets/ai-nexus-logo.png";
 import { aiTools, categories } from "@/data/aiToolsData";
@@ -31,11 +33,31 @@ export function Dashboard({ userEmail, onLogout }: DashboardProps) {
   const [selectedTool, setSelectedTool] = useState<typeof aiTools[0] | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<"tools" | "automation">("tools");
+  const [isJarvisOpen, setIsJarvisOpen] = useState(false);
 
   const handleToolClick = (tool: typeof aiTools[0]) => {
     setSelectedTool(tool);
     setIsModalOpen(true);
   };
+
+  const handleVoiceOpenTool = useCallback((toolName: string) => {
+    const tool = aiTools.find(t => 
+      t.title.toLowerCase().includes(toolName.toLowerCase())
+    );
+    if (tool) {
+      setIsJarvisOpen(false);
+      setTimeout(() => {
+        setSelectedTool(tool);
+        setIsModalOpen(true);
+      }, 300);
+    }
+  }, []);
+
+  const handleVoiceSearch = useCallback((query: string) => {
+    setSearchQuery(query);
+    setSelectedCategory("All");
+    setIsJarvisOpen(false);
+  }, []);
 
   const filteredTools = aiTools.filter(tool => {
     const matchesSearch = tool.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -105,6 +127,15 @@ export function Dashboard({ userEmail, onLogout }: DashboardProps) {
                 >
                   <Plug size={14} className="sm:w-4 sm:h-4" />
                   <span className="hidden md:inline">Integrations</span>
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsJarvisOpen(true)}
+                  className="gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3 bg-gradient-to-r from-cyan-500/10 to-blue-500/10 border-cyan-500/30 hover:border-cyan-500 hover:shadow-[0_0_15px_rgba(0,212,255,0.3)] transition-all"
+                >
+                  <Mic size={14} className="sm:w-4 sm:h-4 text-cyan-400" />
+                  <span className="hidden md:inline">JARVIS</span>
                 </Button>
               </div>
               <span className="text-xs sm:text-sm text-muted-foreground hidden lg:block truncate max-w-[150px]">Welcome, {userEmail}</span>
@@ -218,6 +249,14 @@ export function Dashboard({ userEmail, onLogout }: DashboardProps) {
         {/* AI Help Agent */}
         <AIHelpAgent />
       </div>
+
+      {/* JARVIS Voice Assistant */}
+      <JarvisInterface
+        isOpen={isJarvisOpen}
+        onClose={() => setIsJarvisOpen(false)}
+        onOpenTool={handleVoiceOpenTool}
+        onSearchTools={handleVoiceSearch}
+      />
     </div>
   );
 }
