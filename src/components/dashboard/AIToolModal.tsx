@@ -3,6 +3,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useGeminiAI } from "@/hooks/useGeminiAI";
 import { useSocialMediaAI } from "@/hooks/useSocialMediaAI";
 import { useEmailGeneratorAI } from "@/hooks/useEmailGeneratorAI";
+import { useTextToSpeech } from "@/hooks/useTextToSpeech";
 import { extractTextFromFile, extractFileContent } from "@/utils/fileTextExtractor";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -13,7 +14,6 @@ import { Separator } from "@/components/ui/separator";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { supabase } from "@/integrations/supabase/client";
 import { 
   Sparkles, 
   Send, 
@@ -52,9 +52,6 @@ export function AIToolModal({ isOpen, onClose, tool }: AIToolModalProps) {
   const [outputType, setOutputType] = useState<"text" | "image" | "code">("text");
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const [enableWebSearch, setEnableWebSearch] = useState(true);
-  const [isSpeaking, setIsSpeaking] = useState(false);
-  const [isLoadingTTS, setIsLoadingTTS] = useState(false);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
@@ -64,6 +61,7 @@ export function AIToolModal({ isOpen, onClose, tool }: AIToolModalProps) {
   });
   const { generateContent: generateSocialContent, isProcessing: isSocialProcessing } = useSocialMediaAI();
   const { generateEmail, isProcessing: isEmailProcessing } = useEmailGeneratorAI();
+  const { speak, isSpeaking, isLoadingTTS } = useTextToSpeech({ voice: "nova" });
 
   const handleFileUpload = (files: File[]) => {
     const validFiles = files.filter(file => {
@@ -196,52 +194,9 @@ export function AIToolModal({ isOpen, onClose, tool }: AIToolModalProps) {
     }
   };
 
-  const handleReadAloud = async () => {
-    if (isSpeaking && audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current.currentTime = 0;
-      setIsSpeaking(false);
-      return;
-    }
-
+  const handleReadAloud = () => {
     if (!output || outputType === "image") return;
-
-    setIsLoadingTTS(true);
-    try {
-      // Truncate to 5000 chars for TTS
-      const ttsText = output.slice(0, 5000).replace(/[#*`_~\[\]()>]/g, "");
-      
-      const { data, error } = await supabase.functions.invoke("openai-tts", {
-        body: { text: ttsText, voice: "nova" },
-      });
-
-      if (error) throw error;
-      if (!data?.success || !data?.audioContent) {
-        throw new Error(data?.error || "TTS failed");
-      }
-
-      const audioSrc = `data:audio/mp3;base64,${data.audioContent}`;
-      const audio = new Audio(audioSrc);
-      audioRef.current = audio;
-      
-      audio.onended = () => setIsSpeaking(false);
-      audio.onerror = () => {
-        setIsSpeaking(false);
-        toast({ title: "Audio playback failed", variant: "destructive" });
-      };
-
-      await audio.play();
-      setIsSpeaking(true);
-    } catch (error) {
-      console.error("TTS error:", error);
-      toast({
-        title: "Read Aloud Failed",
-        description: error instanceof Error ? error.message : "Could not generate speech",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoadingTTS(false);
-    }
+    speak(output);
   };
 
   const copyToClipboard = async () => {
