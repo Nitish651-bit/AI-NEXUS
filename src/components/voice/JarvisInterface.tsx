@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useVoiceAssistant } from "@/hooks/useVoiceAssistant";
-import { JarvisWaveform } from "./JarvisWaveform";
+import { NexusWaveform } from "./JarvisWaveform";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
@@ -17,7 +17,7 @@ import {
   Volume2,
 } from "lucide-react";
 
-interface JarvisInterfaceProps {
+interface NexusInterfaceProps {
   isOpen: boolean;
   onClose: () => void;
   onOpenTool?: (toolName: string) => void;
@@ -32,7 +32,7 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
   speaking: { label: "SPEAKING", color: "text-amber-400" },
 };
 
-export function JarvisInterface({ isOpen, onClose, onOpenTool, onSearchTools }: JarvisInterfaceProps) {
+export function NexusInterface({ isOpen, onClose, onOpenTool, onSearchTools }: NexusInterfaceProps) {
   const navigate = useNavigate();
   const [showTranscript, setShowTranscript] = useState(true);
 
@@ -90,7 +90,7 @@ export function JarvisInterface({ isOpen, onClose, onOpenTool, onSearchTools }: 
         <div className="flex items-center gap-3">
           <div className="w-3 h-3 rounded-full bg-holo-blue animate-pulse" />
           <span className="text-sm font-mono text-holo-blue tracking-wider">
-            JARVIS v3.0 — AI NEXUS
+            AI NEXUS VOICE v3.0
           </span>
         </div>
         <div className="flex items-center gap-2">
@@ -107,7 +107,7 @@ export function JarvisInterface({ isOpen, onClose, onOpenTool, onSearchTools }: 
       <div className="relative flex-1 flex flex-col items-center justify-center w-full max-w-2xl px-4 gap-6">
         {/* Waveform */}
         <div className="relative">
-          <JarvisWaveform status={status} audioLevel={audioLevel} />
+          <NexusWaveform status={status} audioLevel={audioLevel} />
           
           {/* Center status icon */}
           <div className="absolute inset-0 flex items-center justify-center">
@@ -168,7 +168,7 @@ export function JarvisInterface({ isOpen, onClose, onOpenTool, onSearchTools }: 
               className="gap-2 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white px-8 py-6 rounded-full text-lg shadow-[0_0_30px_rgba(0,212,255,0.3)] hover:shadow-[0_0_50px_rgba(0,212,255,0.5)] transition-all"
             >
               <Zap size={20} />
-              Activate JARVIS
+              Activate AI NEXUS
             </Button>
           ) : (
             <>

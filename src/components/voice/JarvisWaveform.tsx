@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import { VoiceStatus } from "@/hooks/useVoiceAssistant";
 
-interface JarvisWaveformProps {
+interface NexusWaveformProps {
   status: VoiceStatus;
   audioLevel: number;
 }
@@ -14,7 +14,7 @@ const STATUS_COLORS: Record<VoiceStatus, string[]> = {
   speaking: ["#f59e0b", "#ef4444"],
 };
 
-export function JarvisWaveform({ status, audioLevel }: JarvisWaveformProps) {
+export function NexusWaveform({ status, audioLevel }: NexusWaveformProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const frameRef = useRef<number>(0);
   const phaseRef = useRef(0);

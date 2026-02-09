@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { AIToolCard } from "./AIToolCard";
 import { AIHelpAgent } from "@/components/help/AIHelpAgent";
 import { AutomationDashboard } from "@/components/automation/AutomationDashboard";
-import { JarvisInterface } from "@/components/voice/JarvisInterface";
+import { NexusInterface } from "@/components/voice/JarvisInterface";
 import { useNavigate } from "react-router-dom";
 import { 
   Search,
@@ -135,7 +135,7 @@ export function Dashboard({ userEmail, onLogout }: DashboardProps) {
                   className="gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3 bg-gradient-to-r from-cyan-500/10 to-blue-500/10 border-cyan-500/30 hover:border-cyan-500 hover:shadow-[0_0_15px_rgba(0,212,255,0.3)] transition-all"
                 >
                   <Mic size={14} className="sm:w-4 sm:h-4 text-cyan-400" />
-                  <span className="hidden md:inline">JARVIS</span>
+                  <span className="hidden md:inline">AI NEXUS</span>
                 </Button>
               </div>
               <span className="text-xs sm:text-sm text-muted-foreground hidden lg:block truncate max-w-[150px]">Welcome, {userEmail}</span>
@@ -250,8 +250,8 @@ export function Dashboard({ userEmail, onLogout }: DashboardProps) {
         <AIHelpAgent />
       </div>
 
-      {/* JARVIS Voice Assistant */}
-      <JarvisInterface
+      {/* AI NEXUS Voice Assistant */}
+      <NexusInterface
         isOpen={isJarvisOpen}
         onClose={() => setIsJarvisOpen(false)}
         onOpenTool={handleVoiceOpenTool}
