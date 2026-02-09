@@ -162,7 +162,7 @@ export function useVoiceAssistant(options: UseVoiceAssistantOptions = {}) {
         body: {
           message: userMessage,
           toolCategory: "Voice Assistant",
-          toolTitle: "JARVIS Voice Assistant",
+          toolTitle: "AI NEXUS Voice Assistant",
           enableWebSearch: true,
         },
       });
@@ -338,7 +338,7 @@ export function useVoiceAssistant(options: UseVoiceAssistantOptions = {}) {
     speechSynthesis.cancel();
   }, []);
 
-  // Activate JARVIS
+  // Activate AI NEXUS
   const activate = useCallback(async () => {
     setIsActive(true);
     setStatus("wake-listening");
@@ -348,14 +348,14 @@ export function useVoiceAssistant(options: UseVoiceAssistantOptions = {}) {
     const welcomeMsg: VoiceMessage = {
       id: crypto.randomUUID(),
       role: "assistant",
-      content: "JARVIS online. Say \"Hey Nexus\" to give me a command, or speak freely after activation.",
+      content: "AI NEXUS online. Say \"Hey Nexus\" to give me a command, or speak freely after activation.",
       timestamp: new Date(),
     };
     setMessages([welcomeMsg]);
-    await speakResponse("JARVIS online. Say Hey Nexus to give me a command.");
+    await speakResponse("AI NEXUS online. Say Hey Nexus to give me a command.");
   }, [startAudioMonitoring, startListening, speakResponse]);
 
-  // Deactivate JARVIS
+  // Deactivate AI NEXUS
   const deactivate = useCallback(() => {
     setIsActive(false);
     setStatus("idle");
