@@ -3,9 +3,10 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { HelpCircle, Send, X, Bot, User } from "lucide-react";
+import { HelpCircle, Send, X, Bot, User, Volume2, VolumeX, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useTextToSpeech } from "@/hooks/useTextToSpeech";
 
 interface Message {
   id: string;
@@ -28,6 +29,7 @@ export function AIHelpAgent() {
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
+  const { speak, isSpeaking, isLoadingTTS } = useTextToSpeech({ voice: "nova" });
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -161,12 +163,31 @@ export function AIHelpAgent() {
                     }`}
                   >
                     <p className="text-sm">{message.content}</p>
-                    <p className="text-xs opacity-70 mt-1">
-                      {message.timestamp.toLocaleTimeString([], {
-                        hour: '2-digit',
-                        minute: '2-digit'
-                      })}
-                    </p>
+                    <div className="flex items-center justify-between mt-1">
+                      <p className="text-xs opacity-70">
+                        {message.timestamp.toLocaleTimeString([], {
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
+                      </p>
+                      {message.role === 'assistant' && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => speak(message.content)}
+                          disabled={isLoadingTTS}
+                          className="h-5 w-5 p-0 opacity-70 hover:opacity-100"
+                        >
+                          {isLoadingTTS ? (
+                            <Loader2 size={10} className="animate-spin" />
+                          ) : isSpeaking ? (
+                            <VolumeX size={10} />
+                          ) : (
+                            <Volume2 size={10} />
+                          )}
+                        </Button>
+                      )}
+                    </div>
                   </div>
                   {message.role === 'user' && (
                     <div className="w-6 h-6 rounded-full bg-accent flex items-center justify-center flex-shrink-0 mt-1">
