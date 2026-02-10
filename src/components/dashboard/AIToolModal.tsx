@@ -4,6 +4,7 @@ import { useGeminiAI } from "@/hooks/useGeminiAI";
 import { useSocialMediaAI } from "@/hooks/useSocialMediaAI";
 import { useEmailGeneratorAI } from "@/hooks/useEmailGeneratorAI";
 import { useTextToSpeech } from "@/hooks/useTextToSpeech";
+import { ReadAloudButton } from "@/components/tts/ReadAloudButton";
 import { extractTextFromFile, extractFileContent } from "@/utils/fileTextExtractor";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -194,9 +195,9 @@ export function AIToolModal({ isOpen, onClose, tool }: AIToolModalProps) {
     }
   };
 
-  const handleReadAloud = () => {
+  const handleReadAloud = (lang?: string) => {
     if (!output || outputType === "image") return;
-    speak(output);
+    speak(output, lang);
   };
 
   const copyToClipboard = async () => {
@@ -451,22 +452,11 @@ export function AIToolModal({ isOpen, onClose, tool }: AIToolModalProps) {
                   
                   <div className="flex gap-2">
                     {outputType !== "image" && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={handleReadAloud}
-                        disabled={isLoadingTTS}
-                        className={isSpeaking ? "border-primary text-primary" : ""}
-                      >
-                        {isLoadingTTS ? (
-                          <Loader2 size={14} className="animate-spin" />
-                        ) : isSpeaking ? (
-                          <VolumeX size={14} />
-                        ) : (
-                          <Volume2 size={14} />
-                        )}
-                        {isSpeaking ? "Stop" : "Read Aloud"}
-                      </Button>
+                      <ReadAloudButton
+                        onSpeak={handleReadAloud}
+                        isSpeaking={isSpeaking}
+                        isLoading={isLoadingTTS}
+                      />
                     )}
                     <Button variant="outline" size="sm" onClick={copyToClipboard}>
                       <Copy size={14} />

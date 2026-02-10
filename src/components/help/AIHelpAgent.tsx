@@ -3,10 +3,11 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { HelpCircle, Send, X, Bot, User, Volume2, VolumeX, Loader2 } from "lucide-react";
+import { HelpCircle, Send, X, Bot, User } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useTextToSpeech } from "@/hooks/useTextToSpeech";
+import { ReadAloudButton } from "@/components/tts/ReadAloudButton";
 
 interface Message {
   id: string;
@@ -171,21 +172,12 @@ export function AIHelpAgent() {
                         })}
                       </p>
                       {message.role === 'assistant' && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => speak(message.content)}
-                          disabled={isLoadingTTS}
-                          className="h-5 w-5 p-0 opacity-70 hover:opacity-100"
-                        >
-                          {isLoadingTTS ? (
-                            <Loader2 size={10} className="animate-spin" />
-                          ) : isSpeaking ? (
-                            <VolumeX size={10} />
-                          ) : (
-                            <Volume2 size={10} />
-                          )}
-                        </Button>
+                        <ReadAloudButton
+                          onSpeak={(lang) => speak(message.content, lang)}
+                          isSpeaking={isSpeaking}
+                          isLoading={isLoadingTTS}
+                          compact
+                        />
                       )}
                     </div>
                   </div>
