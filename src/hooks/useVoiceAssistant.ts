@@ -111,35 +111,35 @@ export function useVoiceAssistant(options: UseVoiceAssistantOptions = {}) {
     return { type: "chat", value: text };
   }, []);
 
-  // Speak response using TTS
+  // Speak response using multilingual TTS (100+ languages)
   const speakResponse = useCallback(async (text: string) => {
     setStatus("speaking");
     try {
-      const ttsText = text.slice(0, 5000).replace(/[#*`_~\[\]()>]/g, "");
-      const { data, error } = await supabase.functions.invoke("openai-tts", {
-        body: { text: ttsText, voice: "nova" },
-      });
+      const cleanText = text.slice(0, 3000).replace(/[#*`_~\[\]()>]/g, "");
+      
+      // Use Browser Speech API for multilingual support
+      const utterance = new SpeechSynthesisUtterance(cleanText);
+      // Auto-detect language from user's browser or content
+      const userLang = navigator.language || "en-US";
+      utterance.lang = userLang;
+      utterance.rate = 1;
+      utterance.pitch = 1;
 
-      if (error || !data?.success || !data?.audioContent) {
-        // Fallback to Web Speech API
-        const utterance = new SpeechSynthesisUtterance(ttsText.slice(0, 500));
-        utterance.rate = 1;
-        utterance.pitch = 1;
-        utterance.onend = () => setStatus(isActive ? "wake-listening" : "idle");
-        speechSynthesis.speak(utterance);
-        return;
-      }
+      // Select best voice for language
+      const voices = speechSynthesis.getVoices();
+      const bestVoice = voices.find(v => v.lang === userLang) 
+        || voices.find(v => v.lang.startsWith(userLang.split("-")[0]))
+        || voices.find(v => v.default) || voices[0];
+      if (bestVoice) utterance.voice = bestVoice;
 
-      const audioSrc = `data:audio/mp3;base64,${data.audioContent}`;
-      const audio = new Audio(audioSrc);
-      audioRef.current = audio;
-      audio.onended = () => {
+      utterance.onend = () => {
         setStatus(isActive ? "wake-listening" : "idle");
-        // Resume listening after speaking
         if (isActive) startListening(true);
       };
-      audio.onerror = () => setStatus(isActive ? "wake-listening" : "idle");
-      await audio.play();
+      utterance.onerror = () => setStatus(isActive ? "wake-listening" : "idle");
+      
+      speechSynthesis.cancel();
+      speechSynthesis.speak(utterance);
     } catch {
       setStatus(isActive ? "wake-listening" : "idle");
     }
@@ -280,7 +280,9 @@ export function useVoiceAssistant(options: UseVoiceAssistantOptions = {}) {
     const recognition = new SpeechRecognition();
     recognition.continuous = true;
     recognition.interimResults = true;
-    recognition.lang = "en-US";
+    // Support multilingual speech recognition
+    const userLang = navigator.language || "en-US";
+    recognition.lang = userLang;
 
     recognition.onresult = (event: any) => {
       let finalTranscript = "";
