@@ -34,33 +34,33 @@ export const ElevenLabsTTS = () => {
     setIsGenerating(true);
     try {
       const { data, error } = await supabase.functions.invoke('elevenlabs-tts', {
-        body: {
-          text,
-          voice: selectedVoice,
-        }
+        body: { text, voice: selectedVoice }
       });
 
-      if (error) throw error;
-
-      if (data.success) {
-        // Convert base64 to audio blob
-        const audioBlob = base64ToBlob(data.audioContent, 'audio/mpeg');
-        const url = URL.createObjectURL(audioBlob);
-        setAudioUrl(url);
-        
+      if (error || !data?.success || !data?.audioContent) {
+        console.warn('ElevenLabs TTS failed, using browser speech fallback');
+        speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(text);
+        speechSynthesis.speak(utterance);
         toast({
-          title: "Speech generated!",
-          description: "Your audio is ready to play",
+          title: "Playing with browser voice",
+          description: "ElevenLabs API key is invalid. Using browser speech instead.",
         });
-      } else {
-        throw new Error(data.error);
+        return;
       }
+
+      const audioBlob = base64ToBlob(data.audioContent, 'audio/mpeg');
+      const url = URL.createObjectURL(audioBlob);
+      setAudioUrl(url);
+      toast({ title: "Speech generated!", description: "Your audio is ready to play" });
     } catch (error) {
-      console.error('TTS error:', error);
+      console.warn('TTS error, using browser fallback:', error);
+      speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(text);
+      speechSynthesis.speak(utterance);
       toast({
-        title: "Generation failed",
-        description: error instanceof Error ? error.message : "Please try again",
-        variant: "destructive",
+        title: "Playing with browser voice",
+        description: "ElevenLabs unavailable. Using browser speech instead.",
       });
     } finally {
       setIsGenerating(false);
