@@ -30,7 +30,7 @@ export function AIHelpAgent() {
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
-  const { speak, isSpeaking, isLoadingTTS } = useTextToSpeech({ voice: "nova" });
+  const { speak, isSpeaking, isLoadingTTS } = useTextToSpeech();
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });

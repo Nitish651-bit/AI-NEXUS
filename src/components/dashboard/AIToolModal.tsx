@@ -62,7 +62,7 @@ export function AIToolModal({ isOpen, onClose, tool }: AIToolModalProps) {
   });
   const { generateContent: generateSocialContent, isProcessing: isSocialProcessing } = useSocialMediaAI();
   const { generateEmail, isProcessing: isEmailProcessing } = useEmailGeneratorAI();
-  const { speak, isSpeaking, isLoadingTTS } = useTextToSpeech({ voice: "nova" });
+  const { speak, isSpeaking, isLoadingTTS } = useTextToSpeech();
 
   const handleFileUpload = (files: File[]) => {
     const validFiles = files.filter(file => {
