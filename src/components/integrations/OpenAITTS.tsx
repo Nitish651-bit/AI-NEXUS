@@ -23,6 +23,14 @@ export const OpenAITTS = () => {
   const [audioUrl, setAudioUrl] = useState<string>("");
   const [isGenerating, setIsGenerating] = useState(false);
   const { toast } = useToast();
+  const speakWithBrowser = (spokenText: string) => {
+    speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(spokenText);
+    utterance.rate = 1;
+    utterance.pitch = 1;
+    speechSynthesis.speak(utterance);
+    toast({ title: "Playing", description: "Using browser speech (ElevenLabs key is invalid)" });
+  };
 
   const generateSpeech = async () => {
     if (!text.trim()) {
@@ -39,34 +47,21 @@ export const OpenAITTS = () => {
 
     try {
       const { data, error } = await supabase.functions.invoke('openai-tts', {
-        body: { 
-          text,
-          voice: selectedVoice
-        }
+        body: { text, voice: selectedVoice }
       });
 
-      if (error) {
-        throw error;
-      }
-
-      if (!data?.success || !data?.audioContent) {
-        throw new Error(data?.error || "Failed to generate speech");
+      if (error || !data?.success || !data?.audioContent) {
+        console.warn("ElevenLabs TTS failed, falling back to Browser Speech API");
+        speakWithBrowser(text);
+        return;
       }
 
       const audio = `data:audio/mp3;base64,${data.audioContent}`;
       setAudioUrl(audio);
-      
-      toast({
-        title: "Success",
-        description: "Speech generated successfully!",
-      });
+      toast({ title: "Success", description: "Speech generated with ElevenLabs!" });
     } catch (error) {
-      console.error("Error generating speech:", error);
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to generate speech",
-        variant: "destructive",
-      });
+      console.warn("TTS edge function error, using browser fallback:", error);
+      speakWithBrowser(text);
     } finally {
       setIsGenerating(false);
     }
