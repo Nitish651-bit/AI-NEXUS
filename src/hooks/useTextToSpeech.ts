@@ -215,11 +215,6 @@ export function useTextToSpeech(options: UseTextToSpeechOptions = {}) {
       await speakWithBrowser(cleanText, lang);
     } catch (err) {
       console.error("TTS error:", err);
-      // Final fallback - try ElevenLabs if browser failed
-      if (!preferElevenLabs) {
-        const success = await speakWithElevenLabs(cleanText);
-        if (success) return;
-      }
       toast({
         title: "Read Aloud Failed",
         description: "Could not generate speech. Please try again.",
