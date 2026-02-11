@@ -1,70 +1,62 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Volume2, Loader2 } from "lucide-react";
+import { Volume2, Loader2, VolumeX } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
 
 const voices = [
-  { id: "alloy", name: "Alloy" },
-  { id: "echo", name: "Echo" },
-  { id: "fable", name: "Fable" },
-  { id: "onyx", name: "Onyx" },
-  { id: "nova", name: "Nova" },
-  { id: "shimmer", name: "Shimmer" },
+  { id: "default", name: "Default" },
+  { id: "male", name: "Male" },
+  { id: "female", name: "Female" },
 ];
 
 export const OpenAITTS = () => {
   const [text, setText] = useState("");
-  const [selectedVoice, setSelectedVoice] = useState("alloy");
-  const [audioUrl, setAudioUrl] = useState<string>("");
-  const [isGenerating, setIsGenerating] = useState(false);
+  const [selectedVoice, setSelectedVoice] = useState("default");
+  const [isSpeaking, setIsSpeaking] = useState(false);
   const { toast } = useToast();
-  const speakWithBrowser = (spokenText: string) => {
-    speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(spokenText);
-    utterance.rate = 1;
-    utterance.pitch = 1;
-    speechSynthesis.speak(utterance);
-    toast({ title: "Playing", description: "Using browser speech (ElevenLabs key is invalid)" });
+  const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
+
+  const getBrowserVoice = () => {
+    const allVoices = speechSynthesis.getVoices();
+    if (!allVoices.length) return null;
+    if (selectedVoice === "male") return allVoices.find(v => v.name.toLowerCase().includes("male")) || allVoices[0];
+    if (selectedVoice === "female") return allVoices.find(v => v.name.toLowerCase().includes("female")) || allVoices.find(v => v.default) || allVoices[0];
+    return allVoices.find(v => v.default) || allVoices[0];
   };
 
-  const generateSpeech = async () => {
+  const generateSpeech = () => {
     if (!text.trim()) {
-      toast({
-        title: "Error",
-        description: "Please enter some text",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: "Please enter some text", variant: "destructive" });
       return;
     }
 
-    setIsGenerating(true);
-    setAudioUrl("");
-
-    try {
-      const { data, error } = await supabase.functions.invoke('openai-tts', {
-        body: { text, voice: selectedVoice }
-      });
-
-      if (error || !data?.success || !data?.audioContent) {
-        console.warn("ElevenLabs TTS failed, falling back to Browser Speech API");
-        speakWithBrowser(text);
-        return;
-      }
-
-      const audio = `data:audio/mp3;base64,${data.audioContent}`;
-      setAudioUrl(audio);
-      toast({ title: "Success", description: "Speech generated with ElevenLabs!" });
-    } catch (error) {
-      console.warn("TTS edge function error, using browser fallback:", error);
-      speakWithBrowser(text);
-    } finally {
-      setIsGenerating(false);
+    if (isSpeaking) {
+      speechSynthesis.cancel();
+      setIsSpeaking(false);
+      return;
     }
+
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.rate = 1;
+    utterance.pitch = 1;
+    const voice = getBrowserVoice();
+    if (voice) utterance.voice = voice;
+
+    utterance.onend = () => setIsSpeaking(false);
+    utterance.onerror = () => {
+      setIsSpeaking(false);
+      toast({ title: "Error", description: "Speech synthesis failed", variant: "destructive" });
+    };
+
+    speechSynthesis.cancel();
+    speechSynthesis.speak(utterance);
+    utteranceRef.current = utterance;
+    setIsSpeaking(true);
+    toast({ title: "Playing", description: "Speaking with Browser Speech API" });
   };
 
   return (
@@ -74,64 +66,27 @@ export const OpenAITTS = () => {
           <Volume2 className="w-5 h-5 text-primary" />
           <CardTitle>Text-to-Speech</CardTitle>
         </div>
-        <CardDescription>
-          Convert text to natural-sounding speech using OpenAI TTS
-        </CardDescription>
+        <CardDescription>Convert text to natural-sounding speech using Browser Speech API</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="space-y-2">
           <Label htmlFor="text">Text to Convert</Label>
-          <Textarea
-            id="text"
-            placeholder="Enter the text you want to convert to speech..."
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            rows={4}
-          />
+          <Textarea id="text" placeholder="Enter the text you want to convert to speech..." value={text} onChange={(e) => setText(e.target.value)} rows={4} />
         </div>
-
         <div className="space-y-2">
           <Label htmlFor="voice">Voice</Label>
           <Select value={selectedVoice} onValueChange={setSelectedVoice}>
-            <SelectTrigger id="voice">
-              <SelectValue />
-            </SelectTrigger>
+            <SelectTrigger id="voice"><SelectValue /></SelectTrigger>
             <SelectContent>
               {voices.map((voice) => (
-                <SelectItem key={voice.id} value={voice.id}>
-                  {voice.name}
-                </SelectItem>
+                <SelectItem key={voice.id} value={voice.id}>{voice.name}</SelectItem>
               ))}
             </SelectContent>
           </Select>
         </div>
-
-        <Button 
-          onClick={generateSpeech} 
-          disabled={isGenerating}
-          className="w-full"
-        >
-          {isGenerating ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Generating...
-            </>
-          ) : (
-            <>
-              <Volume2 className="mr-2 h-4 w-4" />
-              Generate Speech
-            </>
-          )}
+        <Button onClick={generateSpeech} className="w-full">
+          {isSpeaking ? <><VolumeX className="mr-2 h-4 w-4" />Stop</> : <><Volume2 className="mr-2 h-4 w-4" />Generate Speech</>}
         </Button>
-
-        {audioUrl && (
-          <div className="space-y-2">
-            <Label>Generated Audio</Label>
-            <audio controls className="w-full" src={audioUrl}>
-              Your browser does not support the audio element.
-            </audio>
-          </div>
-        )}
       </CardContent>
     </Card>
   );
