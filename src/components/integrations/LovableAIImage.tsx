@@ -26,31 +26,77 @@ export const LovableAIImage = () => {
     setIsGenerating(true);
     setGeneratedImage("");
 
+    const tryGenerate = async (attempt: number): Promise<void> => {
+      try {
+        // Try Lovable AI Image first
+        const { data, error } = await supabase.functions.invoke('lovable-ai-image', {
+          body: { prompt }
+        });
+
+        if (error) {
+          throw new Error(error.message || "Edge function error");
+        }
+
+        if (!data?.success || !data?.imageUrl) {
+          throw new Error(data?.error || "Failed to generate image");
+        }
+
+        setGeneratedImage(data.imageUrl);
+        toast({
+          title: "Success",
+          description: "Image generated successfully!",
+        });
+      } catch (primaryError: any) {
+        console.warn(`Lovable AI attempt ${attempt} failed:`, primaryError);
+
+        // Retry once on transient/rate-limit errors
+        if (attempt < 2) {
+          toast({
+            title: "Retrying...",
+            description: "First attempt failed, retrying image generation...",
+          });
+          await new Promise(r => setTimeout(r, 2000));
+          return tryGenerate(attempt + 1);
+        }
+
+        // Fallback to Replicate
+        try {
+          toast({
+            title: "Switching provider...",
+            description: "Using backup image generator...",
+          });
+          const { data: repData, error: repError } = await supabase.functions.invoke('replicate-image', {
+            body: { prompt }
+          });
+
+          if (repError) throw repError;
+
+          if (repData?.success && repData?.output?.[0]) {
+            setGeneratedImage(repData.output[0]);
+            toast({
+              title: "Success",
+              description: "Image generated with backup provider!",
+            });
+            return;
+          }
+          throw new Error(repData?.error || "Backup generation failed");
+        } catch (fallbackError) {
+          console.error("All image generation failed:", fallbackError);
+          toast({
+            title: "Generation Failed",
+            description: primaryError?.message?.includes("Rate limit")
+              ? "Rate limit reached. Please wait a moment and try again."
+              : primaryError?.message?.includes("credits")
+              ? "AI credits exhausted. Please add credits to continue."
+              : "Image generation failed. Please try again shortly.",
+            variant: "destructive",
+          });
+        }
+      }
+    };
+
     try {
-      const { data, error } = await supabase.functions.invoke('lovable-ai-image', {
-        body: { prompt }
-      });
-
-      if (error) {
-        throw error;
-      }
-
-      if (!data?.success || !data?.imageUrl) {
-        throw new Error(data?.error || "Failed to generate image");
-      }
-
-      setGeneratedImage(data.imageUrl);
-      toast({
-        title: "Success",
-        description: "Image generated successfully!",
-      });
-    } catch (error) {
-      console.error("Error generating image:", error);
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to generate image",
-        variant: "destructive",
-      });
+      await tryGenerate(1);
     } finally {
       setIsGenerating(false);
     }
