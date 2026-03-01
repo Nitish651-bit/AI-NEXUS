@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -43,7 +44,14 @@ serve(async (req) => {
     }
     console.log("Authenticated user:", claimsData.claims.sub);
 
-    const { query, category, page = 1, limit = 50 } = await req.json();
+    const body = await req.json();
+    const musicSearchSchema = z.object({
+      query: z.string().trim().max(200).optional(),
+      category: z.string().max(50).optional(),
+      page: z.number().int().min(1).max(100).optional(),
+      limit: z.number().int().min(1).max(100).optional()
+    });
+    const { query, category, page = 1, limit = 50 } = musicSearchSchema.parse(body);
     
     const apiKey = Deno.env.get("PIXABAY_API_KEY");
     if (!apiKey) {
