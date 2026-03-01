@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -32,7 +33,14 @@ serve(async (req) => {
     }
     console.log("Authenticated user:", claimsData.claims.sub);
 
-    const { videoDescription, currentFilters, clipCount, totalDuration } = await req.json();
+    const body = await req.json();
+    const recommendSchema = z.object({
+      videoDescription: z.string().trim().max(5000).optional(),
+      currentFilters: z.array(z.string().max(100)).max(20).optional(),
+      clipCount: z.number().int().min(0).max(1000).optional(),
+      totalDuration: z.number().min(0).max(86400).optional()
+    });
+    const { videoDescription, currentFilters, clipCount, totalDuration } = recommendSchema.parse(body);
     
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
