@@ -16,7 +16,9 @@ import {
   Bot,
   Plug,
   Film,
-  Mic
+  Mic,
+  Info,
+  MessageSquare
 } from "lucide-react";
 import logo from "@/assets/ai-nexus-logo.png";
 import { aiTools, categories } from "@/data/aiToolsData";
@@ -127,6 +129,24 @@ export function Dashboard({ userEmail, onLogout }: DashboardProps) {
                 >
                   <Plug size={14} className="sm:w-4 sm:h-4" />
                   <span className="hidden md:inline">Integrations</span>
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => navigate('/about')}
+                  className="gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3"
+                >
+                  <Info size={14} className="sm:w-4 sm:h-4" />
+                  <span className="hidden md:inline">About</span>
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => navigate('/contact')}
+                  className="gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3"
+                >
+                  <MessageSquare size={14} className="sm:w-4 sm:h-4" />
+                  <span className="hidden md:inline">Contact</span>
                 </Button>
                 <Button
                   variant="outline"

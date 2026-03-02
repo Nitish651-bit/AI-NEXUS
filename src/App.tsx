@@ -8,6 +8,8 @@ import NotFound from "./pages/NotFound";
 import { Integrations } from "./pages/Integrations";
 import ResetPassword from "./pages/ResetPassword";
 import VideoSuite from "./pages/VideoSuite";
+import AboutUs from "./pages/AboutUs";
+import ContactUs from "./pages/ContactUs";
 import PWAInstallPrompt from "./components/pwa/PWAInstallPrompt";
 
 const queryClient = new QueryClient();
@@ -23,6 +25,8 @@ const App = () => (
           <Route path="/" element={<Index />} />
           <Route path="/video-suite" element={<VideoSuite />} />
           <Route path="/integrations" element={<Integrations />} />
+          <Route path="/about" element={<AboutUs />} />
+          <Route path="/contact" element={<ContactUs />} />
           <Route path="/reset-password" element={<ResetPassword />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
