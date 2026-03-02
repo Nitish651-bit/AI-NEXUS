@@ -1,14 +1,15 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 import { 
   Search,
   Download,
   Star,
-  Users,
   Clock,
   Zap,
   FileText,
@@ -16,7 +17,11 @@ import {
   MessageSquare,
   BarChart3,
   Globe,
-  Code
+  Code,
+  Play,
+  Loader2,
+  CheckCircle,
+  XCircle
 } from "lucide-react";
 
 interface AutomationTemplate {
@@ -162,6 +167,9 @@ const categories = ["All", "Marketing", "Development", "Design", "Support", "Res
 export const AutomationTemplates = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
+  const [runningTemplates, setRunningTemplates] = useState<string[]>([]);
+  const [templateResults, setTemplateResults] = useState<Record<string, any[]>>({});
+  const [expandedTemplate, setExpandedTemplate] = useState<string | null>(null);
   const { toast } = useToast();
 
   const filteredTemplates = templates.filter(template => {
@@ -181,12 +189,46 @@ export const AutomationTemplates = () => {
     }
   };
 
-  const useTemplate = (template: AutomationTemplate) => {
-    toast({
-      title: "Template Applied",
-      description: `"${template.name}" has been added to your workflows!`,
-    });
-  };
+  const runTemplate = useCallback(async (template: AutomationTemplate) => {
+    if (runningTemplates.includes(template.id)) return;
+    
+    setRunningTemplates(prev => [...prev, template.id]);
+    toast({ title: "Running Template", description: `Executing "${template.name}" with real AI...` });
+
+    try {
+      const { data, error } = await supabase.functions.invoke('workflow-automation', {
+        body: {
+          workflowName: template.name,
+          steps: template.workflow.map((s, i) => ({
+            id: `tmpl-${template.id}-${i}`,
+            toolName: s.tool,
+            toolCategory: template.category,
+            prompt: s.prompt,
+            order: i + 1
+          }))
+        }
+      });
+
+      if (error) throw new Error(error.message);
+
+      setTemplateResults(prev => ({ ...prev, [template.id]: data.results || [] }));
+      setExpandedTemplate(template.id);
+
+      const completed = data.results?.filter((r: any) => r.success).length || 0;
+      toast({
+        title: data.success ? "Template Complete" : "Partially Complete",
+        description: `${completed}/${template.workflow.length} steps succeeded.`,
+      });
+    } catch (err) {
+      toast({
+        title: "Execution Failed",
+        description: err instanceof Error ? err.message : "Unknown error",
+        variant: "destructive",
+      });
+    } finally {
+      setRunningTemplates(prev => prev.filter(id => id !== template.id));
+    }
+  }, [runningTemplates, toast]);
 
   return (
     <div className="space-y-6">
@@ -312,12 +354,32 @@ export const AutomationTemplates = () => {
                 )}
               </div>
 
-              {/* Action Button */}
+              {/* Action Button + Results */}
+              {templateResults[template.id] && expandedTemplate === template.id && (
+                <ScrollArea className="max-h-[300px] rounded-md border p-3 bg-muted/30 mb-3">
+                  {templateResults[template.id].map((result: any, idx: number) => (
+                    <div key={result.stepId} className="mb-3 last:mb-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        {result.success ? <CheckCircle size={12} className="text-green-500" /> : <XCircle size={12} className="text-destructive" />}
+                        <span className="font-medium text-xs">{result.toolName}</span>
+                      </div>
+                      <pre className="text-xs bg-background p-2 rounded whitespace-pre-wrap break-words max-h-[100px] overflow-y-auto">
+                        {result.success ? result.output : result.error}
+                      </pre>
+                    </div>
+                  ))}
+                </ScrollArea>
+              )}
               <Button 
-                onClick={() => useTemplate(template)}
-                className="w-full group-hover:bg-primary group-hover:text-primary-foreground transition-colors"
+                onClick={() => runTemplate(template)}
+                className="w-full gap-2"
+                disabled={runningTemplates.includes(template.id)}
               >
-                Use Template
+                {runningTemplates.includes(template.id) ? (
+                  <><Loader2 size={14} className="animate-spin" /> Running...</>
+                ) : (
+                  <><Play size={14} /> Run Template</>
+                )}
               </Button>
             </CardContent>
           </Card>

@@ -3,10 +3,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { AutomationWorkflow } from "./AutomationWorkflow";
 import { AutomationTemplates } from "./AutomationTemplates";
 import { AutomationHistory } from "./AutomationHistory";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 import { 
   Bot, 
   Clock, 
@@ -14,103 +16,158 @@ import {
   BarChart3, 
   Calendar,
   PlayCircle,
-  PauseCircle,
   TrendingUp,
   RefreshCw,
-  Play
+  Play,
+  CheckCircle,
+  XCircle,
+  Loader2
 } from "lucide-react";
 
-const automationStats = [
-  {
-    title: "Active Workflows",
-    value: "12",
-    change: "+3 this week",
-    icon: <Bot className="h-4 w-4" />,
-    trend: "up"
-  },
-  {
-    title: "Total Executions",
-    value: "1,247",
-    change: "+15% this month",
-    icon: <PlayCircle className="h-4 w-4" />,
-    trend: "up"
-  },
-  {
-    title: "Time Saved",
-    value: "42.5h",
-    change: "This month",
-    icon: <Clock className="h-4 w-4" />,
-    trend: "neutral"
-  },
-  {
-    title: "Success Rate",
-    value: "98.2%",
-    change: "+0.3% this week",
-    icon: <TrendingUp className="h-4 w-4" />,
-    trend: "up"
-  }
-];
+interface QuickStartTemplate {
+  name: string;
+  icon: string;
+  description: string;
+  steps: Array<{
+    tool: string;
+    category: string;
+    action: string;
+    prompt: string;
+  }>;
+}
 
-const quickStartTemplates = [
+interface ActivityItem {
+  id: number;
+  workflow: string;
+  status: string;
+  duration: string;
+  timestamp: string;
+  steps: number;
+  results?: Array<{ stepId: string; toolName: string; output: string; success: boolean; error?: string }>;
+}
+
+const quickStartTemplates: QuickStartTemplate[] = [
   {
     name: "Content Generation Workflow",
     icon: "📝",
-    description: "Generate blog posts and social content",
+    description: "Generate blog posts and social content using real AI",
     steps: [
-      { tool: "ChatGPT", action: "Generate blog outline" },
-      { tool: "Claude", action: "Write full content" },
-      { tool: "Jasper.ai", action: "Create social posts" }
+      { tool: "ChatGPT (OpenAI)", category: "Chat & Assistants", action: "Generate blog outline", prompt: "Create a detailed blog post outline about AI automation trends in 2026. Include 5 main sections with bullet points." },
+      { tool: "Claude (Anthropic)", category: "Chat & Assistants", action: "Write full content", prompt: "Based on the previous outline, write a compelling 500-word blog post. Make it engaging and informative." },
+      { tool: "Jasper.ai", category: "Marketing & Content", action: "Create social posts", prompt: "From the blog content above, create 3 social media posts: one for Twitter (280 chars), one for LinkedIn (professional tone), and one for Instagram (with hashtags)." }
     ]
   },
   {
-    name: "Design Asset Pipeline",
-    icon: "🎨",
-    description: "Create images and graphics",
+    name: "Code Review & Documentation",
+    icon: "💻",
+    description: "Analyze code and generate documentation with AI",
     steps: [
-      { tool: "DALL·E", action: "Generate base image" },
-      { tool: "Canva AI", action: "Create templates" }
+      { tool: "GitHub Copilot", category: "Code & Developer Tools", action: "Analyze code patterns", prompt: "Analyze common React component patterns and suggest best practices for state management, error handling, and performance optimization in 2026." },
+      { tool: "Claude (Anthropic)", category: "Chat & Assistants", action: "Generate documentation", prompt: "Based on the code analysis above, create comprehensive developer documentation including setup instructions, API reference, and troubleshooting guide." }
     ]
   },
   {
-    name: "Business Process Automation",
-    icon: "💼",
-    description: "Automate business workflows",
+    name: "Business Intelligence Report",
+    icon: "📊",
+    description: "Generate business analysis and strategic insights",
     steps: [
-      { tool: "Claude", action: "Analyze requirements" },
-      { tool: "Notion AI", action: "Create documentation" }
+      { tool: "Claude (Anthropic)", category: "Chat & Assistants", action: "Market analysis", prompt: "Provide a comprehensive market analysis of the AI tools industry in 2026. Include market size, growth trends, key players, and emerging opportunities." },
+      { tool: "ChatGPT (OpenAI)", category: "Chat & Assistants", action: "Strategic recommendations", prompt: "Based on the market analysis above, provide 5 actionable strategic recommendations for an AI platform company. Include risks and expected outcomes." },
+      { tool: "Notion AI", category: "Productivity & Docs", action: "Format report", prompt: "Format the analysis and recommendations above into a professional executive summary with clear sections, key takeaways, and an action items table." }
+    ]
+  },
+  {
+    name: "Email Campaign Generator",
+    icon: "📧",
+    description: "Create a full email marketing sequence with AI",
+    steps: [
+      { tool: "ChatGPT (OpenAI)", category: "Chat & Assistants", action: "Email strategy", prompt: "Design a 3-email welcome sequence for a SaaS product launch. Include subject lines, send timing, and audience segments." },
+      { tool: "Jasper.ai", category: "Marketing & Content", action: "Write email copy", prompt: "Write the full copy for each of the 3 emails from the strategy above. Use persuasive copywriting techniques, include CTAs, and optimize for conversions." },
+      { tool: "Grammarly", category: "Marketing & Content", action: "Polish and optimize", prompt: "Review and improve the email copy above. Fix grammar, improve readability, strengthen CTAs, and ensure a consistent brand voice throughout." }
+    ]
+  },
+  {
+    name: "SEO Content Pipeline",
+    icon: "🔍",
+    description: "Research keywords and create SEO-optimized content",
+    steps: [
+      { tool: "ChatGPT (OpenAI)", category: "Chat & Assistants", action: "Keyword research", prompt: "Research and list the top 20 high-value keywords for 'AI tools platform' niche. Include search volume estimates, difficulty, and content type recommendations." },
+      { tool: "Claude (Anthropic)", category: "Chat & Assistants", action: "Write SEO article", prompt: "Write a 600-word SEO-optimized article targeting the top keywords from above. Include proper H2/H3 structure, internal linking suggestions, and a meta description." },
+      { tool: "Jasper.ai", category: "Marketing & Content", action: "Create meta content", prompt: "From the article above, generate: 1) An SEO-optimized title tag (under 60 chars), 2) Meta description (under 160 chars), 3) 5 FAQ schema entries, 4) Social sharing snippets." }
     ]
   }
 ];
 
 export const AutomationDashboard = () => {
   const [activeTab, setActiveTab] = useState("overview");
-  const [recentActivity, setRecentActivity] = useState([
-    {
-      id: 1,
-      workflow: "Content Creation Pipeline",
-      status: "completed",
-      duration: "2m 34s",
-      timestamp: "5 minutes ago",
-      steps: 4
-    },
-    {
-      id: 2,
-      workflow: "Social Media Automation",
-      status: "completed",
-      duration: "1m 12s",
-      timestamp: "12 minutes ago",
-      steps: 3
-    },
-    {
-      id: 3,
-      workflow: "Code Review Assistant",
-      status: "completed",
-      duration: "45s",
-      timestamp: "1 hour ago",
-      steps: 2
-    }
-  ]);
+  const [recentActivity, setRecentActivity] = useState<ActivityItem[]>([]);
   const [runningWorkflows, setRunningWorkflows] = useState<string[]>([]);
+  const [expandedResult, setExpandedResult] = useState<number | null>(null);
+
+  const runQuickStartWorkflow = useCallback(async (template: QuickStartTemplate) => {
+    if (runningWorkflows.includes(template.name)) return;
+
+    setRunningWorkflows(prev => [...prev, template.name]);
+    
+    const newActivity: ActivityItem = {
+      id: Date.now(),
+      workflow: template.name,
+      status: "running",
+      duration: "0s",
+      timestamp: "Just now",
+      steps: template.steps.length
+    };
+    
+    setRecentActivity(prev => [newActivity, ...prev.slice(0, 9)]);
+    toast.info(`Starting "${template.name}" with ${template.steps.length} real AI steps...`);
+
+    const startTime = Date.now();
+
+    try {
+      const { data, error } = await supabase.functions.invoke('workflow-automation', {
+        body: {
+          workflowName: template.name,
+          steps: template.steps.map((s, i) => ({
+            id: `quick-${Date.now()}-${i}`,
+            toolName: s.tool,
+            toolCategory: s.category,
+            prompt: s.prompt,
+            order: i + 1
+          }))
+        }
+      });
+
+      const duration = Math.round((Date.now() - startTime) / 1000);
+
+      if (error) throw new Error(error.message);
+      if (!data?.success && !data?.results?.some((r: any) => r.success)) {
+        throw new Error(data?.error || 'Workflow execution failed');
+      }
+
+      setRecentActivity(prev =>
+        prev.map(a =>
+          a.id === newActivity.id
+            ? { ...a, status: data.success ? "completed" : "partial", duration: `${duration}s`, results: data.results }
+            : a
+        )
+      );
+
+      const completed = data.results?.filter((r: any) => r.success).length || 0;
+      toast.success(`"${template.name}" completed! ${completed}/${template.steps.length} steps succeeded.`);
+    } catch (err) {
+      const duration = Math.round((Date.now() - startTime) / 1000);
+      setRecentActivity(prev =>
+        prev.map(a =>
+          a.id === newActivity.id
+            ? { ...a, status: "failed", duration: `${duration}s` }
+            : a
+        )
+      );
+      toast.error(`"${template.name}" failed: ${err instanceof Error ? err.message : 'Unknown error'}`);
+    } finally {
+      setRunningWorkflows(prev => prev.filter(w => w !== template.name));
+    }
+  }, [runningWorkflows]);
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -120,86 +177,15 @@ export const AutomationDashboard = () => {
         return <Badge className="bg-blue-500/10 text-blue-500 border-blue-500/20 animate-pulse">Running</Badge>;
       case "failed":
         return <Badge variant="destructive">Failed</Badge>;
+      case "partial":
+        return <Badge className="bg-yellow-500/10 text-yellow-500 border-yellow-500/20">Partial</Badge>;
       default:
         return <Badge variant="secondary">{status}</Badge>;
     }
   };
 
-  const getTrendIcon = (trend: string) => {
-    if (trend === "up") return "↗️";
-    if (trend === "down") return "↘️";
-    return "—";
-  };
-
-  const runQuickStartWorkflow = useCallback(async (template: typeof quickStartTemplates[0]) => {
-    const workflowId = `quick-${Date.now()}`;
-    
-    // Add to running workflows
-    setRunningWorkflows(prev => [...prev, template.name]);
-    
-    // Add to activity as running
-    const newActivity = {
-      id: Date.now(),
-      workflow: template.name,
-      status: "running",
-      duration: "0s",
-      timestamp: "Just now",
-      steps: template.steps.length
-    };
-    
-    setRecentActivity(prev => [newActivity, ...prev.slice(0, 4)]);
-    toast.info(`Starting "${template.name}"...`);
-
-    // Simulate workflow execution
-    const startTime = Date.now();
-    
-    for (let i = 0; i < template.steps.length; i++) {
-      const step = template.steps[i];
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      toast.success(`Step ${i + 1}: ${step.tool} - ${step.action}`);
-    }
-
-    const duration = Math.round((Date.now() - startTime) / 1000);
-    
-    // Update activity to completed
-    setRecentActivity(prev => 
-      prev.map(a => 
-        a.id === newActivity.id 
-          ? { ...a, status: "completed", duration: `${duration}s`, timestamp: "Just now" }
-          : a
-      )
-    );
-    
-    setRunningWorkflows(prev => prev.filter(w => w !== template.name));
-    toast.success(`"${template.name}" completed successfully! 🎉`);
-  }, []);
-
-  const retryWorkflow = useCallback(async (activity: typeof recentActivity[0]) => {
-    toast.info(`Retrying "${activity.workflow}"...`);
-    
-    // Update status to running
-    setRecentActivity(prev =>
-      prev.map(a =>
-        a.id === activity.id
-          ? { ...a, status: "running", timestamp: "Just now" }
-          : a
-      )
-    );
-
-    // Simulate retry
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    // Update to completed
-    setRecentActivity(prev =>
-      prev.map(a =>
-        a.id === activity.id
-          ? { ...a, status: "completed", timestamp: "Just now" }
-          : a
-      )
-    );
-    
-    toast.success(`"${activity.workflow}" completed successfully!`);
-  }, []);
+  const completedCount = recentActivity.filter(a => a.status === "completed").length;
+  const totalStepsRun = recentActivity.reduce((acc, a) => acc + a.steps, 0);
 
   return (
     <div className="space-y-6">
@@ -207,31 +193,30 @@ export const AutomationDashboard = () => {
         <div>
           <h1 className="text-3xl font-bold">Automation Hub</h1>
           <p className="text-muted-foreground">
-            Streamline your AI workflows with intelligent automation
+            Real AI-powered workflow automation -- runs actual AI models
           </p>
         </div>
         <div className="flex gap-2">
           <Button 
             variant="outline" 
             className="gap-2"
-            onClick={() => {
-              setActiveTab("workflows");
-              toast.info("Create a workflow and set trigger to 'Scheduled'");
-            }}
+            onClick={() => setActiveTab("workflows")}
           >
             <Calendar size={16} />
-            Schedule
+            Custom Workflow
           </Button>
           <Button 
             className="gap-2"
             onClick={() => {
-              const randomTemplate = quickStartTemplates[Math.floor(Math.random() * quickStartTemplates.length)];
-              runQuickStartWorkflow(randomTemplate);
+              const available = quickStartTemplates.filter(t => !runningWorkflows.includes(t.name));
+              if (available.length > 0) {
+                runQuickStartWorkflow(available[Math.floor(Math.random() * available.length)]);
+              }
             }}
-            disabled={runningWorkflows.length > 0}
+            disabled={runningWorkflows.length >= 2}
           >
             {runningWorkflows.length > 0 ? (
-              <RefreshCw size={16} className="animate-spin" />
+              <Loader2 size={16} className="animate-spin" />
             ) : (
               <Zap size={16} />
             )}
@@ -249,28 +234,55 @@ export const AutomationDashboard = () => {
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6">
-          {/* Stats Grid */}
+          {/* Live Stats */}
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            {automationStats.map((stat, index) => (
-              <Card key={index}>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">
-                    {stat.title}
-                  </CardTitle>
-                  {stat.icon}
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{stat.value}</div>
-                  <p className="text-xs text-muted-foreground flex items-center gap-1">
-                    <span>{getTrendIcon(stat.trend)}</span>
-                    {stat.change}
-                  </p>
-                </CardContent>
-              </Card>
-            ))}
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Running Now</CardTitle>
+                <Bot className="h-4 w-4" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{runningWorkflows.length}</div>
+                <p className="text-xs text-muted-foreground">Active workflows</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Completed</CardTitle>
+                <PlayCircle className="h-4 w-4" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{completedCount}</div>
+                <p className="text-xs text-muted-foreground">This session</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">AI Steps Run</CardTitle>
+                <Clock className="h-4 w-4" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{totalStepsRun}</div>
+                <p className="text-xs text-muted-foreground">Total steps executed</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Success Rate</CardTitle>
+                <TrendingUp className="h-4 w-4" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {recentActivity.length > 0 
+                    ? `${Math.round((completedCount / recentActivity.length) * 100)}%`
+                    : '--'}
+                </div>
+                <p className="text-xs text-muted-foreground">This session</p>
+              </CardContent>
+            </Card>
           </div>
 
-          {/* Recent Activity */}
+          {/* Recent Activity with Real Results */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -278,57 +290,93 @@ export const AutomationDashboard = () => {
                 Recent Activity
               </CardTitle>
               <CardDescription>
-                Latest workflow executions and their status
+                Live workflow executions with real AI outputs
               </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
                 {recentActivity.length === 0 ? (
                   <div className="text-center py-8 text-muted-foreground">
-                    No recent activity. Start a workflow to see it here!
+                    No activity yet. Click "Quick Automate" or run a template to start!
                   </div>
                 ) : (
                   recentActivity.map((activity) => (
-                    <div key={activity.id} className="flex items-center justify-between p-4 rounded-lg border">
-                      <div className="flex items-center gap-4">
-                        <div className="flex flex-col">
-                          <span className="font-medium">{activity.workflow}</span>
-                          <span className="text-sm text-muted-foreground">
-                            {activity.steps} steps • {activity.duration}
-                          </span>
+                    <div key={activity.id} className="rounded-lg border">
+                      <div 
+                        className="flex items-center justify-between p-4 cursor-pointer hover:bg-muted/30 transition-colors"
+                        onClick={() => setExpandedResult(expandedResult === activity.id ? null : activity.id)}
+                      >
+                        <div className="flex items-center gap-4">
+                          <div className="flex flex-col">
+                            <span className="font-medium">{activity.workflow}</span>
+                            <span className="text-sm text-muted-foreground">
+                              {activity.steps} steps · {activity.duration} · {activity.timestamp}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          {getStatusBadge(activity.status)}
+                          {activity.status === "completed" && (
+                            <Button 
+                              size="sm" 
+                              variant="ghost"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const template = quickStartTemplates.find(t => t.name === activity.workflow);
+                                if (template) runQuickStartWorkflow(template);
+                              }}
+                              disabled={runningWorkflows.includes(activity.workflow)}
+                              className="gap-1"
+                            >
+                              <Play size={12} />
+                              Re-run
+                            </Button>
+                          )}
+                          {activity.status === "failed" && (
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const template = quickStartTemplates.find(t => t.name === activity.workflow);
+                                if (template) runQuickStartWorkflow(template);
+                              }}
+                              className="gap-1"
+                            >
+                              <RefreshCw size={12} />
+                              Retry
+                            </Button>
+                          )}
                         </div>
                       </div>
-                      <div className="flex items-center gap-4">
-                        <span className="text-sm text-muted-foreground">
-                          {activity.timestamp}
-                        </span>
-                        {getStatusBadge(activity.status)}
-                        {activity.status === "failed" && (
-                          <Button 
-                            size="sm" 
-                            variant="outline"
-                            onClick={() => retryWorkflow(activity)}
-                            className="gap-1"
-                          >
-                            <RefreshCw size={12} />
-                            Retry
-                          </Button>
-                        )}
-                        {activity.status === "completed" && (
-                          <Button 
-                            size="sm" 
-                            variant="ghost"
-                            onClick={() => {
-                              const template = quickStartTemplates.find(t => t.name === activity.workflow);
-                              if (template) runQuickStartWorkflow(template);
-                            }}
-                            className="gap-1"
-                          >
-                            <Play size={12} />
-                            Run Again
-                          </Button>
-                        )}
-                      </div>
+                      
+                      {/* Expandable Results */}
+                      {expandedResult === activity.id && activity.results && (
+                        <div className="border-t px-4 pb-4 pt-3 space-y-3">
+                          <p className="text-sm font-medium text-muted-foreground">AI Outputs:</p>
+                          <ScrollArea className="max-h-[400px]">
+                            {activity.results.map((result, idx) => (
+                              <div key={result.stepId} className="mb-3 last:mb-0">
+                                <div className="flex items-center gap-2 mb-1">
+                                  {result.success ? (
+                                    <CheckCircle size={14} className="text-green-500 shrink-0" />
+                                  ) : (
+                                    <XCircle size={14} className="text-destructive shrink-0" />
+                                  )}
+                                  <span className="font-medium text-sm">Step {idx + 1}: {result.toolName}</span>
+                                </div>
+                                {result.success ? (
+                                  <pre className="text-xs bg-muted/50 p-3 rounded-md whitespace-pre-wrap break-words max-h-[200px] overflow-y-auto ml-6">
+                                    {result.output}
+                                  </pre>
+                                ) : (
+                                  <p className="text-xs text-destructive ml-6">{result.error}</p>
+                                )}
+                              </div>
+                            ))}
+                          </ScrollArea>
+                        </div>
+                      )}
                     </div>
                   ))
                 )}
@@ -336,70 +384,47 @@ export const AutomationDashboard = () => {
             </CardContent>
           </Card>
 
-          {/* Quick Actions */}
-          <div className="grid gap-4 md:grid-cols-2">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Zap size={20} />
-                  Quick Start
-                </CardTitle>
-                <CardDescription>
-                  Get started with pre-built automation templates
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-              <div className="space-y-2">
-                  {quickStartTemplates.map((template) => (
-                    <Button 
+          {/* Quick Start Templates */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Zap size={20} />
+                Quick Start -- Real AI Workflows
+              </CardTitle>
+              <CardDescription>
+                One-click workflows that execute real AI models (GPT, Claude, Gemini)
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {quickStartTemplates.map((template) => {
+                  const isRunning = runningWorkflows.includes(template.name);
+                  return (
+                    <button 
                       key={template.name}
-                      variant="outline" 
-                      className="w-full justify-between group"
+                      className="p-4 rounded-lg border text-left hover:bg-muted/30 transition-all disabled:opacity-50 group"
                       onClick={() => runQuickStartWorkflow(template)}
-                      disabled={runningWorkflows.includes(template.name)}
+                      disabled={isRunning}
                     >
-                      <span className="flex items-center gap-2">
-                        {template.icon} {template.name}
-                      </span>
-                      {runningWorkflows.includes(template.name) ? (
-                        <RefreshCw size={14} className="animate-spin" />
-                      ) : (
-                        <Play size={14} className="opacity-0 group-hover:opacity-100 transition-opacity" />
-                      )}
-                    </Button>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Calendar size={20} />
-                  Scheduled Workflows
-                </CardTitle>
-                <CardDescription>
-                  Upcoming automated executions
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm">Daily Report Generation</span>
-                    <Badge variant="outline">9:00 AM</Badge>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm">Weekly Content Analysis</span>
-                    <Badge variant="outline">Monday 2:00 PM</Badge>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm">Social Media Posting</span>
-                    <Badge variant="outline">Every 4 hours</Badge>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-xl">{template.icon}</span>
+                        <span className="font-medium text-sm">{template.name}</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground mb-3">{template.description}</p>
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-muted-foreground">{template.steps.length} AI steps</span>
+                        {isRunning ? (
+                          <Loader2 size={14} className="animate-spin text-primary" />
+                        ) : (
+                          <Play size={14} className="opacity-0 group-hover:opacity-100 transition-opacity text-primary" />
+                        )}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="workflows">
