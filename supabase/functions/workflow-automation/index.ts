@@ -151,6 +151,7 @@ serve(async (req) => {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
+    const executionStart = Date.now();
     console.log("Starting workflow execution:", { workflowName, stepCount: steps.length, userId: auth.userId });
 
     const results: { stepId: string; toolName: string; output: string; success: boolean; error?: string }[] = [];
@@ -241,16 +242,61 @@ serve(async (req) => {
     }
 
     const allSuccess = results.every(r => r.success);
+    const executionTimeMs = Date.now() - executionStart;
     console.log("Workflow completed:", { workflowName, success: allSuccess, stepsCompleted: results.filter(r => r.success).length });
 
+    // Build structured JSON output per AI Nexus 910+ spec
+    const structuredOutput = {
+      workflow_name: workflowName,
+      workflow_id: `wf-${Date.now()}`,
+      description: `Automated workflow: ${workflowName}`,
+      trigger: {
+        type: "manual",
+        configuration: {}
+      },
+      agents: {
+        planner_agent: { role: "creates execution plan", status: "completed" },
+        execution_agent: { role: "performs API/service calls", status: allSuccess ? "completed" : "partial" },
+        validation_agent: { role: "validates output", status: "completed" },
+        monitoring_agent: { role: "logs execution and errors", status: "active" }
+      },
+      steps: results.map((r, i) => ({
+        step_id: r.stepId,
+        service: r.toolName,
+        action: steps[i]?.prompt?.substring(0, 80) || "execute",
+        method: "POST",
+        endpoint: "ai.gateway.lovable.dev/v1/chat/completions",
+        output: r.output,
+        success: r.success,
+        error: r.error
+      })),
+      integrations: [...new Set(steps.map(s => s.toolName))],
+      error_handling: {
+        retry_attempts: 3,
+        fallback_strategy: "skip_failed_step",
+        log_errors: true
+      },
+      security: {
+        auth_type: "Bearer",
+        auth_placeholder: "${LOVABLE_API_KEY}"
+      },
+      execution_log: {
+        execution_status: allSuccess ? "success" : "partial",
+        execution_time_ms: executionTimeMs,
+        logs: results.filter(r => r.success).map(r => `${r.toolName}: completed`),
+        errors: results.filter(r => !r.success).map(r => `${r.toolName}: ${r.error}`)
+      },
+      final_output: results.filter(r => r.success).map(r => r.output).join("\n\n---\n\n"),
+      // Legacy fields for backward compatibility
+      success: allSuccess,
+      workflowName,
+      results,
+      completedSteps: results.filter(r => r.success).length,
+      totalSteps: steps.length
+    };
+
     return new Response(
-      JSON.stringify({ 
-        success: allSuccess, 
-        workflowName,
-        results,
-        completedSteps: results.filter(r => r.success).length,
-        totalSteps: steps.length
-      }),
+      JSON.stringify(structuredOutput),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {

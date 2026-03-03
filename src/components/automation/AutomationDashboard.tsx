@@ -2,6 +2,7 @@ import { useState, useCallback } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { AutomationWorkflow } from "./AutomationWorkflow";
@@ -21,7 +22,9 @@ import {
   Play,
   CheckCircle,
   XCircle,
-  Loader2
+  Loader2,
+  Link as LinkIcon,
+  Send
 } from "lucide-react";
 
 interface QuickStartTemplate {
@@ -103,6 +106,8 @@ export const AutomationDashboard = () => {
   const [recentActivity, setRecentActivity] = useState<ActivityItem[]>([]);
   const [runningWorkflows, setRunningWorkflows] = useState<string[]>([]);
   const [expandedResult, setExpandedResult] = useState<number | null>(null);
+  const [zapierWebhookUrl, setZapierWebhookUrl] = useState("");
+  const [isTriggeringZap, setIsTriggeringZap] = useState(false);
 
   const runQuickStartWorkflow = useCallback(async (template: QuickStartTemplate) => {
     if (runningWorkflows.includes(template.name)) return;
@@ -169,6 +174,32 @@ export const AutomationDashboard = () => {
     }
   }, [runningWorkflows]);
 
+  const triggerZapierWebhook = useCallback(async (data?: Record<string, unknown>) => {
+    if (!zapierWebhookUrl) {
+      toast.error("Please enter your Zapier webhook URL");
+      return;
+    }
+    setIsTriggeringZap(true);
+    try {
+      await fetch(zapierWebhookUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        mode: "no-cors",
+        body: JSON.stringify({
+          timestamp: new Date().toISOString(),
+          triggered_from: window.location.origin,
+          source: "AI Nexus Automation Hub",
+          ...(data || {})
+        }),
+      });
+      toast.success("Zapier webhook triggered! Check your Zap history to confirm.");
+    } catch {
+      toast.error("Failed to trigger Zapier webhook. Check the URL and try again.");
+    } finally {
+      setIsTriggeringZap(false);
+    }
+  }, [zapierWebhookUrl]);
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "completed":
@@ -234,6 +265,41 @@ export const AutomationDashboard = () => {
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6">
+          {/* Zapier Webhook Integration */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <LinkIcon size={18} />
+                Zapier / Webhook Integration
+              </CardTitle>
+              <CardDescription>
+                Connect your workflows to 5000+ apps via Zapier webhooks
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex gap-2">
+                <Input
+                  placeholder="https://hooks.zapier.com/hooks/catch/..."
+                  value={zapierWebhookUrl}
+                  onChange={(e) => setZapierWebhookUrl(e.target.value)}
+                  className="flex-1"
+                />
+                <Button 
+                  onClick={() => triggerZapierWebhook()}
+                  disabled={!zapierWebhookUrl || isTriggeringZap}
+                  variant="outline"
+                  className="gap-2"
+                >
+                  {isTriggeringZap ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
+                  Trigger
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground mt-2">
+                Paste your Zapier webhook URL to trigger external automations (Gmail, Slack, Sheets, etc.)
+              </p>
+            </CardContent>
+          </Card>
+
           {/* Live Stats */}
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             <Card>

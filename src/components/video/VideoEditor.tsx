@@ -82,6 +82,9 @@ export function VideoEditor() {
   const [exportFormat, setExportFormat] = useState("mp4");
   const [exportQuality, setExportQuality] = useState(80);
   const [isDragging, setIsDragging] = useState(false);
+  const [exportCodec, setExportCodec] = useState("h264");
+  const [compatibilityProfile, setCompatibilityProfile] = useState("universal");
+  const [textOverlays, setTextOverlays] = useState<Array<{id: string; text: string; position: string; fontSize: number}>>([]);
   
   const videoRef = useRef<HTMLVideoElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -853,22 +856,39 @@ export function VideoEditor() {
                         onChange={(e) => setExportResolution(e.target.value)}
                         className="w-full px-3 py-2 rounded-md border border-input bg-background text-sm"
                       >
-                        <option value="1080p">1080p (1920x1080)</option>
-                        <option value="720p">720p (1280x720)</option>
-                        <option value="4k">4K (3840x2160)</option>
-                        <option value="480p">480p (854x480)</option>
+                        <option value="4k">4K Ultra HD (3840×2160)</option>
+                        <option value="1440p">2K QHD (2560×1440)</option>
+                        <option value="1080p">1080p Full HD (1920×1080)</option>
+                        <option value="720p">720p HD (1280×720)</option>
+                        <option value="480p">480p SD (854×480)</option>
                       </select>
                     </div>
                     <div className="space-y-2">
-                      <label className="text-sm text-muted-foreground">Format</label>
+                      <label className="text-sm text-muted-foreground">Format & Codec</label>
                       <select 
                         value={exportFormat}
                         onChange={(e) => setExportFormat(e.target.value)}
                         className="w-full px-3 py-2 rounded-md border border-input bg-background text-sm"
                       >
-                        <option value="mp4">MP4 (H.264)</option>
-                        <option value="webm">WebM (VP9)</option>
-                        <option value="gif">GIF</option>
+                        <option value="mp4">MP4 (H.264 — Universal)</option>
+                        <option value="mp4-h265">MP4 (H.265/HEVC — Smaller Files)</option>
+                        <option value="webm">WebM (VP9 — Web Optimized)</option>
+                        <option value="gif">GIF (Animated)</option>
+                      </select>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm text-muted-foreground">Compatibility Profile</label>
+                      <select
+                        value={compatibilityProfile}
+                        onChange={(e) => setCompatibilityProfile(e.target.value)}
+                        className="w-full px-3 py-2 rounded-md border border-input bg-background text-sm"
+                      >
+                        <option value="universal">Universal (All Devices)</option>
+                        <option value="youtube">YouTube</option>
+                        <option value="instagram">Instagram / Reels</option>
+                        <option value="tiktok">TikTok</option>
+                        <option value="desktop">Desktop (High Quality)</option>
+                        <option value="mobile">Mobile Optimized</option>
                       </select>
                     </div>
                     <div className="space-y-2">
@@ -880,9 +900,72 @@ export function VideoEditor() {
                         step={1} 
                       />
                       <div className="flex justify-between text-xs text-muted-foreground">
-                        <span>Low</span>
-                        <span>High</span>
+                        <span>Smaller File</span>
+                        <span>Best Quality</span>
                       </div>
+                    </div>
+
+                    {/* Text Overlays */}
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <label className="text-sm text-muted-foreground">Text Overlays</label>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 text-xs"
+                          onClick={() => setTextOverlays(prev => [...prev, {
+                            id: `txt-${Date.now()}`,
+                            text: "Your Text",
+                            position: "center",
+                            fontSize: 48
+                          }])}
+                        >
+                          + Add Text
+                        </Button>
+                      </div>
+                      {textOverlays.map((overlay, i) => (
+                        <div key={overlay.id} className="p-2 rounded-md bg-muted/50 space-y-2">
+                          <div className="flex items-center gap-2">
+                            <Input
+                              value={overlay.text}
+                              onChange={(e) => setTextOverlays(prev => prev.map((o, idx) => idx === i ? { ...o, text: e.target.value } : o))}
+                              placeholder="Enter text..."
+                              className="flex-1 h-7 text-xs"
+                            />
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
+                              onClick={() => setTextOverlays(prev => prev.filter((_, idx) => idx !== i))}
+                            >
+                              ×
+                            </Button>
+                          </div>
+                          <div className="grid grid-cols-2 gap-2">
+                            <select
+                              value={overlay.position}
+                              onChange={(e) => setTextOverlays(prev => prev.map((o, idx) => idx === i ? { ...o, position: e.target.value } : o))}
+                              className="px-2 py-1 rounded border border-input bg-background text-xs"
+                            >
+                              <option value="top">Top</option>
+                              <option value="center">Center</option>
+                              <option value="bottom">Bottom</option>
+                            </select>
+                            <div className="flex items-center gap-1">
+                              <span className="text-[10px] text-muted-foreground">Size:</span>
+                              <Slider
+                                value={[overlay.fontSize]}
+                                onValueChange={(v) => setTextOverlays(prev => prev.map((o, idx) => idx === i ? { ...o, fontSize: v[0] } : o))}
+                                min={12}
+                                max={96}
+                                step={2}
+                                className="flex-1"
+                              />
+                              <span className="text-[10px] w-6">{overlay.fontSize}</span>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
                     </div>
                     
                     {/* Progress bar during processing */}
