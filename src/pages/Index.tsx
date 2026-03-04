@@ -5,7 +5,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { Loader2 } from "lucide-react";
 
 const Index = () => {
-  const { user, isLoading, isAuthenticated, signIn, signUp, signOut, resetPassword } = useAuth();
+  const { user, isLoading, isAuthenticated, signIn, signUp, signInWithGoogle, signOut, resetPassword } = useAuth();
   const { toast } = useToast();
 
   const handleSignIn = async (email: string, password: string) => {
@@ -65,11 +65,24 @@ const Index = () => {
     return <Dashboard userEmail={user.email || ""} onLogout={handleLogout} />;
   }
 
+  const handleGoogleSignIn = async () => {
+    const { error } = await signInWithGoogle();
+    if (error) {
+      toast({
+        title: "Google Sign-In Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+    return { error };
+  };
+
   return (
     <LoginForm 
       onSignIn={handleSignIn} 
       onSignUp={handleSignUp} 
       onResetPassword={handleResetPassword}
+      onGoogleSignIn={handleGoogleSignIn}
       isLoading={isLoading} 
     />
   );

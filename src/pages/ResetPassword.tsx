@@ -13,24 +13,59 @@ const ResetPassword = () => {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [isReady, setIsReady] = useState(false);
   const [error, setError] = useState("");
   const navigate = useNavigate();
   const { toast } = useToast();
 
   useEffect(() => {
-    // Check if we have a valid session from the reset link
-    const checkSession = async () => {
+    // Listen for the PASSWORD_RECOVERY event from the URL hash token
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        if (event === "PASSWORD_RECOVERY") {
+          // User arrived via a valid password reset link
+          setIsReady(true);
+        } else if (event === "SIGNED_IN" && !isReady) {
+          // Could be signup verification — check URL hash
+          const hash = window.location.hash;
+          if (hash.includes("type=recovery")) {
+            setIsReady(true);
+          }
+        }
+      }
+    );
+
+    // Also check if we already have a session (e.g. page was refreshed after recovery)
+    const checkExistingSession = async () => {
+      const hash = window.location.hash;
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        toast({
-          title: "Invalid or expired link",
-          description: "Please request a new password reset link.",
-          variant: "destructive",
-        });
-        navigate("/");
+      
+      if (session && (hash.includes("type=recovery") || hash.includes("recovery"))) {
+        setIsReady(true);
+      } else if (session) {
+        // Already logged in, allow password change
+        setIsReady(true);
+      } else {
+        // Wait a moment for the auth state change to fire
+        setTimeout(() => {
+          setIsReady((prev) => {
+            if (!prev) {
+              toast({
+                title: "Invalid or expired link",
+                description: "Please request a new password reset link.",
+                variant: "destructive",
+              });
+              navigate("/");
+            }
+            return prev;
+          });
+        }, 3000);
       }
     };
-    checkSession();
+
+    checkExistingSession();
+
+    return () => subscription.unsubscribe();
   }, [navigate, toast]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -66,7 +101,6 @@ const ResetPassword = () => {
       description: "Your password has been successfully changed.",
     });
 
-    // Redirect to dashboard after 2 seconds
     setTimeout(() => {
       navigate("/");
     }, 2000);
@@ -82,6 +116,17 @@ const ResetPassword = () => {
             <p className="text-muted-foreground">Redirecting you to the dashboard...</p>
           </CardContent>
         </Card>
+      </div>
+    );
+  }
+
+  if (!isReady) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
+        <div className="text-center space-y-4">
+          <Loader2 className="w-8 h-8 animate-spin mx-auto text-primary" />
+          <p className="text-muted-foreground">Verifying reset link...</p>
+        </div>
       </div>
     );
   }
