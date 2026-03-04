@@ -2,6 +2,7 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useTextToSpeech } from "@/hooks/useTextToSpeech";
 import { supabase } from "@/integrations/supabase/client";
+import { aiTools } from "@/data/aiToolsData";
 
 export type VoiceStatus = "idle" | "listening" | "processing" | "speaking" | "wake-listening";
 
@@ -145,7 +146,7 @@ export function useVoiceAssistant(options: UseVoiceAssistantOptions = {}) {
     }
   }, [isActive]);
 
-  // Send to AI and get response
+  // Send to AI Orchestrator and get response
   const sendToAI = useCallback(async (userMessage: string) => {
     setStatus("processing");
 
@@ -158,17 +159,24 @@ export function useVoiceAssistant(options: UseVoiceAssistantOptions = {}) {
     setMessages(prev => [...prev, userMsg]);
 
     try {
-      const { data, error } = await supabase.functions.invoke("lovable-ai-chat", {
+      // Use the Nexus Orchestrator for intelligent multi-step processing
+      const toolNames = aiTools.map(t => t.title);
+      const { data, error } = await supabase.functions.invoke("nexus-orchestrator", {
         body: {
-          message: userMessage,
-          toolCategory: "Voice Assistant",
-          toolTitle: "AI NEXUS Voice Assistant",
-          enableWebSearch: true,
+          command: userMessage,
+          availableTools: toolNames,
+          context: { currentPage: window.location.pathname },
         },
       });
 
       if (error) throw error;
-      const responseText = data?.output || "I'm sorry, I couldn't process that request.";
+      
+      const responseText = data?.result || "I'm sorry, I couldn't process that request.";
+      
+      // Handle navigation if orchestrator suggests it
+      if (data?.orchestration?.navigation_target && onNavigate) {
+        onNavigate(data.orchestration.navigation_target);
+      }
 
       const assistantMsg: VoiceMessage = {
         id: crypto.randomUUID(),
@@ -180,16 +188,37 @@ export function useVoiceAssistant(options: UseVoiceAssistantOptions = {}) {
       await speakResponse(responseText);
     } catch (err) {
       console.error("AI Error:", err);
-      const errorMsg: VoiceMessage = {
-        id: crypto.randomUUID(),
-        role: "assistant",
-        content: "I encountered an error. Please try again.",
-        timestamp: new Date(),
-      };
-      setMessages(prev => [...prev, errorMsg]);
-      setStatus(isActive ? "wake-listening" : "idle");
+      // Fallback to direct chat
+      try {
+        const { data } = await supabase.functions.invoke("lovable-ai-chat", {
+          body: {
+            message: userMessage,
+            toolCategory: "Voice Assistant",
+            toolTitle: "AI NEXUS Voice Assistant",
+            enableWebSearch: true,
+          },
+        });
+        const fallbackText = data?.output || "I encountered an error. Please try again.";
+        const assistantMsg: VoiceMessage = {
+          id: crypto.randomUUID(),
+          role: "assistant",
+          content: fallbackText,
+          timestamp: new Date(),
+        };
+        setMessages(prev => [...prev, assistantMsg]);
+        await speakResponse(fallbackText);
+      } catch {
+        const errorMsg: VoiceMessage = {
+          id: crypto.randomUUID(),
+          role: "assistant",
+          content: "I encountered an error. Please try again.",
+          timestamp: new Date(),
+        };
+        setMessages(prev => [...prev, errorMsg]);
+        setStatus(isActive ? "wake-listening" : "idle");
+      }
     }
-  }, [speakResponse, isActive]);
+  }, [speakResponse, isActive, onNavigate]);
 
   // Handle recognized speech
   const handleSpeechResult = useCallback(async (text: string) => {
