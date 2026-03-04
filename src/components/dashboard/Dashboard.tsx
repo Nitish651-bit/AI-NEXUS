@@ -8,6 +8,7 @@ import { AIHelpAgent } from "@/components/help/AIHelpAgent";
 import { AutomationDashboard } from "@/components/automation/AutomationDashboard";
 import { NexusInterface } from "@/components/voice/JarvisInterface";
 import { useNavigate } from "react-router-dom";
+import { OrchestrationPipeline } from "@/components/orchestrator/OrchestrationPipeline";
 import { 
   Search,
   Filter,
@@ -18,7 +19,8 @@ import {
   Film,
   Mic,
   Info,
-  MessageSquare
+  MessageSquare,
+  Cpu,
 } from "lucide-react";
 import logo from "@/assets/ai-nexus-logo.png";
 import { aiTools, categories } from "@/data/aiToolsData";
@@ -34,7 +36,7 @@ export function Dashboard({ userEmail, onLogout }: DashboardProps) {
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [selectedTool, setSelectedTool] = useState<typeof aiTools[0] | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<"tools" | "automation">("tools");
+  const [activeTab, setActiveTab] = useState<"tools" | "automation" | "orchestrator">("tools");
   const [isJarvisOpen, setIsJarvisOpen] = useState(false);
 
   const handleToolClick = (tool: typeof aiTools[0]) => {
@@ -111,6 +113,15 @@ export function Dashboard({ userEmail, onLogout }: DashboardProps) {
                 >
                   <Bot size={14} className="sm:w-4 sm:h-4" />
                   <span className="hidden sm:inline">Automation</span>
+                </Button>
+                <Button
+                  variant={activeTab === "orchestrator" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setActiveTab("orchestrator")}
+                  className="gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3 bg-gradient-to-r from-emerald-500/10 to-cyan-500/10 border-emerald-500/30 hover:border-emerald-500"
+                >
+                  <Cpu size={14} className="sm:w-4 sm:h-4" />
+                  <span className="hidden md:inline">Orchestrator</span>
                 </Button>
                 <Button
                   variant="outline"
@@ -255,6 +266,20 @@ export function Dashboard({ userEmail, onLogout }: DashboardProps) {
 
         {activeTab === "automation" && (
           <AutomationDashboard />
+        )}
+
+        {activeTab === "orchestrator" && (
+          <div className="space-y-6">
+            <div className="text-center mb-8">
+              <h2 className="text-2xl sm:text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent">
+                AI NEXUS Orchestrator v3.0
+              </h2>
+              <p className="text-muted-foreground mt-2">
+                Central Intelligence Engine — Intent → Tools → Plan → Execute → Result
+              </p>
+            </div>
+            <OrchestrationPipeline />
+          </div>
         )}
 
         {/* AI Tool Modal */}
