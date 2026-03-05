@@ -1,6 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { useTextToSpeech } from "@/hooks/useTextToSpeech";
 import { supabase } from "@/integrations/supabase/client";
 import { aiTools } from "@/data/aiToolsData";
 
@@ -18,17 +17,15 @@ interface UseVoiceAssistantOptions {
   onOpenTool?: (toolName: string) => void;
   onSearchTools?: (query: string) => void;
   wakeWord?: string;
-  alwaysListening?: boolean;
 }
 
+/**
+ * Production-ready voice assistant hook using Web Speech API.
+ * Uses refs to avoid stale closures in recognition callbacks.
+ * Supports Chrome, Edge, and Android browsers.
+ */
 export function useVoiceAssistant(options: UseVoiceAssistantOptions = {}) {
-  const {
-    onNavigate,
-    onOpenTool,
-    onSearchTools,
-    wakeWord = "hey nexus",
-    alwaysListening = false,
-  } = options;
+  const { onNavigate, onOpenTool, onSearchTools, wakeWord = "hey nexus" } = options;
 
   const [status, setStatus] = useState<VoiceStatus>("idle");
   const [messages, setMessages] = useState<VoiceMessage[]>([]);
@@ -36,29 +33,38 @@ export function useVoiceAssistant(options: UseVoiceAssistantOptions = {}) {
   const [isActive, setIsActive] = useState(false);
   const [audioLevel, setAudioLevel] = useState(0);
 
+  // Refs to avoid stale closures inside recognition callbacks
+  const statusRef = useRef<VoiceStatus>("idle");
+  const isActiveRef = useRef(false);
   const recognitionRef = useRef<any>(null);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const analyserRef = useRef<AnalyserNode | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
-  const animationFrameRef = useRef<number | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const animationFrameRef = useRef<number | null>(null);
+  const shouldRestartRef = useRef(false);
+
+  // Keep refs in sync with state
+  useEffect(() => { statusRef.current = status; }, [status]);
+  useEffect(() => { isActiveRef.current = isActive; }, [isActive]);
+
   const { toast } = useToast();
 
-  const isSpeechSupported = typeof window !== "undefined" && 
+  // Check browser support
+  const isSpeechSupported = typeof window !== "undefined" &&
     ("SpeechRecognition" in window || "webkitSpeechRecognition" in window);
 
-  // Audio level monitoring
-  const startAudioMonitoring = useCallback(async () => {
+  // ── Microphone permission + audio level monitoring ──
+  const requestMicPermission = useCallback(async (): Promise<boolean> => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       streamRef.current = stream;
+
+      // Set up audio level analyser
       const ctx = new AudioContext();
       audioContextRef.current = ctx;
       const source = ctx.createMediaStreamSource(stream);
       const analyser = ctx.createAnalyser();
       analyser.fftSize = 256;
       source.connect(analyser);
-      analyserRef.current = analyser;
 
       const dataArray = new Uint8Array(analyser.frequencyBinCount);
       const tick = () => {
@@ -68,32 +74,45 @@ export function useVoiceAssistant(options: UseVoiceAssistantOptions = {}) {
         animationFrameRef.current = requestAnimationFrame(tick);
       };
       tick();
+      return true;
     } catch (err) {
       console.error("Microphone access denied:", err);
+      toast({
+        title: "Microphone access denied",
+        description: "Please allow microphone access in your browser settings to use voice control.",
+        variant: "destructive",
+      });
+      return false;
     }
-  }, []);
+  }, [toast]);
 
   const stopAudioMonitoring = useCallback(() => {
     if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
-    if (audioContextRef.current) audioContextRef.current.close();
+    if (audioContextRef.current) audioContextRef.current.close().catch(() => {});
     if (streamRef.current) streamRef.current.getTracks().forEach(t => t.stop());
-    analyserRef.current = null;
     audioContextRef.current = null;
     streamRef.current = null;
     setAudioLevel(0);
   }, []);
 
-  // Process voice commands
+  // ── Command parser ──
   const processCommand = useCallback((text: string): { type: "navigate" | "tool" | "search" | "chat"; value: string } => {
     const lower = text.toLowerCase().trim();
 
-    // Navigation commands
+    // Navigation
     if (lower.includes("go to") || lower.includes("open") || lower.includes("navigate to")) {
       if (lower.includes("video") || lower.includes("video suite")) return { type: "navigate", value: "/video-suite" };
       if (lower.includes("integration")) return { type: "navigate", value: "/integrations" };
       if (lower.includes("automation")) return { type: "navigate", value: "automation" };
       if (lower.includes("home") || lower.includes("dashboard")) return { type: "navigate", value: "/" };
       if (lower.includes("tools")) return { type: "navigate", value: "tools" };
+      if (lower.includes("about")) return { type: "navigate", value: "/about" };
+      if (lower.includes("contact")) return { type: "navigate", value: "/contact" };
+    }
+
+    // Start assistant
+    if (lower.includes("start assistant") || lower.includes("start ai")) {
+      return { type: "navigate", value: "/" };
     }
 
     // Tool opening
@@ -103,50 +122,57 @@ export function useVoiceAssistant(options: UseVoiceAssistantOptions = {}) {
     }
 
     // Search
-    if (lower.startsWith("search ") || lower.startsWith("find ") || lower.startsWith("look for ")) {
-      const query = lower.replace(/^(search |find |look for )/, "").trim();
+    if (lower.startsWith("search ") || lower.startsWith("find ") || lower.startsWith("look for ") || lower.includes("search ai tools")) {
+      const query = lower.replace(/^(search |find |look for )/, "").replace("search ai tools", "").trim() || "AI tools";
       return { type: "search", value: query };
     }
 
-    // Default: chat with AI
     return { type: "chat", value: text };
   }, []);
 
-  // Speak response using multilingual TTS (100+ languages)
-  const speakResponse = useCallback(async (text: string) => {
-    setStatus("speaking");
-    try {
-      const cleanText = text.slice(0, 3000).replace(/[#*`_~\[\]()>]/g, "");
-      
-      // Use Browser Speech API for multilingual support
-      const utterance = new SpeechSynthesisUtterance(cleanText);
-      // Auto-detect language from user's browser or content
-      const userLang = navigator.language || "en-US";
-      utterance.lang = userLang;
-      utterance.rate = 1;
-      utterance.pitch = 1;
+  // ── Text-to-Speech response ──
+  const speakResponse = useCallback((text: string): Promise<void> => {
+    return new Promise((resolve) => {
+      setStatus("speaking");
+      try {
+        const cleanText = text.slice(0, 3000).replace(/[#*`_~\[\]()>]/g, "");
+        const utterance = new SpeechSynthesisUtterance(cleanText);
+        const userLang = navigator.language || "en-US";
+        utterance.lang = userLang;
+        utterance.rate = 1;
+        utterance.pitch = 1;
 
-      // Select best voice for language
-      const voices = speechSynthesis.getVoices();
-      const bestVoice = voices.find(v => v.lang === userLang) 
-        || voices.find(v => v.lang.startsWith(userLang.split("-")[0]))
-        || voices.find(v => v.default) || voices[0];
-      if (bestVoice) utterance.voice = bestVoice;
+        // Select best voice
+        const voices = speechSynthesis.getVoices();
+        const bestVoice = voices.find(v => v.lang === userLang)
+          || voices.find(v => v.lang.startsWith(userLang.split("-")[0]))
+          || voices.find(v => v.default) || voices[0];
+        if (bestVoice) utterance.voice = bestVoice;
 
-      utterance.onend = () => {
-        setStatus(isActive ? "wake-listening" : "idle");
-        if (isActive) startListening(true);
-      };
-      utterance.onerror = () => setStatus(isActive ? "wake-listening" : "idle");
-      
-      speechSynthesis.cancel();
-      speechSynthesis.speak(utterance);
-    } catch {
-      setStatus(isActive ? "wake-listening" : "idle");
-    }
-  }, [isActive]);
+        utterance.onend = () => {
+          if (isActiveRef.current) {
+            setStatus("wake-listening");
+            restartRecognition();
+          } else {
+            setStatus("idle");
+          }
+          resolve();
+        };
+        utterance.onerror = () => {
+          setStatus(isActiveRef.current ? "wake-listening" : "idle");
+          resolve();
+        };
 
-  // Send to AI Orchestrator and get response
+        speechSynthesis.cancel();
+        speechSynthesis.speak(utterance);
+      } catch {
+        setStatus(isActiveRef.current ? "wake-listening" : "idle");
+        resolve();
+      }
+    });
+  }, []);
+
+  // ── AI query handler ──
   const sendToAI = useCallback(async (userMessage: string) => {
     setStatus("processing");
 
@@ -158,8 +184,10 @@ export function useVoiceAssistant(options: UseVoiceAssistantOptions = {}) {
     };
     setMessages(prev => [...prev, userMsg]);
 
+    let responseText = "I encountered an error. Please try again.";
+
     try {
-      // Use the Nexus Orchestrator for intelligent multi-step processing
+      // Try orchestrator first
       const toolNames = aiTools.map(t => t.title);
       const { data, error } = await supabase.functions.invoke("nexus-orchestrator", {
         body: {
@@ -170,148 +198,148 @@ export function useVoiceAssistant(options: UseVoiceAssistantOptions = {}) {
       });
 
       if (error) throw error;
-      
-      const responseText = data?.result || "I'm sorry, I couldn't process that request.";
-      
-      // Handle navigation if orchestrator suggests it
+      responseText = data?.result || responseText;
+
       if (data?.orchestration?.navigation_target && onNavigate) {
         onNavigate(data.orchestration.navigation_target);
       }
-
-      const assistantMsg: VoiceMessage = {
-        id: crypto.randomUUID(),
-        role: "assistant",
-        content: responseText,
-        timestamp: new Date(),
-      };
-      setMessages(prev => [...prev, assistantMsg]);
-      await speakResponse(responseText);
-    } catch (err) {
-      console.error("AI Error:", err);
+    } catch {
       // Fallback to direct chat
       try {
-        const { data } = await supabase.functions.invoke("lovable-ai-chat", {
+        const { data } = await supabase.functions.invoke("gemini-ai", {
           body: {
-            message: userMessage,
+            input: `You are the AI NEXUS voice assistant created by Nitish Tiwari. Answer concisely: ${userMessage}`,
             toolCategory: "Voice Assistant",
-            toolTitle: "AI NEXUS Voice Assistant",
-            enableWebSearch: true,
+            toolTitle: "AI NEXUS Voice",
           },
         });
-        const fallbackText = data?.output || "I encountered an error. Please try again.";
-        const assistantMsg: VoiceMessage = {
-          id: crypto.randomUUID(),
-          role: "assistant",
-          content: fallbackText,
-          timestamp: new Date(),
-        };
-        setMessages(prev => [...prev, assistantMsg]);
-        await speakResponse(fallbackText);
+        responseText = data?.output || responseText;
       } catch {
-        const errorMsg: VoiceMessage = {
-          id: crypto.randomUUID(),
-          role: "assistant",
-          content: "I encountered an error. Please try again.",
-          timestamp: new Date(),
-        };
-        setMessages(prev => [...prev, errorMsg]);
-        setStatus(isActive ? "wake-listening" : "idle");
+        // Use fallback message
       }
     }
-  }, [speakResponse, isActive, onNavigate]);
 
-  // Handle recognized speech
-  const handleSpeechResult = useCallback(async (text: string) => {
-    if (!text.trim()) return;
+    const assistantMsg: VoiceMessage = {
+      id: crypto.randomUUID(),
+      role: "assistant",
+      content: responseText,
+      timestamp: new Date(),
+    };
+    setMessages(prev => [...prev, assistantMsg]);
+    await speakResponse(responseText);
+  }, [onNavigate, speakResponse]);
 
-    // Check for wake word in wake-listening mode
-    if (status === "wake-listening") {
-      if (text.toLowerCase().includes(wakeWord)) {
-        const command = text.toLowerCase().replace(wakeWord, "").trim();
-        if (command) {
-          setTranscript(command);
-          await handleCommand(command);
-        } else {
-          // Just the wake word — start active listening
-          setStatus("listening");
-          const ackMsg: VoiceMessage = {
-            id: crypto.randomUUID(),
-            role: "assistant",
-            content: "Yes? I'm listening...",
-            timestamp: new Date(),
-          };
-          setMessages(prev => [...prev, ackMsg]);
-          await speakResponse("Yes? I'm listening.");
-        }
-        return;
-      }
-      return; // Ignore non-wake-word speech
-    }
-
-    setTranscript(text);
-    await handleCommand(text);
-  }, [status, wakeWord, speakResponse]);
-
+  // ── Command handler ──
   const handleCommand = useCallback(async (text: string) => {
     const command = processCommand(text);
+    const userMsg: VoiceMessage = { id: crypto.randomUUID(), role: "user", content: text, timestamp: new Date() };
 
     switch (command.type) {
-      case "navigate":
+      case "navigate": {
         onNavigate?.(command.value);
-        const navMsg: VoiceMessage = {
-          id: crypto.randomUUID(),
-          role: "assistant",
-          content: `Navigating to ${command.value === "/" ? "home" : command.value.replace("/", "")}...`,
-          timestamp: new Date(),
-        };
-        setMessages(prev => [...prev, { id: crypto.randomUUID(), role: "user", content: text, timestamp: new Date() }, navMsg]);
-        await speakResponse(`Navigating to ${command.value === "/" ? "home" : command.value.replace(/[/-]/g, " ")}`);
+        const label = command.value === "/" ? "home" : command.value.replace(/[/-]/g, " ").trim();
+        const navMsg: VoiceMessage = { id: crypto.randomUUID(), role: "assistant", content: `Navigating to ${label}...`, timestamp: new Date() };
+        setMessages(prev => [...prev, userMsg, navMsg]);
+        await speakResponse(`Navigating to ${label}`);
         break;
-
-      case "tool":
+      }
+      case "tool": {
         onOpenTool?.(command.value);
-        const toolMsg: VoiceMessage = {
-          id: crypto.randomUUID(),
-          role: "assistant",
-          content: `Opening ${command.value}...`,
-          timestamp: new Date(),
-        };
-        setMessages(prev => [...prev, { id: crypto.randomUUID(), role: "user", content: text, timestamp: new Date() }, toolMsg]);
+        const toolMsg: VoiceMessage = { id: crypto.randomUUID(), role: "assistant", content: `Opening ${command.value}...`, timestamp: new Date() };
+        setMessages(prev => [...prev, userMsg, toolMsg]);
         await speakResponse(`Opening ${command.value}`);
         break;
-
-      case "search":
+      }
+      case "search": {
         onSearchTools?.(command.value);
-        const searchMsg: VoiceMessage = {
-          id: crypto.randomUUID(),
-          role: "assistant",
-          content: `Searching for ${command.value}...`,
-          timestamp: new Date(),
-        };
-        setMessages(prev => [...prev, { id: crypto.randomUUID(), role: "user", content: text, timestamp: new Date() }, searchMsg]);
+        const searchMsg: VoiceMessage = { id: crypto.randomUUID(), role: "assistant", content: `Searching for ${command.value}...`, timestamp: new Date() };
+        setMessages(prev => [...prev, userMsg, searchMsg]);
         await speakResponse(`Searching for ${command.value}`);
         break;
-
+      }
       case "chat":
         await sendToAI(text);
         break;
     }
   }, [processCommand, onNavigate, onOpenTool, onSearchTools, sendToAI, speakResponse]);
 
-  // Start speech recognition
-  const startListening = useCallback((continuous = false) => {
+  // ── Speech result handler (uses refs to avoid stale closures) ──
+  const handleSpeechResultRef = useRef<(text: string) => void>(() => {});
+
+  // Update the ref whenever dependencies change
+  useEffect(() => {
+    handleSpeechResultRef.current = async (text: string) => {
+      if (!text.trim()) return;
+
+      const currentStatus = statusRef.current;
+
+      // In wake-listening mode, only respond to wake word
+      if (currentStatus === "wake-listening") {
+        if (text.toLowerCase().includes(wakeWord)) {
+          const command = text.toLowerCase().replace(wakeWord, "").trim();
+          if (command) {
+            setTranscript(command);
+            stopRecognition();
+            await handleCommand(command);
+          } else {
+            // Just wake word — acknowledge and start active listening
+            setStatus("listening");
+            const ackMsg: VoiceMessage = {
+              id: crypto.randomUUID(),
+              role: "assistant",
+              content: "Yes? I'm listening...",
+              timestamp: new Date(),
+            };
+            setMessages(prev => [...prev, ackMsg]);
+            await speakResponse("Yes? I'm listening.");
+          }
+        }
+        return;
+      }
+
+      // Active listening — process command
+      setTranscript(text);
+      stopRecognition();
+      await handleCommand(text);
+    };
+  }, [wakeWord, handleCommand, speakResponse]);
+
+  // ── Speech Recognition management ──
+  const stopRecognition = useCallback(() => {
+    shouldRestartRef.current = false;
+    if (recognitionRef.current) {
+      try { recognitionRef.current.abort(); } catch {}
+      recognitionRef.current = null;
+    }
+  }, []);
+
+  const restartRecognition = useCallback(() => {
+    stopRecognition();
+    // Small delay before restart to prevent rapid restart loops
+    setTimeout(() => {
+      if (isActiveRef.current) {
+        startRecognition();
+      }
+    }, 300);
+  }, []);
+
+  const startRecognition = useCallback(() => {
     if (!isSpeechSupported) {
-      toast({ title: "Speech not supported", description: "Your browser doesn't support speech recognition.", variant: "destructive" });
+      toast({ title: "Speech not supported", description: "Try Chrome or Edge browser.", variant: "destructive" });
       return;
+    }
+
+    // Clean up any existing instance
+    if (recognitionRef.current) {
+      try { recognitionRef.current.abort(); } catch {}
     }
 
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     const recognition = new SpeechRecognition();
     recognition.continuous = true;
     recognition.interimResults = true;
-    // Support multilingual speech recognition
-    const userLang = navigator.language || "en-US";
-    recognition.lang = userLang;
+    recognition.lang = navigator.language || "en-US";
+    recognition.maxAlternatives = 1;
 
     recognition.onresult = (event: any) => {
       let finalTranscript = "";
@@ -327,91 +355,95 @@ export function useVoiceAssistant(options: UseVoiceAssistantOptions = {}) {
       }
 
       if (interimTranscript) setTranscript(interimTranscript);
-      if (finalTranscript) handleSpeechResult(finalTranscript);
-    };
 
-    recognition.onerror = (event: any) => {
-      console.error("Speech recognition error:", event.error);
-      if (event.error !== "no-speech" && event.error !== "aborted") {
-        toast({ title: "Voice Error", description: `Speech recognition error: ${event.error}`, variant: "destructive" });
+      // Use ref-based handler to get latest state
+      if (finalTranscript) {
+        handleSpeechResultRef.current(finalTranscript);
       }
     };
 
+    recognition.onerror = (event: any) => {
+      console.warn("Speech recognition error:", event.error);
+      // Only show toast for non-recoverable errors
+      if (event.error === "not-allowed") {
+        toast({ title: "Microphone blocked", description: "Allow microphone access in browser settings.", variant: "destructive" });
+        setStatus("idle");
+        setIsActive(false);
+      }
+      // "no-speech" and "aborted" are normal — don't alert
+    };
+
     recognition.onend = () => {
-      // Restart if still active
-      if (isActive && recognitionRef.current) {
-        try {
-          recognition.start();
-        } catch {
-          // Already started
-        }
+      // Auto-restart if still active and not processing/speaking
+      if (isActiveRef.current && statusRef.current !== "processing" && statusRef.current !== "speaking") {
+        setTimeout(() => {
+          if (isActiveRef.current && recognitionRef.current === recognition) {
+            try { recognition.start(); } catch {}
+          }
+        }, 200);
       }
     };
 
     recognitionRef.current = recognition;
+    shouldRestartRef.current = true;
+
     try {
       recognition.start();
-    } catch {
-      // Already started
+    } catch (err) {
+      console.error("Failed to start recognition:", err);
     }
-  }, [isSpeechSupported, handleSpeechResult, isActive, toast]);
+  }, [isSpeechSupported, toast]);
 
-  // Stop speech recognition
-  const stopListening = useCallback(() => {
-    if (recognitionRef.current) {
-      recognitionRef.current.abort();
-      recognitionRef.current = null;
-    }
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current = null;
-    }
-    speechSynthesis.cancel();
-  }, []);
+  // ── Public API ──
 
-  // Activate AI NEXUS
+  /** Activate NEXUS — requests mic, starts wake-word listening */
   const activate = useCallback(async () => {
+    const hasPermission = await requestMicPermission();
+    if (!hasPermission) return;
+
     setIsActive(true);
     setStatus("wake-listening");
-    await startAudioMonitoring();
-    startListening(true);
-    
+    startRecognition();
+
     const welcomeMsg: VoiceMessage = {
       id: crypto.randomUUID(),
       role: "assistant",
-      content: "AI NEXUS online. Say \"Hey Nexus\" to give me a command, or speak freely after activation.",
+      content: 'AI NEXUS online. Say "Hey Nexus" to give me a command, or press Push to Talk.',
       timestamp: new Date(),
     };
     setMessages([welcomeMsg]);
     await speakResponse("AI NEXUS online. Say Hey Nexus to give me a command.");
-  }, [startAudioMonitoring, startListening, speakResponse]);
+  }, [requestMicPermission, startRecognition, speakResponse]);
 
-  // Deactivate AI NEXUS
+  /** Deactivate — stop everything */
   const deactivate = useCallback(() => {
     setIsActive(false);
     setStatus("idle");
-    stopListening();
+    stopRecognition();
     stopAudioMonitoring();
+    speechSynthesis.cancel();
     setTranscript("");
-  }, [stopListening, stopAudioMonitoring]);
+  }, [stopRecognition, stopAudioMonitoring]);
 
-  // Manual push-to-talk
+  /** Push to talk — force active listening mode */
   const pushToTalk = useCallback(() => {
-    if (status === "speaking") {
-      if (audioRef.current) audioRef.current.pause();
+    if (statusRef.current === "speaking") {
       speechSynthesis.cancel();
     }
+    if (statusRef.current === "processing") return;
+
     setStatus("listening");
-    startListening(false);
-  }, [status, startListening]);
+    startRecognition();
+  }, [startRecognition]);
 
   // Cleanup on unmount
   useEffect(() => {
     return () => {
-      stopListening();
+      stopRecognition();
       stopAudioMonitoring();
+      speechSynthesis.cancel();
     };
-  }, [stopListening, stopAudioMonitoring]);
+  }, [stopRecognition, stopAudioMonitoring]);
 
   return {
     status,
