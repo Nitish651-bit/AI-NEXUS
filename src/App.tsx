@@ -11,6 +11,7 @@ import VideoSuite from "./pages/VideoSuite";
 import AboutUs from "./pages/AboutUs";
 import ContactUs from "./pages/ContactUs";
 import Automation from "./pages/Automation";
+import AuthCallback from "./pages/AuthCallback";
 import PWAInstallPrompt from "./components/pwa/PWAInstallPrompt";
 
 const queryClient = new QueryClient();
@@ -29,6 +30,7 @@ const App = () => (
           <Route path="/about" element={<AboutUs />} />
           <Route path="/contact" element={<ContactUs />} />
           <Route path="/automation" element={<Automation />} />
+          <Route path="/auth/callback" element={<AuthCallback />} />
           <Route path="/reset-password" element={<ResetPassword />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
