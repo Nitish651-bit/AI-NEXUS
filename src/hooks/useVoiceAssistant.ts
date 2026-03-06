@@ -41,6 +41,7 @@ export function useVoiceAssistant(options: UseVoiceAssistantOptions = {}) {
   const streamRef = useRef<MediaStream | null>(null);
   const animationFrameRef = useRef<number | null>(null);
   const shouldRestartRef = useRef(false);
+  const startRecognitionRef = useRef<() => void>(() => {});
 
   // Keep refs in sync with state
   useEffect(() => { statusRef.current = status; }, [status]);
@@ -318,10 +319,10 @@ export function useVoiceAssistant(options: UseVoiceAssistantOptions = {}) {
     // Small delay before restart to prevent rapid restart loops
     setTimeout(() => {
       if (isActiveRef.current) {
-        startRecognition();
+        startRecognitionRef.current();
       }
     }, 300);
-  }, []);
+  }, [stopRecognition]);
 
   const startRecognition = useCallback(() => {
     if (!isSpeechSupported) {
@@ -393,6 +394,9 @@ export function useVoiceAssistant(options: UseVoiceAssistantOptions = {}) {
       console.error("Failed to start recognition:", err);
     }
   }, [isSpeechSupported, toast]);
+
+  // Keep startRecognitionRef in sync
+  useEffect(() => { startRecognitionRef.current = startRecognition; }, [startRecognition]);
 
   // ── Public API ──
 
