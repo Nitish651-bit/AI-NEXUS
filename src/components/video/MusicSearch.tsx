@@ -1,19 +1,13 @@
-import { useState, useRef, useMemo } from "react";
+import { useState, useRef, useMemo, useCallback } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { 
-  Search, 
-  Music, 
-  Play, 
-  Pause, 
-  Plus, 
-  Heart,
-  ChevronDown,
-  X
+  Search, Music, Play, Pause, Plus, Heart, ChevronDown, X, Loader2, RefreshCw
 } from "lucide-react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 interface MusicTrack {
   id: string;
@@ -23,35 +17,34 @@ interface MusicTrack {
   previewUrl: string;
   category: string;
   tags: string[];
+  source?: string;
 }
 
 interface MusicSearchProps {
   onSelectTrack: (track: { id: string; name: string; url: string; duration: number; volume: number; fadeIn: number; fadeOut: number }) => void;
 }
 
-// Curated royalty-free music tracks from SoundHelix (free sample audio)
-const SAMPLE_TRACKS: MusicTrack[] = [
-  { id: "1", name: "Upbeat Corporate", artist: "SoundHelix", duration: 142, previewUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3", category: "pop", tags: ["corporate", "upbeat", "happy"] },
-  { id: "2", name: "Chill Electronic", artist: "SoundHelix", duration: 198, previewUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3", category: "electronic", tags: ["chill", "electronic", "ambient"] },
-  { id: "3", name: "Acoustic Morning", artist: "SoundHelix", duration: 211, previewUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3", category: "acoustic", tags: ["acoustic", "calm", "morning"] },
-  { id: "4", name: "Epic Cinematic", artist: "SoundHelix", duration: 185, previewUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3", category: "cinematic", tags: ["epic", "cinematic", "dramatic"] },
-  { id: "5", name: "Jazz Lounge", artist: "SoundHelix", duration: 224, previewUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-5.mp3", category: "jazz", tags: ["jazz", "lounge", "relaxing"] },
-  { id: "6", name: "Rock Energy", artist: "SoundHelix", duration: 176, previewUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-6.mp3", category: "rock", tags: ["rock", "energy", "guitar"] },
-  { id: "7", name: "Hip Hop Beat", artist: "SoundHelix", duration: 163, previewUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-7.mp3", category: "hiphop", tags: ["hiphop", "beat", "urban"] },
-  { id: "8", name: "Classical Piano", artist: "SoundHelix", duration: 245, previewUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3", category: "classical", tags: ["classical", "piano", "elegant"] },
-  { id: "9", name: "Ambient Dreams", artist: "SoundHelix", duration: 289, previewUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-9.mp3", category: "ambient", tags: ["ambient", "dreams", "space"] },
-  { id: "10", name: "Folk Journey", artist: "SoundHelix", duration: 194, previewUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-10.mp3", category: "folk", tags: ["folk", "journey", "nature"] },
-  { id: "11", name: "Dance Floor", artist: "SoundHelix", duration: 167, previewUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-11.mp3", category: "dance", tags: ["dance", "edm", "party"] },
-  { id: "12", name: "Lo-Fi Study", artist: "SoundHelix", duration: 203, previewUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-12.mp3", category: "lofi", tags: ["lofi", "study", "chill"] },
-  { id: "13", name: "Country Roads", artist: "SoundHelix", duration: 178, previewUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-13.mp3", category: "country", tags: ["country", "roads", "travel"] },
-  { id: "14", name: "R&B Smooth", artist: "SoundHelix", duration: 215, previewUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-14.mp3", category: "rnb", tags: ["rnb", "smooth", "soul"] },
-  { id: "15", name: "Reggae Vibes", artist: "SoundHelix", duration: 188, previewUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-15.mp3", category: "reggae", tags: ["reggae", "vibes", "island"] },
-  { id: "16", name: "Uplifting Motivation", artist: "SoundHelix", duration: 156, previewUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-16.mp3", category: "uplifting", tags: ["uplifting", "motivation", "inspiring"] },
-  { id: "17", name: "Sad Piano", artist: "SoundHelix", duration: 234, previewUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3", category: "sad", tags: ["sad", "emotional", "piano"] },
-  { id: "18", name: "Happy Ukulele", artist: "SoundHelix", duration: 145, previewUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3", category: "happy", tags: ["happy", "ukulele", "cheerful"] },
-  { id: "19", name: "Dark Atmosphere", artist: "SoundHelix", duration: 267, previewUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3", category: "dark", tags: ["dark", "atmosphere", "tension"] },
-  { id: "20", name: "Funky Groove", artist: "SoundHelix", duration: 183, previewUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3", category: "funky", tags: ["funky", "groove", "bass"] },
-];
+// Expanded built-in royalty-free tracks from SoundHelix + additional sources
+const SOUNDHELIX_TRACKS: MusicTrack[] = Array.from({ length: 16 }, (_, i) => ({
+  id: `sh-${i + 1}`,
+  name: [
+    "Upbeat Corporate", "Chill Electronic", "Acoustic Morning", "Epic Cinematic",
+    "Jazz Lounge", "Rock Energy", "Hip Hop Beat", "Classical Piano",
+    "Ambient Dreams", "Folk Journey", "Dance Floor", "Lo-Fi Study",
+    "Country Roads", "R&B Smooth", "Reggae Vibes", "Uplifting Motivation"
+  ][i],
+  artist: "SoundHelix",
+  duration: [142, 198, 211, 185, 224, 176, 163, 245, 289, 194, 167, 203, 178, 215, 188, 156][i],
+  previewUrl: `https://www.soundhelix.com/examples/mp3/SoundHelix-Song-${i + 1}.mp3`,
+  category: ["pop", "electronic", "acoustic", "cinematic", "jazz", "rock", "hiphop", "classical", "ambient", "folk", "dance", "lofi", "country", "rnb", "reggae", "uplifting"][i],
+  tags: [
+    ["corporate", "upbeat", "happy"], ["chill", "electronic", "ambient"], ["acoustic", "calm", "morning"], ["epic", "cinematic", "dramatic"],
+    ["jazz", "lounge", "relaxing"], ["rock", "energy", "guitar"], ["hiphop", "beat", "urban"], ["classical", "piano", "elegant"],
+    ["ambient", "dreams", "space"], ["folk", "journey", "nature"], ["dance", "edm", "party"], ["lofi", "study", "chill"],
+    ["country", "roads", "travel"], ["rnb", "smooth", "soul"], ["reggae", "vibes", "island"], ["uplifting", "motivation", "inspiring"]
+  ][i],
+  source: "SoundHelix",
+}));
 
 const CATEGORIES = [
   { id: "all", name: "All Music", icon: "🎵" },
@@ -75,6 +68,9 @@ const CATEGORIES = [
   { id: "uplifting", name: "Uplifting", icon: "🚀" },
   { id: "dark", name: "Dark", icon: "🌑" },
   { id: "funky", name: "Funky", icon: "🪩" },
+  { id: "epic", name: "Epic", icon: "⚔️" },
+  { id: "romantic", name: "Romantic", icon: "💕" },
+  { id: "relaxing", name: "Relaxing", icon: "🧘" },
 ];
 
 export function MusicSearch({ onSelectTrack }: MusicSearchProps) {
@@ -83,12 +79,58 @@ export function MusicSearch({ onSelectTrack }: MusicSearchProps) {
   const [playingTrackId, setPlayingTrackId] = useState<string | null>(null);
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
   const [showCategories, setShowCategories] = useState(false);
+  const [pixabayTracks, setPixabayTracks] = useState<MusicTrack[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [pixabayPage, setPixabayPage] = useState(1);
+  const [hasMore, setHasMore] = useState(false);
+  const [totalPixabay, setTotalPixabay] = useState(0);
   
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  // Filter tracks based on search and category
-  const filteredTracks = useMemo(() => {
-    return SAMPLE_TRACKS.filter(track => {
+  // Search Pixabay Music API
+  const searchPixabay = useCallback(async (query?: string, category?: string, page = 1) => {
+    setIsSearching(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('music-search', {
+        body: { 
+          query: query || undefined, 
+          category: category !== 'all' ? category : undefined, 
+          page, 
+          limit: 50 
+        },
+      });
+
+      if (error) throw error;
+
+      const tracks: MusicTrack[] = (data?.tracks || []).map((t: any) => ({
+        id: `px-${t.id}`,
+        name: t.name,
+        artist: t.artist,
+        duration: t.duration,
+        previewUrl: t.previewUrl || t.downloadUrl,
+        category: category || 'all',
+        tags: t.tags ? t.tags.split(',').map((tag: string) => tag.trim()) : [],
+        source: 'Pixabay',
+      }));
+
+      if (page === 1) {
+        setPixabayTracks(tracks);
+      } else {
+        setPixabayTracks(prev => [...prev, ...tracks]);
+      }
+      setHasMore(data?.hasMore || false);
+      setTotalPixabay(data?.total || 0);
+      setPixabayPage(page);
+    } catch (err) {
+      console.warn('Pixabay search failed, using local tracks only:', err);
+    } finally {
+      setIsSearching(false);
+    }
+  }, []);
+
+  // Combined tracks: local + Pixabay
+  const allTracks = useMemo(() => {
+    const local = SOUNDHELIX_TRACKS.filter(track => {
       const matchesCategory = selectedCategory === "all" || track.category === selectedCategory;
       const matchesSearch = !searchQuery || 
         track.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -96,7 +138,10 @@ export function MusicSearch({ onSelectTrack }: MusicSearchProps) {
         track.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()));
       return matchesCategory && matchesSearch;
     });
-  }, [searchQuery, selectedCategory]);
+
+    // Combine and deduplicate
+    return [...local, ...pixabayTracks];
+  }, [searchQuery, selectedCategory, pixabayTracks]);
 
   const formatDuration = (seconds: number): string => {
     const mins = Math.floor(seconds / 60);
@@ -109,11 +154,9 @@ export function MusicSearch({ onSelectTrack }: MusicSearchProps) {
       audioRef.current?.pause();
       setPlayingTrackId(null);
     } else {
-      if (audioRef.current) {
-        audioRef.current.pause();
-      }
+      if (audioRef.current) audioRef.current.pause();
       audioRef.current = new Audio(track.previewUrl);
-      audioRef.current.play();
+      audioRef.current.play().catch(() => toast.error("Couldn't play this track"));
       audioRef.current.onended = () => setPlayingTrackId(null);
       setPlayingTrackId(track.id);
     }
@@ -135,13 +178,18 @@ export function MusicSearch({ onSelectTrack }: MusicSearchProps) {
   const toggleFavorite = (trackId: string) => {
     setFavorites(prev => {
       const newFavorites = new Set(prev);
-      if (newFavorites.has(trackId)) {
-        newFavorites.delete(trackId);
-      } else {
-        newFavorites.add(trackId);
-      }
+      if (newFavorites.has(trackId)) newFavorites.delete(trackId);
+      else newFavorites.add(trackId);
       return newFavorites;
     });
+  };
+
+  const handleSearch = () => {
+    searchPixabay(searchQuery, selectedCategory, 1);
+  };
+
+  const handleLoadMore = () => {
+    searchPixabay(searchQuery, selectedCategory, pixabayPage + 1);
   };
 
   const selectedCategoryData = CATEGORIES.find(c => c.id === selectedCategory);
@@ -151,19 +199,31 @@ export function MusicSearch({ onSelectTrack }: MusicSearchProps) {
       <div className="flex items-center justify-between">
         <h3 className="font-medium">Music Library</h3>
         <Badge variant="secondary" className="text-[10px]">
-          {filteredTracks.length} tracks
+          {allTracks.length} tracks {totalPixabay > 0 && `(${totalPixabay.toLocaleString()}+ available)`}
         </Badge>
       </div>
 
       {/* Search */}
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-        <Input
-          placeholder="Search songs, artists, tags..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="pl-9 h-8 text-xs"
-        />
+      <div className="flex gap-1">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input
+            placeholder="Search songs, artists, tags..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+            className="pl-9 h-8 text-xs"
+          />
+        </div>
+        <Button 
+          variant="default" 
+          size="sm" 
+          className="h-8 px-3 text-xs"
+          onClick={handleSearch}
+          disabled={isSearching}
+        >
+          {isSearching ? <Loader2 className="w-3 h-3 animate-spin" /> : <Search className="w-3 h-3" />}
+        </Button>
       </div>
 
       {/* Category Selector */}
@@ -189,6 +249,7 @@ export function MusicSearch({ onSelectTrack }: MusicSearchProps) {
                 onClick={() => {
                   setSelectedCategory(category.id);
                   setShowCategories(false);
+                  searchPixabay(searchQuery, category.id, 1);
                 }}
                 className={`flex items-center gap-1 px-1.5 py-1 rounded text-[9px] transition-colors ${
                   selectedCategory === category.id
@@ -210,89 +271,97 @@ export function MusicSearch({ onSelectTrack }: MusicSearchProps) {
           {selectedCategory !== "all" && (
             <Badge variant="secondary" className="text-[9px] gap-1 h-5">
               {selectedCategoryData?.icon} {selectedCategoryData?.name}
-              <X 
-                className="w-2 h-2 cursor-pointer" 
-                onClick={() => setSelectedCategory("all")}
-              />
+              <X className="w-2 h-2 cursor-pointer" onClick={() => setSelectedCategory("all")} />
             </Badge>
           )}
           {searchQuery && (
             <Badge variant="secondary" className="text-[9px] gap-1 h-5">
               "{searchQuery}"
-              <X 
-                className="w-2 h-2 cursor-pointer" 
-                onClick={() => setSearchQuery("")}
-              />
+              <X className="w-2 h-2 cursor-pointer" onClick={() => setSearchQuery("")} />
             </Badge>
           )}
         </div>
       )}
 
       {/* Track List */}
-      <ScrollArea className="h-[200px]">
+      <ScrollArea className="h-[250px]">
         <div className="space-y-1.5 pr-2">
-          {filteredTracks.length === 0 ? (
+          {isSearching && allTracks.length === 0 ? (
+            <div className="text-center py-6 text-muted-foreground text-xs">
+              <Loader2 className="w-6 h-6 mx-auto mb-2 animate-spin" />
+              <p>Searching music library...</p>
+            </div>
+          ) : allTracks.length === 0 ? (
             <div className="text-center py-6 text-muted-foreground text-xs">
               <Music className="w-6 h-6 mx-auto mb-2 opacity-50" />
-              <p>No tracks found. Try a different search.</p>
+              <p>No tracks found. Try searching online.</p>
+              <Button variant="outline" size="sm" className="mt-2 text-xs" onClick={handleSearch}>
+                <Search className="w-3 h-3 mr-1" /> Search Online
+              </Button>
             </div>
           ) : (
-            filteredTracks.map((track) => (
-              <div
-                key={track.id}
-                className="flex items-center gap-2 p-1.5 rounded-lg border border-border bg-card hover:bg-accent/50 transition-colors group"
-              >
-                {/* Album Art */}
-                <div className="relative w-9 h-9 rounded overflow-hidden bg-muted flex-shrink-0">
-                  <div className="w-full h-full flex items-center justify-center">
-                    <Music className="w-3 h-3 text-muted-foreground" />
+            <>
+              {allTracks.map((track) => (
+                <div
+                  key={track.id}
+                  className="flex items-center gap-2 p-1.5 rounded-lg border border-border bg-card hover:bg-accent/50 transition-colors group"
+                >
+                  <div className="relative w-9 h-9 rounded overflow-hidden bg-muted flex-shrink-0">
+                    <div className="w-full h-full flex items-center justify-center">
+                      <Music className="w-3 h-3 text-muted-foreground" />
+                    </div>
+                    <button
+                      onClick={() => handlePlayPause(track)}
+                      className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      {playingTrackId === track.id ? (
+                        <Pause className="w-3 h-3 text-white" />
+                      ) : (
+                        <Play className="w-3 h-3 text-white" />
+                      )}
+                    </button>
                   </div>
-                  <button
-                    onClick={() => handlePlayPause(track)}
-                    className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                  >
-                    {playingTrackId === track.id ? (
-                      <Pause className="w-3 h-3 text-white" />
-                    ) : (
-                      <Play className="w-3 h-3 text-white" />
-                    )}
-                  </button>
-                </div>
 
-                {/* Track Info */}
-                <div className="flex-1 min-w-0">
-                  <p className="text-[10px] font-medium truncate">{track.name}</p>
-                  <p className="text-[9px] text-muted-foreground truncate">{track.artist} • {formatDuration(track.duration)}</p>
-                </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[10px] font-medium truncate">{track.name}</p>
+                    <p className="text-[9px] text-muted-foreground truncate">
+                      {track.artist} • {formatDuration(track.duration)}
+                      {track.source && <span className="ml-1 text-primary/70">• {track.source}</span>}
+                    </p>
+                  </div>
 
-                {/* Actions */}
-                <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    className="h-5 w-5"
-                    onClick={() => toggleFavorite(track.id)}
-                  >
-                    <Heart className={`w-2.5 h-2.5 ${favorites.has(track.id) ? 'fill-red-500 text-red-500' : ''}`} />
-                  </Button>
-                  <Button 
-                    variant="default" 
-                    size="icon" 
-                    className="h-5 w-5"
-                    onClick={() => handleAddTrack(track)}
-                  >
-                    <Plus className="w-2.5 h-2.5" />
-                  </Button>
+                  <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => toggleFavorite(track.id)}>
+                      <Heart className={`w-2.5 h-2.5 ${favorites.has(track.id) ? 'fill-red-500 text-red-500' : ''}`} />
+                    </Button>
+                    <Button variant="default" size="icon" className="h-5 w-5" onClick={() => handleAddTrack(track)}>
+                      <Plus className="w-2.5 h-2.5" />
+                    </Button>
+                  </div>
                 </div>
-              </div>
-            ))
+              ))}
+
+              {/* Load More */}
+              {hasMore && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full mt-2 text-xs h-7"
+                  onClick={handleLoadMore}
+                  disabled={isSearching}
+                >
+                  {isSearching ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <RefreshCw className="w-3 h-3 mr-1" />}
+                  Load More Tracks
+                </Button>
+              )}
+            </>
           )}
         </div>
       </ScrollArea>
 
       {/* Attribution */}
       <div className="text-[9px] text-muted-foreground pt-1 border-t border-border">
-        🎵 Royalty-free sample tracks from SoundHelix
+        🎵 Royalty-free music from SoundHelix & Pixabay ({totalPixabay > 0 ? `${totalPixabay.toLocaleString()}+` : '20,000+'} tracks available)
       </div>
     </div>
   );

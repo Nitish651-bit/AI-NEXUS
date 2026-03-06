@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Volume2, Loader2, VolumeX } from "lucide-react";
+import { Volume2, VolumeX, Download } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const voices = [
@@ -59,6 +59,68 @@ export const OpenAITTS = () => {
     toast({ title: "Playing", description: "Speaking with Browser Speech API" });
   };
 
+  const handleDownload = async () => {
+    if (!text.trim()) {
+      toast({ title: "Error", description: "Please enter some text to download", variant: "destructive" });
+      return;
+    }
+
+    toast({ title: "Generating Audio", description: "Recording speech for download..." });
+
+    try {
+      const audioContext = new AudioContext();
+      const dest = audioContext.createMediaStreamDestination();
+      const mediaRecorder = new MediaRecorder(dest.stream, { mimeType: 'audio/webm' });
+      const chunks: BlobPart[] = [];
+
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) chunks.push(e.data);
+      };
+
+      const downloadPromise = new Promise<void>((resolve) => {
+        mediaRecorder.onstop = () => {
+          const blob = new Blob(chunks, { type: 'audio/webm' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `tts-audio-${Date.now()}.webm`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+          audioContext.close();
+          toast({ title: "Downloaded!", description: "Audio file saved successfully" });
+          resolve();
+        };
+      });
+
+      mediaRecorder.start();
+
+      const utterance = new SpeechSynthesisUtterance(text);
+      const voice = getBrowserVoice();
+      if (voice) utterance.voice = voice;
+
+      utterance.onend = () => {
+        setTimeout(() => mediaRecorder.stop(), 500);
+      };
+      utterance.onerror = () => {
+        mediaRecorder.stop();
+        toast({ title: "Error", description: "Failed to generate audio", variant: "destructive" });
+      };
+
+      speechSynthesis.cancel();
+      speechSynthesis.speak(utterance);
+
+      await downloadPromise;
+    } catch {
+      toast({ 
+        title: "Browser Limitation", 
+        description: "Direct audio download not supported in this browser.",
+        variant: "destructive" 
+      });
+    }
+  };
+
   return (
     <Card className="w-full">
       <CardHeader>
@@ -84,9 +146,15 @@ export const OpenAITTS = () => {
             </SelectContent>
           </Select>
         </div>
-        <Button onClick={generateSpeech} className="w-full">
-          {isSpeaking ? <><VolumeX className="mr-2 h-4 w-4" />Stop</> : <><Volume2 className="mr-2 h-4 w-4" />Generate Speech</>}
-        </Button>
+        <div className="flex gap-2">
+          <Button onClick={generateSpeech} className="flex-1">
+            {isSpeaking ? <><VolumeX className="mr-2 h-4 w-4" />Stop</> : <><Volume2 className="mr-2 h-4 w-4" />Generate Speech</>}
+          </Button>
+          <Button onClick={handleDownload} variant="outline" className="gap-2" disabled={!text.trim()}>
+            <Download className="w-4 h-4" />
+            Download
+          </Button>
+        </div>
       </CardContent>
     </Card>
   );
