@@ -41,6 +41,7 @@ export function useVoiceAssistant(options: UseVoiceAssistantOptions = {}) {
   const streamRef = useRef<MediaStream | null>(null);
   const animationFrameRef = useRef<number | null>(null);
   const shouldRestartRef = useRef(false);
+  const startRecognitionRef = useRef<() => void>(() => {});
 
   // Keep refs in sync with state
   useEffect(() => { statusRef.current = status; }, [status]);
