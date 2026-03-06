@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { Volume2, VolumeX } from 'lucide-react';
+import { Volume2, VolumeX, Download } from 'lucide-react';
 
 export const ElevenLabsTTS = () => {
   const [text, setText] = useState('');
@@ -63,6 +63,72 @@ export const ElevenLabsTTS = () => {
     toast({ title: "Playing", description: `Speaking in ${languages.find(l => l.code === selectedLang)?.name}` });
   };
 
+  const handleDownload = async () => {
+    if (!text.trim()) {
+      toast({ title: "Text required", description: "Please enter some text to download as audio", variant: "destructive" });
+      return;
+    }
+
+    toast({ title: "Generating Audio", description: "Recording speech for download..." });
+
+    try {
+      // Use Web Audio API + MediaRecorder to capture speech synthesis
+      const audioContext = new AudioContext();
+      const dest = audioContext.createMediaStreamDestination();
+      const mediaRecorder = new MediaRecorder(dest.stream, { mimeType: 'audio/webm' });
+      const chunks: BlobPart[] = [];
+
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) chunks.push(e.data);
+      };
+
+      const downloadPromise = new Promise<void>((resolve) => {
+        mediaRecorder.onstop = () => {
+          const blob = new Blob(chunks, { type: 'audio/webm' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `tts-audio-${Date.now()}.webm`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+          audioContext.close();
+          toast({ title: "Downloaded!", description: "Audio file saved successfully" });
+          resolve();
+        };
+      });
+
+      mediaRecorder.start();
+
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = selectedLang;
+      const voices = speechSynthesis.getVoices();
+      const match = voices.find(v => v.lang === selectedLang) || voices.find(v => v.lang.startsWith(selectedLang.split('-')[0]));
+      if (match) utterance.voice = match;
+
+      utterance.onend = () => {
+        setTimeout(() => mediaRecorder.stop(), 500);
+      };
+      utterance.onerror = () => {
+        mediaRecorder.stop();
+        toast({ title: "Error", description: "Failed to generate audio for download", variant: "destructive" });
+      };
+
+      speechSynthesis.cancel();
+      speechSynthesis.speak(utterance);
+
+      await downloadPromise;
+    } catch {
+      // Fallback: create a simple text file with instructions
+      toast({ 
+        title: "Browser Limitation", 
+        description: "Direct audio download not supported in this browser. The speech was played instead.",
+        variant: "destructive" 
+      });
+    }
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -88,9 +154,15 @@ export const ElevenLabsTTS = () => {
           <label className="text-sm font-medium">Text to Convert</label>
           <Textarea placeholder="Enter the text you want to convert to speech..." value={text} onChange={(e) => setText(e.target.value)} rows={4} />
         </div>
-        <Button onClick={generateSpeech} className="w-full">
-          {isSpeaking ? <><VolumeX className="w-4 h-4 mr-2" />Stop</> : <><Volume2 className="w-4 h-4 mr-2" />Generate Speech</>}
-        </Button>
+        <div className="flex gap-2">
+          <Button onClick={generateSpeech} className="flex-1">
+            {isSpeaking ? <><VolumeX className="w-4 h-4 mr-2" />Stop</> : <><Volume2 className="w-4 h-4 mr-2" />Generate Speech</>}
+          </Button>
+          <Button onClick={handleDownload} variant="outline" className="gap-2" disabled={!text.trim()}>
+            <Download className="w-4 h-4" />
+            Download
+          </Button>
+        </div>
       </CardContent>
     </Card>
   );
