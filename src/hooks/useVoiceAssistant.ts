@@ -395,6 +395,9 @@ export function useVoiceAssistant(options: UseVoiceAssistantOptions = {}) {
     }
   }, [isSpeechSupported, toast]);
 
+  // Keep startRecognitionRef in sync
+  useEffect(() => { startRecognitionRef.current = startRecognition; }, [startRecognition]);
+
   // ── Public API ──
 
   /** Activate NEXUS — requests mic, starts wake-word listening */
