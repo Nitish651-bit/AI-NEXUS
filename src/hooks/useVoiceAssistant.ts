@@ -318,10 +318,10 @@ export function useVoiceAssistant(options: UseVoiceAssistantOptions = {}) {
     // Small delay before restart to prevent rapid restart loops
     setTimeout(() => {
       if (isActiveRef.current) {
-        startRecognition();
+        startRecognitionRef.current();
       }
     }, 300);
-  }, []);
+  }, [stopRecognition]);
 
   const startRecognition = useCallback(() => {
     if (!isSpeechSupported) {
