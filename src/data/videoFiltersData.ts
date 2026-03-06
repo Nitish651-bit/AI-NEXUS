@@ -415,6 +415,202 @@ const generateFilters = (): VideoFilter[] => {
     }
   });
 
+  // Transition Effects (100+)
+  const transitionBase = [
+    { name: "Fade to Black", description: "Smooth fade to black", command: "eq=brightness=-0.5", color: "#000000" },
+    { name: "Fade to White", description: "Smooth fade to white", command: "eq=brightness=0.5", color: "#FFFFFF" },
+    { name: "Cross Dissolve", description: "Gradual dissolve transition", command: "gblur=sigma=3,eq=brightness=0.1", color: "#B0B0B0" },
+    { name: "Zoom Blur", description: "Zoom blur transition", command: "gblur=sigma=5", color: "#808080" },
+    { name: "Whip Pan", description: "Fast horizontal motion", command: "gblur=sigma=8", color: "#4682B4" },
+    { name: "Flash White", description: "Bright flash transition", command: "eq=brightness=0.8:contrast=1.5", color: "#FFFACD" },
+    { name: "Glitch Cut", description: "Digital glitch transition", command: "noise=alls=50:allf=t+u", color: "#FF00FF" },
+    { name: "Film Burn", description: "Film burn transition", command: "colorbalance=rs=0.5:gs=0.2:bs=-0.2,eq=brightness=0.3", color: "#FF4500" },
+    { name: "Swirl", description: "Swirling vortex transition", command: "gblur=sigma=6", color: "#9370DB" },
+    { name: "Pixelate Out", description: "Pixelation transition", command: "gblur=sigma=4", color: "#FF69B4" },
+  ];
+
+  transitionBase.forEach((filter) => {
+    for (let intensity = 1; intensity <= 10; intensity++) {
+      filters.push({
+        id: `tr-${id++}`,
+        name: `${filter.name} ${intensity * 10}%`,
+        description: `${filter.description} at ${intensity * 10}% intensity`,
+        mood: "Cinematic",
+        category: "Transitions",
+        ffmpegCommand: filter.command,
+        intensity: intensity * 10,
+        previewColor: filter.color,
+      });
+    }
+  });
+
+  // Text Animation Effects (60+)
+  const textEffectsBase = [
+    { name: "Typewriter", description: "Typewriter text reveal", command: "eq=contrast=1.05", color: "#2F4F4F" },
+    { name: "Neon Text Glow", description: "Glowing neon text effect", command: "eq=contrast=1.2,colorbalance=rs=-0.1:gs=0.3:bs=0.3", color: "#00FFFF" },
+    { name: "Cinematic Title", description: "Movie title card effect", command: "eq=contrast=1.3:brightness=-0.1", color: "#FFD700" },
+    { name: "Subtitle Style", description: "Clean subtitle overlay", command: "eq=contrast=1.05:brightness=0.02", color: "#FFFFFF" },
+    { name: "Comic Text", description: "Comic book text bubbles", command: "posterize=6,eq=contrast=1.2", color: "#FF1493" },
+    { name: "Handwritten", description: "Handwritten text overlay", command: "eq=saturation=0.95", color: "#8B4513" },
+  ];
+
+  textEffectsBase.forEach((filter) => {
+    for (let intensity = 1; intensity <= 10; intensity++) {
+      filters.push({
+        id: `te-${id++}`,
+        name: `${filter.name} ${intensity * 10}%`,
+        description: `${filter.description} at ${intensity * 10}% intensity`,
+        mood: "Aesthetic",
+        category: "Text Effects",
+        ffmpegCommand: filter.command,
+        intensity: intensity * 10,
+        previewColor: filter.color,
+      });
+    }
+  });
+
+  // Overlay Effects (80+)
+  const overlayBase = [
+    { name: "Rain Drops", description: "Rainy window overlay", command: "eq=brightness=-0.05,colorbalance=rs=-0.1:gs=-0.05:bs=0.1", color: "#4682B4" },
+    { name: "Snow Particles", description: "Falling snow overlay", command: "eq=brightness=0.1,colorbalance=rs=-0.05:gs=-0.05:bs=0.1", color: "#F0F8FF" },
+    { name: "Dust Particles", description: "Floating dust motes", command: "noise=alls=10:allf=t,eq=brightness=0.05", color: "#DEB887" },
+    { name: "Light Rays", description: "Volumetric light rays", command: "eq=brightness=0.15,colorbalance=rs=0.1:gs=0.08:bs=-0.05", color: "#FFD700" },
+    { name: "Smoke Haze", description: "Smoky atmosphere overlay", command: "gblur=sigma=2,eq=brightness=0.05:contrast=0.95", color: "#696969" },
+    { name: "Fire Embers", description: "Glowing fire embers", command: "colorbalance=rs=0.3:gs=0.1:bs=-0.2,eq=brightness=0.05", color: "#FF4500" },
+    { name: "Confetti", description: "Celebration confetti", command: "eq=saturation=1.3:brightness=0.05", color: "#FF69B4" },
+    { name: "Bubbles", description: "Floating bubbles overlay", command: "eq=brightness=0.08,colorbalance=rs=-0.05:gs=0.05:bs=0.1", color: "#87CEEB" },
+  ];
+
+  overlayBase.forEach((filter) => {
+    for (let intensity = 1; intensity <= 10; intensity++) {
+      filters.push({
+        id: `ov-${id++}`,
+        name: `${filter.name} ${intensity * 10}%`,
+        description: `${filter.description} at ${intensity * 10}% intensity`,
+        mood: "Aesthetic",
+        category: "Overlays",
+        ffmpegCommand: filter.command,
+        intensity: intensity * 10,
+        previewColor: filter.color,
+      });
+    }
+  });
+
+  // Audio Visual Effects (40+)
+  const audioVisualBase = [
+    { name: "Bass Boost Visual", description: "Pulsating bass effect", command: "eq=contrast=1.15:saturation=1.1", color: "#FF0000" },
+    { name: "Rhythm Pulse", description: "Rhythmic pulsing effect", command: "eq=brightness=0.05:contrast=1.1", color: "#FF6347" },
+    { name: "Beat Drop", description: "Impact beat drop effect", command: "eq=contrast=1.3:brightness=-0.05", color: "#8B0000" },
+    { name: "Waveform Glow", description: "Audio waveform visualization", command: "colorbalance=rs=0.1:gs=0.2:bs=0.3", color: "#00CED1" },
+  ];
+
+  audioVisualBase.forEach((filter) => {
+    for (let intensity = 1; intensity <= 10; intensity++) {
+      filters.push({
+        id: `av-${id++}`,
+        name: `${filter.name} ${intensity * 10}%`,
+        description: `${filter.description} at ${intensity * 10}% intensity`,
+        mood: "Neon",
+        category: "Audio Visual",
+        ffmpegCommand: filter.command,
+        intensity: intensity * 10,
+        previewColor: filter.color,
+      });
+    }
+  });
+
+  // Warm Tone Variants (50+)
+  const warmBase = [
+    { name: "Honey Gold", command: "colorbalance=rs=0.2:gs=0.15:bs=-0.2", color: "#E8A317" },
+    { name: "Campfire", command: "colorbalance=rs=0.3:gs=0.1:bs=-0.25", color: "#D2691E" },
+    { name: "Terracotta", command: "colorbalance=rs=0.25:gs=0.08:bs=-0.15", color: "#CC4E5C" },
+    { name: "Maple Syrup", command: "colorbalance=rs=0.2:gs=0.12:bs=-0.18", color: "#BB6528" },
+    { name: "Candlelight", command: "colorbalance=rs=0.15:gs=0.1:bs=-0.2,eq=brightness=0.05", color: "#FFD700" },
+  ];
+
+  warmBase.forEach((filter) => {
+    for (let intensity = 1; intensity <= 10; intensity++) {
+      filters.push({
+        id: `wm-${id++}`,
+        name: `${filter.name} ${intensity * 10}%`,
+        description: `Warm tone at ${intensity * 10}% intensity`,
+        mood: "Warm",
+        category: "Color Grading",
+        ffmpegCommand: filter.command,
+        intensity: intensity * 10,
+        previewColor: filter.color,
+      });
+    }
+  });
+
+  // Cool Tone Variants (50+)
+  const coolBase = [
+    { name: "Glacier", command: "colorbalance=rs=-0.25:gs=-0.05:bs=0.3", color: "#B0E0E6" },
+    { name: "Moonlight", command: "colorbalance=rs=-0.15:gs=-0.1:bs=0.25", color: "#C4C4DA" },
+    { name: "Deep Ocean", command: "colorbalance=rs=-0.2:gs=0:bs=0.35", color: "#006994" },
+    { name: "Ice Crystal", command: "colorbalance=rs=-0.1:gs=0.05:bs=0.2,eq=brightness=0.08", color: "#E0FFFF" },
+    { name: "Steel Blue", command: "colorbalance=rs=-0.12:gs=-0.05:bs=0.2", color: "#4682B4" },
+  ];
+
+  coolBase.forEach((filter) => {
+    for (let intensity = 1; intensity <= 10; intensity++) {
+      filters.push({
+        id: `cl-${id++}`,
+        name: `${filter.name} ${intensity * 10}%`,
+        description: `Cool tone at ${intensity * 10}% intensity`,
+        mood: "Cool",
+        category: "Color Grading",
+        ffmpegCommand: filter.command,
+        intensity: intensity * 10,
+        previewColor: filter.color,
+      });
+    }
+  });
+
+  // Minimalist Effects (30+)
+  const minimalistBase = [
+    { name: "Clean White", command: "eq=brightness=0.1:contrast=1.05:saturation=0.9", color: "#FAFAFA" },
+    { name: "Subtle Warmth", command: "colorbalance=rs=0.05:gs=0.03:bs=-0.05", color: "#FFF5EE" },
+    { name: "Quiet Elegance", command: "eq=contrast=1.08:saturation=0.92", color: "#F5F5F5" },
+  ];
+
+  minimalistBase.forEach((filter) => {
+    for (let intensity = 1; intensity <= 10; intensity++) {
+      filters.push({
+        id: `mn-${id++}`,
+        name: `${filter.name} ${intensity * 10}%`,
+        description: `Minimalist effect at ${intensity * 10}% intensity`,
+        mood: "Minimalist",
+        category: "Color Grading",
+        ffmpegCommand: filter.command,
+        intensity: intensity * 10,
+        previewColor: filter.color,
+      });
+    }
+  });
+
+  // Sepia Variations (30+)
+  const sepiaBase = [
+    { name: "Classic Sepia", command: "colorize=0.15:0.1:0.05", color: "#704214" },
+    { name: "Warm Sepia", command: "colorize=0.2:0.12:0.03", color: "#8B7355" },
+    { name: "Cool Sepia", command: "colorize=0.1:0.1:0.08", color: "#8B8589" },
+  ];
+
+  sepiaBase.forEach((filter) => {
+    for (let intensity = 1; intensity <= 10; intensity++) {
+      filters.push({
+        id: `sp2-${id++}`,
+        name: `${filter.name} ${intensity * 10}%`,
+        description: `Sepia toning at ${intensity * 10}% intensity`,
+        mood: "Sepia",
+        category: "Color Grading",
+        ffmpegCommand: filter.command,
+        intensity: intensity * 10,
+        previewColor: filter.color,
+      });
+    }
+  });
+
   return filters;
 };
 
