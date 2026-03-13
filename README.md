@@ -1,8 +1,15 @@
 # Welcome to AI NEXUS 910+
 
 ## Project info
+**Project URL** https://aiiinexus.lovable.app/
+AI Nexus 910+ is a unified AI platform designed to integrate multiple artificial intelligence tools into one powerful ecosystem. The platform enables users to access AI-powered capabilities such as intelligent chat, content generation, automation workflows, and advanced AI model integration from a single interface.
 
-**URL** https://aiiinexus.lovable.app/
+The goal of AI Nexus 910+ is to eliminate the need for multiple separate AI tools by creating a centralized system where different AI models and services can work together efficiently. The platform supports scalable architecture, allowing future expansion with AI agents, workflow automation, and intelligent decision systems.
+
+Built using modern web technologies such as React, TypeScript, Vite, and Tailwind CSS, AI Nexus 910+ provides a fast, responsive, and modular interface designed for developers, researchers, and businesses exploring AI-driven solutions.
+
+The vision of AI Nexus 910+ is to evolve into a next-generation AI operating system that connects various AI technologies into a unified intelligent network for productivity, automation, and innovation.
+
 
 ## How can I edit this code?
 1. Edit the Code Using VS Code (Best Method)
