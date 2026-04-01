@@ -130,12 +130,15 @@ All colors MUST be HSL.
 
   html, body {
     @apply bg-background text-foreground;
-    background: linear-gradient(135deg, hsl(220 25% 6%), hsl(220 20% 8%));
     min-height: 100vh;
     min-height: 100dvh;
     overflow-x: hidden;
     -webkit-text-size-adjust: 100%;
     -webkit-tap-highlight-color: transparent;
+  }
+
+  .dark html, .dark body {
+    background: linear-gradient(135deg, hsl(220 25% 6%), hsl(220 20% 8%));
   }
 
   /* Custom scrollbar with smooth styling */
