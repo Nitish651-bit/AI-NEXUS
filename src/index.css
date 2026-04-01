@@ -65,8 +65,61 @@ All colors MUST be HSL.
     --sidebar-ring: 195 100% 50%;
   }
 
+  .light {
+    --background: 210 20% 98%;
+    --foreground: 220 20% 10%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 220 20% 10%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 20% 10%;
+
+    --primary: 210 100% 50%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 210 10% 94%;
+    --secondary-foreground: 220 15% 25%;
+
+    --muted: 210 10% 94%;
+    --muted-foreground: 220 10% 45%;
+
+    --accent: 210 100% 45%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 75% 55%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 210 15% 88%;
+    --input: 210 10% 92%;
+    --ring: 210 100% 50%;
+
+    --holo-blue: 210 100% 50%;
+    --holo-blue-dark: 210 100% 40%;
+    --holo-blue-light: 210 100% 65%;
+    --electric-blue: 210 100% 55%;
+    --cyber-purple: 270 75% 55%;
+
+    --gradient-primary: linear-gradient(135deg, hsl(210 100% 50%), hsl(210 100% 60%));
+    --gradient-secondary: linear-gradient(135deg, hsl(210 20% 96%), hsl(210 15% 92%));
+    --gradient-card: linear-gradient(135deg, hsl(0 0% 100%), hsl(210 10% 97%));
+
+    --shadow-holo: 0 0 20px hsl(210 100% 50% / 0.15);
+    --shadow-card: 0 4px 20px hsl(220 25% 10% / 0.08);
+    --glow-primary: 0 0 20px hsl(210 100% 50% / 0.2);
+
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 220 15% 25%;
+    --sidebar-primary: 210 100% 50%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 210 10% 94%;
+    --sidebar-accent-foreground: 220 15% 25%;
+    --sidebar-border: 210 15% 88%;
+    --sidebar-ring: 210 100% 50%;
+  }
+
   .dark {
-    /* Dark mode uses same colors for consistency */
+    /* Dark mode uses root values */
   }
 }
 
@@ -77,12 +130,15 @@ All colors MUST be HSL.
 
   html, body {
     @apply bg-background text-foreground;
-    background: linear-gradient(135deg, hsl(220 25% 6%), hsl(220 20% 8%));
     min-height: 100vh;
     min-height: 100dvh;
     overflow-x: hidden;
     -webkit-text-size-adjust: 100%;
     -webkit-tap-highlight-color: transparent;
+  }
+
+  .dark html, .dark body {
+    background: linear-gradient(135deg, hsl(220 25% 6%), hsl(220 20% 8%));
   }
 
   /* Custom scrollbar with smooth styling */

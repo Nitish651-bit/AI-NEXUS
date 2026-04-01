@@ -41,13 +41,12 @@ async function validateAuth(req: Request): Promise<{ authenticated: boolean; use
       { global: { headers: { Authorization: authHeader } } }
     );
 
-    const token = authHeader.replace("Bearer ", "");
-    const { data, error } = await supabaseClient.auth.getClaims(token);
-    if (error || !data?.claims) {
+    const { data: { user }, error } = await supabaseClient.auth.getUser();
+    if (error || !user) {
       return { authenticated: false };
     }
 
-    return { authenticated: true, userId: data.claims.sub as string };
+    return { authenticated: true, userId: user.id };
   } catch {
     return { authenticated: false };
   }
