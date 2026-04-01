@@ -158,7 +158,7 @@ serve(async (req) => {
     console.error("Music search error:", error);
     return new Response(
       JSON.stringify({ 
-        error: error.message,
+        error: error instanceof Error ? error.message : "Unknown error",
         tracks: [],
         total: 0,
         page: 1,
