@@ -80,7 +80,7 @@ export function Dashboard({ userEmail, onLogout }: DashboardProps) {
             </div>
             <div className="flex items-center gap-2 ml-4">
               <Badge variant="outline" className="text-xs border-primary/30 text-primary gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+                <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
                 {aiTools.length}+ Tools
               </Badge>
             </div>
