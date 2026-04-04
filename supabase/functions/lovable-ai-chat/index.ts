@@ -45,7 +45,7 @@ serve(async (req) => {
         status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-    const userId = claimsData.claims.sub;
+    const userId = user.id;
     console.log("Authenticated user:", userId);
 
     const body = await req.json();

@@ -51,14 +51,14 @@ serve(async (req) => {
         status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-    console.log("Authenticated user:", claimsData.claims.sub);
+    console.log("Authenticated user:", user.id);
 
     const body = await req.json();
-    const { messages, model = 'gpt-5-mini-2025-08-07', temperature = 0.7 } = inputSchema.parse(body);
+    const { messages, model = 'gpt-4o-mini', temperature = 0.7 } = inputSchema.parse(body);
 
-    const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
-    if (!OPENAI_API_KEY) {
-      throw new Error('OPENAI_API_KEY not configured');
+    const AI_MASTER_KEY = Deno.env.get('AI_MASTER_KEY');
+    if (!AI_MASTER_KEY) {
+      throw new Error('AI_MASTER_KEY not configured');
     }
 
     console.log('OpenAI Chat request:', { model, messageCount: messages.length });
@@ -66,7 +66,7 @@ serve(async (req) => {
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${OPENAI_API_KEY}`,
+        'Authorization': `Bearer ${AI_MASTER_KEY}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
