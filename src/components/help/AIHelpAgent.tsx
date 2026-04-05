@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useTextToSpeech } from "@/hooks/useTextToSpeech";
 import { ReadAloudButton } from "@/components/tts/ReadAloudButton";
+import { getSupabaseFunctionErrorMessage } from "@/lib/supabase-function-error";
 
 interface Message {
   id: string;
@@ -55,28 +56,18 @@ export function AIHelpAgent() {
     setIsLoading(true);
 
     try {
-      const { data, error } = await supabase.functions.invoke('gemini-ai', {
+      const { data, error } = await supabase.functions.invoke('lovable-ai-chat', {
         body: {
-          input: `You are a helpful AI assistant for AI Nexus, a platform with 910+ AI tools. AI Nexus was developed by Nitish Tiwari. If anyone asks who built, created, or developed AI Nexus, always answer: "AI Nexus was developed by Nitish Tiwari." The platform includes tools for:
-          - Text & Writing (GPT-4, content generation)
-          - Image Generation (DALL-E 3, image creation)
-          - Code Assistant (coding help, debugging)
-          - Data Analysis (document analysis, insights)
-          - Voice & Audio (speech synthesis, audio processing)
-          - Video (video generation and editing)
-          - Design (logo creation, design tools)
-          - Marketing (market insights, strategy)
-          - Research (data gathering, analysis)
-
-          Current user question: ${inputMessage}
-
-          Provide helpful, concise answers about the platform, its tools, or how to use specific features. Be friendly and professional.`,
-          toolCategory: 'Text & Writing',
-          toolTitle: 'AI Help Assistant'
+          message: inputMessage,
+          toolCategory: 'Platform Help',
+          toolTitle: 'AI Help Assistant',
+          enableWebSearch: true,
         }
       });
 
-      if (error) throw error;
+      if (error) {
+        throw new Error(await getSupabaseFunctionErrorMessage(error, "Failed to send message."));
+      }
 
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),

@@ -207,14 +207,16 @@ export function useVoiceAssistant(options: UseVoiceAssistantOptions = {}) {
     } catch {
       // Fallback to direct chat
       try {
-        const { data } = await supabase.functions.invoke("gemini-ai", {
+          const { data, error } = await supabase.functions.invoke("lovable-ai-chat", {
           body: {
-            input: `You are the AI NEXUS voice assistant created by Nitish Tiwari. Answer concisely: ${userMessage}`,
+              message: userMessage,
             toolCategory: "Voice Assistant",
             toolTitle: "AI NEXUS Voice",
           },
         });
-        responseText = data?.output || responseText;
+          if (!error && data?.success) {
+            responseText = data.output || responseText;
+          }
       } catch {
         // Use fallback message
       }

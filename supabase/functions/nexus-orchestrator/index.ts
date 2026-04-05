@@ -59,7 +59,7 @@ serve(async (req) => {
       });
     }
 
-    const userId = claimsData.claims.sub as string;
+    const userId = user.id;
     executionLog.push(`Authenticated user: ${userId}`);
 
     const body = await req.json();
