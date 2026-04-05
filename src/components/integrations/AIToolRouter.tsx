@@ -6,6 +6,7 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Sparkles, ArrowRight, Zap } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { getSupabaseFunctionErrorMessage } from '@/lib/supabase-function-error';
 
 export const AIToolRouter = () => {
   const [userRequest, setUserRequest] = useState('');
@@ -38,7 +39,9 @@ export const AIToolRouter = () => {
         }
       });
 
-      if (error) throw error;
+      if (error) {
+        throw new Error(await getSupabaseFunctionErrorMessage(error, 'Please try again'));
+      }
 
       if (data.success) {
         setRecommendation(data.recommendation);

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { getSupabaseFunctionErrorMessage } from '@/lib/supabase-function-error';
 
 interface ImageInput {
   url: string;
@@ -50,7 +51,8 @@ export function useSocialMediaAI({ platform, tone }: UseSocialMediaAIProps = {})
 
       if (error) {
         console.error('Supabase function error:', error);
-        throw new Error(error.message || 'Failed to connect to AI service');
+        const errorMessage = await getSupabaseFunctionErrorMessage(error, 'Failed to connect to AI service');
+        throw new Error(errorMessage);
       }
 
       const response: AIResponse = data;
