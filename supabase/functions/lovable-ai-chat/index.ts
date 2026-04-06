@@ -74,11 +74,11 @@ async function callOllama(baseUrl: string, model: string, systemPrompt: string, 
 
 // ─── Lovable AI Gateway caller ───
 async function callLovableAI(systemPrompt: string, userContent: any, enableWebSearch?: boolean): Promise<string> {
-  const apiKey = Deno.env.get("LOVABLE_API_KEY");
-  if (!apiKey) throw new Error("LOVABLE_API_KEY is not configured");
+  const apiKey = Deno.env.get("AI_MASTER_KEY");
+  if (!apiKey) throw new Error("AI_MASTER_KEY is not configured");
 
   const body: any = {
-    model: "google/gemini-2.5-flash",
+    model: "ainexus",
     messages: [
       { role: "system", content: systemPrompt },
       { role: "user", content: userContent },
