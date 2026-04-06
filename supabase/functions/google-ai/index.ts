@@ -148,7 +148,7 @@ serve(async (req) => {
         output: result,
         toolCategory,
         toolTitle,
-        provider: 'Google AI'
+        provider: 'AI Nexus (ainexus)'
       }),
       { 
         headers: { 
