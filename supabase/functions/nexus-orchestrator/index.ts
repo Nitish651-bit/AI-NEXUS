@@ -67,8 +67,8 @@ serve(async (req) => {
     const sanitizedCommand = sanitizeInput(command);
     executionLog.push(`Command received: ${sanitizedCommand.slice(0, 100)}...`);
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
+    const AI_MASTER_KEY = Deno.env.get("AI_MASTER_KEY");
+    if (!AI_MASTER_KEY) throw new Error("AI_MASTER_KEY not configured");
 
     // PHASE 1: Intent Analysis + Tool Identification + Planning
     const orchestratorPrompt = `You are AI NEXUS Orchestrator v3.0 — the central intelligence engine.
@@ -118,11 +118,11 @@ Return ONLY valid JSON with this exact structure:
     const analysisResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        Authorization: `Bearer ${AI_MASTER_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
+        model: "ainexus",
         messages: [
           { role: "system", content: orchestratorPrompt },
           { role: "user", content: `Command: "${sanitizedCommand}"` },
@@ -174,11 +174,11 @@ Do NOT explain your reasoning process — just deliver the result.`;
     const executionResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        Authorization: `Bearer ${AI_MASTER_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
+        model: "ainexus",
         messages: [
           { role: "system", content: executionPrompt },
           { role: "user", content: sanitizedCommand },

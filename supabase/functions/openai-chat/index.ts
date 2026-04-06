@@ -61,18 +61,17 @@ serve(async (req) => {
       throw new Error('AI_MASTER_KEY not configured');
     }
 
-    console.log('OpenAI Chat request:', { model, messageCount: messages.length });
+    console.log('OpenAI Chat request:', { model: 'ainexus', messageCount: messages.length });
 
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${AI_MASTER_KEY}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model,
+        model: 'ainexus',
         messages,
-        max_completion_tokens: 2048,
       }),
     });
 

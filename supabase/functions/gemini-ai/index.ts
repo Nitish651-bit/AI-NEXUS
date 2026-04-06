@@ -50,15 +50,15 @@ serve(async (req) => {
     
     console.log('Received request:', { inputLength: input.length, toolCategory, toolTitle });
     
-    const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');
-    console.log('Lovable API Key exists:', !!lovableApiKey);
+    const aiMasterKey = Deno.env.get('AI_MASTER_KEY');
+    console.log('AI Master Key exists:', !!aiMasterKey);
     
-    if (!lovableApiKey) {
-      console.error('LOVABLE_API_KEY not found');
+    if (!aiMasterKey) {
+      console.error('AI_MASTER_KEY not found');
       return new Response(
         JSON.stringify({ 
           success: false, 
-          error: 'LOVABLE_API_KEY not configured',
+          error: 'AI_MASTER_KEY not configured',
         }),
         { 
           status: 400,
@@ -72,7 +72,7 @@ serve(async (req) => {
 
     // Handle image generation separately
     if (toolCategory === "Image Generation") {
-      return await handleImageGeneration(input, lovableApiKey);
+      return await handleImageGeneration(input, aiMasterKey);
     }
 
     // Generate appropriate prompt based on tool category
@@ -100,11 +100,11 @@ serve(async (req) => {
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${lovableApiKey}`,
+        'Authorization': `Bearer ${aiMasterKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'google/gemini-2.5-flash',
+        model: 'ainexus',
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: input }
@@ -163,7 +163,7 @@ serve(async (req) => {
         output: aiOutput,
         toolCategory,
         toolTitle,
-        provider: 'Lovable AI (Gemini 2.5 Flash)'
+        provider: 'AI Nexus (ainexus)'
       }),
       { 
         headers: { 
