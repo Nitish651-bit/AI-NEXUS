@@ -72,99 +72,72 @@ serve(async (req) => {
     let result = "";
     
     if (type === 'image' || toolCategory === "Image Generation") {
-      // Use Google's Imagen API for image generation
-      const imagePrompt = `Generate a high-quality image based on: ${input}`;
-      
+      // Use AI gateway for image generation
       try {
-        const imageResponse = await fetch(`https://aiplatform.googleapis.com/v1/projects/your-project/locations/us-central1/publishers/google/models/imagegeneration:predict`, {
+        const imgResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${googleApiKey}`,
+            'Authorization': `Bearer ${aiMasterKey}`,
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            instances: [
-              {
-                prompt: imagePrompt
-              }
+            model: 'ainexus',
+            messages: [
+              { role: 'system', content: 'You are an AI image description generator. Describe in vivid detail what the requested image would look like.' },
+              { role: 'user', content: `Describe this image concept: ${input}` }
             ],
-            parameters: {
-              sampleCount: 1
-            }
           })
         });
 
-        if (imageResponse.ok) {
-          const imageData = await imageResponse.json();
-          console.log('Google Image API response received');
-          result = `🎨 **AI Image Generated Successfully**
-
-**Your Prompt:** "${input}"
-
-**Image Description:**
-A stunning, high-quality image has been generated based on your request. The image captures the essence of "${input}" with professional composition, vibrant colors, and exceptional detail.
-
-**Technical Specifications:**
-• **Resolution:** High Definition
-• **Style:** Professional AI-generated artwork
-• **Quality:** Premium output
-• **Format:** Optimized for web display
-
-**Note:** This image would be generated using Google's advanced AI image generation technology.
-
----
-*Generated using Google AI Image Generation*`;
-        } else {
-          throw new Error('Google Image API failed');
-        }
+        if (!imgResponse.ok) throw new Error(`AI gateway error: ${imgResponse.status}`);
+        const imgData = await imgResponse.json();
+        result = imgData.choices?.[0]?.message?.content || generateImageFallback(input);
       } catch (imageError) {
-        console.log('Using fallback image response:', imageError);
+        console.log('Image generation fallback:', imageError);
         result = generateImageFallback(input);
       }
     } else {
-      // Use Google's Gemini API for text generation
+      // Use AI gateway for text generation
       const textPrompt = generatePromptForCategory(input, toolCategory, toolTitle);
       
       try {
-        const textResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=${googleApiKey}`, {
+        const textResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
           method: 'POST',
           headers: {
+            'Authorization': `Bearer ${aiMasterKey}`,
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            contents: [{
-              parts: [{
-                text: textPrompt
-              }]
-            }],
-            generationConfig: {
-              temperature: 0.7,
-              topK: 40,
-              topP: 0.95,
-              maxOutputTokens: 2048,
-            }
+            model: 'ainexus',
+            messages: [
+              { role: 'system', content: 'You are a helpful AI assistant on AI NEXUS, a platform with 910+ AI tools developed by Nitish Tiwari.' },
+              { role: 'user', content: textPrompt }
+            ],
           })
         });
 
-        console.log('Google Gemini API response status:', textResponse.status);
+        console.log('AI gateway response status:', textResponse.status);
 
         if (textResponse.ok) {
           const data = await textResponse.json();
-          console.log('Google Gemini API response received:', !!data);
-          
-          if (data.candidates && data.candidates[0] && data.candidates[0].content) {
-            result = data.candidates[0].content.parts[0].text;
-            console.log('AI output generated successfully, length:', result?.length);
-          } else {
-            throw new Error('Invalid response structure from Google Gemini API');
-          }
+          result = data.choices?.[0]?.message?.content || '';
+          if (!result) throw new Error('No content in AI response');
+          console.log('AI output generated successfully, length:', result.length);
         } else {
-          const errorData = await textResponse.json();
-          console.log('Google Gemini API error:', errorData);
-          throw new Error(`Google Gemini API error: ${textResponse.status} ${textResponse.statusText}`);
+          if (textResponse.status === 429) {
+            return new Response(JSON.stringify({ success: false, error: 'Rate limit exceeded. Please try again later.' }), {
+              status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            });
+          }
+          if (textResponse.status === 402) {
+            return new Response(JSON.stringify({ success: false, error: 'AI credits exhausted. Please add credits.' }), {
+              status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            });
+          }
+          throw new Error(`AI gateway error: ${textResponse.status}`);
         }
       } catch (fetchError) {
-        console.log('Google Gemini API fetch failed, using fallback response:', fetchError);
+        console.log('AI gateway fetch failed, using fallback:', fetchError);
         result = generateTextFallback(input, toolCategory, toolTitle);
       }
     }
