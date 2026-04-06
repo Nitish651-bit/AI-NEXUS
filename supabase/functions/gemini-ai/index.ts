@@ -50,15 +50,15 @@ serve(async (req) => {
     
     console.log('Received request:', { inputLength: input.length, toolCategory, toolTitle });
     
-    const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');
-    console.log('Lovable API Key exists:', !!lovableApiKey);
+    const aiMasterKey = Deno.env.get('AI_MASTER_KEY');
+    console.log('AI Master Key exists:', !!aiMasterKey);
     
-    if (!lovableApiKey) {
-      console.error('LOVABLE_API_KEY not found');
+    if (!aiMasterKey) {
+      console.error('AI_MASTER_KEY not found');
       return new Response(
         JSON.stringify({ 
           success: false, 
-          error: 'LOVABLE_API_KEY not configured',
+          error: 'AI_MASTER_KEY not configured',
         }),
         { 
           status: 400,
