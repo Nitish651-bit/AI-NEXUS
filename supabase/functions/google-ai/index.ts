@@ -45,7 +45,7 @@ serve(async (req) => {
         status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-    console.log("Authenticated user:", claimsData.claims.sub);
+    console.log("Authenticated user:", user.id);
 
     const body = await req.json();
     const { input, toolCategory, toolTitle, type = 'text' } = inputSchema.parse(body);
