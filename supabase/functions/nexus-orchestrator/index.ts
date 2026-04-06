@@ -118,11 +118,11 @@ Return ONLY valid JSON with this exact structure:
     const analysisResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        Authorization: `Bearer ${AI_MASTER_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
+        model: "ainexus",
         messages: [
           { role: "system", content: orchestratorPrompt },
           { role: "user", content: `Command: "${sanitizedCommand}"` },
