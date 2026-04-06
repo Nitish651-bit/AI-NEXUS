@@ -72,7 +72,7 @@ serve(async (req) => {
 
     // Handle image generation separately
     if (toolCategory === "Image Generation") {
-      return await handleImageGeneration(input, lovableApiKey);
+      return await handleImageGeneration(input, aiMasterKey);
     }
 
     // Generate appropriate prompt based on tool category
