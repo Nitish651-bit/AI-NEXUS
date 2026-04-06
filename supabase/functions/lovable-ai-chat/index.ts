@@ -148,7 +148,7 @@ serve(async (req) => {
         userContent = textMessage;
       }
       aiResponse = await callLovableAI(systemPrompt, userContent, enableWebSearch);
-      provider = "Lovable AI (Gemini 2.5 Flash)";
+      provider = "AI Nexus (ainexus)";
     }
 
     if (!aiResponse) throw new Error("No response from AI");

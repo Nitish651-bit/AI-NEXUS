@@ -163,7 +163,7 @@ serve(async (req) => {
         output: aiOutput,
         toolCategory,
         toolTitle,
-        provider: 'Lovable AI (Gemini 2.5 Flash)'
+        provider: 'AI Nexus (ainexus)'
       }),
       { 
         headers: { 

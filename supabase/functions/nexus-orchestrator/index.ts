@@ -174,11 +174,11 @@ Do NOT explain your reasoning process — just deliver the result.`;
     const executionResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        Authorization: `Bearer ${AI_MASTER_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
+        model: "ainexus",
         messages: [
           { role: "system", content: executionPrompt },
           { role: "user", content: sanitizedCommand },
