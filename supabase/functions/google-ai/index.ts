@@ -52,23 +52,19 @@ serve(async (req) => {
     
     console.log('Received Google AI request:', { inputLength: input.length, toolCategory, toolTitle, type });
     
-    const googleApiKey = Deno.env.get('GOOGLE_API_KEY');
-    console.log('Google API Key exists:', !!googleApiKey);
+    const aiMasterKey = Deno.env.get('AI_MASTER_KEY');
+    console.log('AI Master Key exists:', !!aiMasterKey);
     
-    if (!googleApiKey) {
-      console.error('GOOGLE_API_KEY not found in environment variables');
+    if (!aiMasterKey) {
+      console.error('AI_MASTER_KEY not found in environment variables');
       return new Response(
         JSON.stringify({ 
           success: false, 
-          error: 'Google API key not configured. Please add GOOGLE_API_KEY to your Supabase project secrets.',
-          debug: 'No API key found in environment'
+          error: 'AI_MASTER_KEY not configured.',
         }),
         { 
           status: 400,
-          headers: { 
-            ...corsHeaders, 
-            'Content-Type': 'application/json' 
-          } 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
         }
       );
     }
