@@ -52,15 +52,15 @@ serve(async (req) => {
     
     console.log('Received Google AI request:', { inputLength: input.length, toolCategory, toolTitle, type });
     
-    const aiMasterKey = Deno.env.get('AI_MASTER_KEY');
-    console.log('AI Master Key exists:', !!aiMasterKey);
+    const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');
+    console.log('LOVABLE_API_KEY exists:', !!lovableApiKey);
     
-    if (!aiMasterKey) {
-      console.error('AI_MASTER_KEY not found in environment variables');
+    if (!lovableApiKey) {
+      console.error('LOVABLE_API_KEY not found in environment variables');
       return new Response(
         JSON.stringify({ 
           success: false, 
-          error: 'AI_MASTER_KEY not configured.',
+          error: 'LOVABLE_API_KEY not configured.',
         }),
         { 
           status: 400,
