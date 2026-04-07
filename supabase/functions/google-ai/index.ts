@@ -52,15 +52,15 @@ serve(async (req) => {
     
     console.log('Received Google AI request:', { inputLength: input.length, toolCategory, toolTitle, type });
     
-    const aiMasterKey = Deno.env.get('AI_MASTER_KEY');
-    console.log('AI Master Key exists:', !!aiMasterKey);
+    const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');
+    console.log('LOVABLE_API_KEY exists:', !!lovableApiKey);
     
-    if (!aiMasterKey) {
-      console.error('AI_MASTER_KEY not found in environment variables');
+    if (!lovableApiKey) {
+      console.error('LOVABLE_API_KEY not found in environment variables');
       return new Response(
         JSON.stringify({ 
           success: false, 
-          error: 'AI_MASTER_KEY not configured.',
+          error: 'LOVABLE_API_KEY not configured.',
         }),
         { 
           status: 400,
@@ -77,11 +77,11 @@ serve(async (req) => {
         const imgResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${aiMasterKey}`,
+            'Authorization': `Bearer ${lovableApiKey}`,
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            model: 'ainexus',
+            model: 'google/gemini-3-flash-preview',
             messages: [
               { role: 'system', content: 'You are an AI image description generator. Describe in vivid detail what the requested image would look like.' },
               { role: 'user', content: `Describe this image concept: ${input}` }
@@ -104,11 +104,11 @@ serve(async (req) => {
         const textResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${aiMasterKey}`,
+            'Authorization': `Bearer ${lovableApiKey}`,
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            model: 'ainexus',
+            model: 'google/gemini-3-flash-preview',
             messages: [
               { role: 'system', content: 'You are a helpful AI assistant on AI NEXUS, a platform with 910+ AI tools developed by Nitish Tiwari.' },
               { role: 'user', content: textPrompt }

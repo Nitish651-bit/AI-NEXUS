@@ -50,15 +50,15 @@ serve(async (req) => {
     
     console.log('Received request:', { inputLength: input.length, toolCategory, toolTitle });
     
-    const aiMasterKey = Deno.env.get('AI_MASTER_KEY');
-    console.log('AI Master Key exists:', !!aiMasterKey);
+    const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');
+    console.log('LOVABLE_API_KEY exists:', !!lovableApiKey);
     
-    if (!aiMasterKey) {
-      console.error('AI_MASTER_KEY not found');
+    if (!lovableApiKey) {
+      console.error('LOVABLE_API_KEY not found');
       return new Response(
         JSON.stringify({ 
           success: false, 
-          error: 'AI_MASTER_KEY not configured',
+          error: 'LOVABLE_API_KEY not configured',
         }),
         { 
           status: 400,
@@ -72,7 +72,7 @@ serve(async (req) => {
 
     // Handle image generation separately
     if (toolCategory === "Image Generation") {
-      return await handleImageGeneration(input, aiMasterKey);
+      return await handleImageGeneration(input, lovableApiKey);
     }
 
     // Generate appropriate prompt based on tool category
@@ -100,11 +100,11 @@ serve(async (req) => {
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${aiMasterKey}`,
+        'Authorization': `Bearer ${lovableApiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'ainexus',
+        model: 'google/gemini-3-flash-preview',
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: input }
