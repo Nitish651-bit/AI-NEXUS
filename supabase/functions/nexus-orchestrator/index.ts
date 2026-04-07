@@ -67,8 +67,8 @@ serve(async (req) => {
     const sanitizedCommand = sanitizeInput(command);
     executionLog.push(`Command received: ${sanitizedCommand.slice(0, 100)}...`);
 
-    const AI_MASTER_KEY = Deno.env.get("AI_MASTER_KEY");
-    if (!AI_MASTER_KEY) throw new Error("AI_MASTER_KEY not configured");
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
     // PHASE 1: Intent Analysis + Tool Identification + Planning
     const orchestratorPrompt = `You are AI NEXUS Orchestrator v3.0 — the central intelligence engine.
