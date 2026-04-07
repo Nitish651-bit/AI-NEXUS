@@ -48,9 +48,9 @@ serve(async (req) => {
     console.log('AI Tool Router - Analyzing request, length:', userRequest.length);
     console.log('Available tools count:', availableTools.length);
 
-    const AI_MASTER_KEY = Deno.env.get('AI_MASTER_KEY');
-    if (!AI_MASTER_KEY) {
-      throw new Error('AI_MASTER_KEY not configured');
+    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
+    if (!LOVABLE_API_KEY) {
+      throw new Error('LOVABLE_API_KEY not configured');
     }
 
     // Use Lovable AI (Gemini) to analyze and recommend tools
