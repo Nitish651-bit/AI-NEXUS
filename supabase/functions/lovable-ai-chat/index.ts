@@ -78,7 +78,7 @@ async function callLovableAI(systemPrompt: string, userContent: any, enableWebSe
   if (!apiKey) throw new Error("LOVABLE_API_KEY is not configured");
 
   const body: any = {
-    model: "ainexus",
+    model: "google/gemini-3-flash-preview",
     messages: [
       { role: "system", content: systemPrompt },
       { role: "user", content: userContent },

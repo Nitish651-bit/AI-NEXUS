@@ -104,11 +104,11 @@ serve(async (req) => {
         const textResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${aiMasterKey}`,
+            'Authorization': `Bearer ${lovableApiKey}`,
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            model: 'ainexus',
+            model: 'google/gemini-3-flash-preview',
             messages: [
               { role: 'system', content: 'You are a helpful AI assistant on AI NEXUS, a platform with 910+ AI tools developed by Nitish Tiwari.' },
               { role: 'user', content: textPrompt }
