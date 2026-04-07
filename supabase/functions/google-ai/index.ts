@@ -77,11 +77,11 @@ serve(async (req) => {
         const imgResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${aiMasterKey}`,
+            'Authorization': `Bearer ${lovableApiKey}`,
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            model: 'ainexus',
+            model: 'google/gemini-3-flash-preview',
             messages: [
               { role: 'system', content: 'You are an AI image description generator. Describe in vivid detail what the requested image would look like.' },
               { role: 'user', content: `Describe this image concept: ${input}` }
