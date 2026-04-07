@@ -71,9 +71,9 @@ serve(async (req) => {
     const body = await req.json();
     const { topic, platform, tone, images, enableWebSearch } = inputSchema.parse(body);
 
-    const AI_MASTER_KEY = Deno.env.get("AI_MASTER_KEY");
-    if (!AI_MASTER_KEY) {
-      throw new Error("AI_MASTER_KEY is not configured");
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    if (!LOVABLE_API_KEY) {
+      throw new Error("LOVABLE_API_KEY is not configured");
     }
 
     console.log("Generating social media content:", { 
