@@ -111,8 +111,8 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const user = await authenticateUser(req);
-    console.log("Authenticated user:", user.id);
+    const user = await tryAuthenticateUser(req);
+    console.log("User:", user.id);
 
     const body = await req.json();
     const { message, toolCategory, toolTitle, images, enableWebSearch } = inputSchema.parse(body);
