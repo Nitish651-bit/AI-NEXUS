@@ -52,8 +52,7 @@ serve(async (req) => {
     }
     executionLog.push(`User: ${userId}`);
 
-    const userId = user.id;
-    executionLog.push(`Authenticated user: ${userId}`);
+    executionLog.push(`Command received: ${sanitizedCommand.slice(0, 100)}...`);
 
     const body = await req.json();
     const { command, availableTools, context } = inputSchema.parse(body);

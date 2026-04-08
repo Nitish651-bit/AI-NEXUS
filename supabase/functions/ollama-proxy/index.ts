@@ -152,9 +152,8 @@ serve(async (req) => {
   }
 
   try {
-    // Authenticate
-    const user = await authenticateUser(req);
-    console.log("Authenticated user:", user.id);
+    const user = await tryAuthenticateUser(req);
+    console.log("User:", user.id);
 
     // Parse & validate input
     const body = await req.json();
