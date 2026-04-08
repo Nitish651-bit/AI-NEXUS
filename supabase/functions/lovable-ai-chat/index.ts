@@ -84,7 +84,7 @@ async function callLovableAI(systemPrompt: string, userContent: any, enableWebSe
       { role: "user", content: userContent },
     ],
   };
-  if (enableWebSearch) body.tools = [{ type: "web_search_preview" }];
+  body.tools = [{ type: "web_search_preview" }];
 
   const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",
