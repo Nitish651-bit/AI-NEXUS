@@ -52,8 +52,6 @@ serve(async (req) => {
     }
     executionLog.push(`User: ${userId}`);
 
-    executionLog.push(`Command received: ${sanitizedCommand.slice(0, 100)}...`);
-
     const body = await req.json();
     const { command, availableTools, context } = inputSchema.parse(body);
     const sanitizedCommand = sanitizeInput(command);
