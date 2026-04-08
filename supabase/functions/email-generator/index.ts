@@ -57,15 +57,10 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  // Validate authentication
+  // Optional auth - allow public access
   const auth = await validateAuth(req);
-  if (!auth.authenticated) {
-    console.error("Unauthorized request to email-generator");
-    return new Response(
-      JSON.stringify({ success: false, error: "Unauthorized" }),
-      { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
-  }
+  const userId = auth.userId || "anonymous";
+  console.log("User:", userId);
 
   try {
     const body = await req.json();

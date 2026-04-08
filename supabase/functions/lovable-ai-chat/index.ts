@@ -28,20 +28,24 @@ const inputSchema = z.object({
   message: "Either message or images must be provided",
 });
 
-// ─── Authentication ───
-async function authenticateUser(req: Request) {
+// ─── Optional Authentication ───
+async function tryAuthenticateUser(req: Request) {
   const authHeader = req.headers.get("Authorization");
   if (!authHeader?.startsWith("Bearer ")) {
-    throw { status: 401, message: "Unauthorized: No auth header" };
+    return { id: "anonymous", email: "public" };
   }
-  const client = createClient(
-    Deno.env.get("SUPABASE_URL") ?? "",
-    Deno.env.get("SUPABASE_ANON_KEY") ?? "",
-    { global: { headers: { Authorization: authHeader } } },
-  );
-  const { data: { user }, error } = await client.auth.getUser();
-  if (error || !user) throw { status: 401, message: `Unauthorized: ${error?.message || "No user"}` };
-  return user;
+  try {
+    const client = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_ANON_KEY") ?? "",
+      { global: { headers: { Authorization: authHeader } } },
+    );
+    const { data: { user }, error } = await client.auth.getUser();
+    if (error || !user) return { id: "anonymous", email: "public" };
+    return user;
+  } catch {
+    return { id: "anonymous", email: "public" };
+  }
 }
 
 // ─── System prompt builder ───
@@ -107,8 +111,8 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const user = await authenticateUser(req);
-    console.log("Authenticated user:", user.id);
+    const user = await tryAuthenticateUser(req);
+    console.log("User:", user.id);
 
     const body = await req.json();
     const { message, toolCategory, toolTitle, images, enableWebSearch } = inputSchema.parse(body);

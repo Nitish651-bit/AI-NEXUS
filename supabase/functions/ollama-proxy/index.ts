@@ -32,20 +32,23 @@ const inputSchema = z.object({
   message: "Either message or images must be provided",
 });
 
-/** Authenticate user via Supabase JWT */
-async function authenticateUser(req: Request) {
+/** Optional authentication - allow public access */
+async function tryAuthenticateUser(req: Request) {
   const authHeader = req.headers.get("Authorization");
   if (!authHeader?.startsWith("Bearer ")) {
-    throw new Error("Unauthorized: No auth header");
+    return { id: "anonymous" };
   }
-  const supabaseClient = createClient(
-    Deno.env.get("SUPABASE_URL") ?? "",
-    Deno.env.get("SUPABASE_ANON_KEY") ?? "",
-    { global: { headers: { Authorization: authHeader } } },
-  );
-  const { data: { user }, error } = await supabaseClient.auth.getUser();
-  if (error || !user) throw new Error(`Unauthorized: ${error?.message || "No user"}`);
-  return user;
+  try {
+    const supabaseClient = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_ANON_KEY") ?? "",
+      { global: { headers: { Authorization: authHeader } } },
+    );
+    const { data: { user } } = await supabaseClient.auth.getUser();
+    return user || { id: "anonymous" };
+  } catch {
+    return { id: "anonymous" };
+  }
 }
 
 /** Build the system prompt based on tool context */
@@ -149,9 +152,8 @@ serve(async (req) => {
   }
 
   try {
-    // Authenticate
-    const user = await authenticateUser(req);
-    console.log("Authenticated user:", user.id);
+    const user = await tryAuthenticateUser(req);
+    console.log("User:", user.id);
 
     // Parse & validate input
     const body = await req.json();
