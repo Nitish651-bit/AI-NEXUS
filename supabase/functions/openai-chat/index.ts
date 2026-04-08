@@ -72,6 +72,7 @@ serve(async (req) => {
       body: JSON.stringify({
         model: 'google/gemini-3-flash-preview',
         messages,
+        tools: [{ type: "web_search_preview" }],
       }),
     });
 
