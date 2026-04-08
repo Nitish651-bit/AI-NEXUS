@@ -76,6 +76,7 @@ serve(async (req) => {
           }
         ],
         temperature: 0.7,
+        tools: [{ type: "web_search_preview" }],
       }),
     });
 

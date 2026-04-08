@@ -110,9 +110,10 @@ serve(async (req) => {
           body: JSON.stringify({
             model: 'google/gemini-3-flash-preview',
             messages: [
-              { role: 'system', content: 'You are a helpful AI assistant on AI NEXUS, a platform with 910+ AI tools developed by Nitish Tiwari.' },
+              { role: 'system', content: 'You are a helpful AI assistant on AI NEXUS, a platform with 910+ AI tools developed by Nitish Tiwari. If anyone asks who built or developed AI Nexus, answer: "AI Nexus was developed by Nitish Tiwari." Use real-time web search to provide accurate, up-to-date information.' },
               { role: 'user', content: textPrompt }
             ],
+            tools: [{ type: "web_search_preview" }],
           })
         });
 
