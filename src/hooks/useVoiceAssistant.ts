@@ -285,6 +285,38 @@ export function useVoiceAssistant(options: UseVoiceAssistantOptions = {}) {
         await speakResponse(`Searching for ${command.value}`);
         break;
       }
+      case "click": {
+        const result = clickByLabel(command.value);
+        const msg: VoiceMessage = { id: crypto.randomUUID(), role: "assistant", content: result.message, timestamp: new Date() };
+        setMessages(prev => [...prev, userMsg, msg]);
+        await speakResponse(result.message);
+        if (!result.ok) {
+          // Fallback to AI for unrecognized targets
+          await sendToAI(text);
+        }
+        break;
+      }
+      case "scroll": {
+        const result = scrollPage(command.value);
+        const msg: VoiceMessage = { id: crypto.randomUUID(), role: "assistant", content: result.message, timestamp: new Date() };
+        setMessages(prev => [...prev, userMsg, msg]);
+        await speakResponse(result.message);
+        break;
+      }
+      case "fill": {
+        const result = fillInput(command.value, command.extra ?? "");
+        const msg: VoiceMessage = { id: crypto.randomUUID(), role: "assistant", content: result.message, timestamp: new Date() };
+        setMessages(prev => [...prev, userMsg, msg]);
+        await speakResponse(result.message);
+        break;
+      }
+      case "history": {
+        const result = historyAction(command.value as "back" | "forward");
+        const msg: VoiceMessage = { id: crypto.randomUUID(), role: "assistant", content: result.message, timestamp: new Date() };
+        setMessages(prev => [...prev, userMsg, msg]);
+        await speakResponse(result.message);
+        break;
+      }
       case "chat":
         await sendToAI(text);
         break;
