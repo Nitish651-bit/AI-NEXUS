@@ -103,34 +103,53 @@ export function useVoiceAssistant(options: UseVoiceAssistantOptions = {}) {
   }, []);
 
   // ── Command parser ──
-  const processCommand = useCallback((text: string): { type: "navigate" | "tool" | "search" | "chat"; value: string } => {
+  const processCommand = useCallback((text: string): { type: "navigate" | "tool" | "search" | "click" | "scroll" | "fill" | "history" | "chat"; value: string; extra?: string } => {
     const lower = text.toLowerCase().trim();
 
+    // History
+    if (/^(go back|back|previous page)$/.test(lower)) return { type: "history", value: "back" };
+    if (/^(go forward|forward|next page)$/.test(lower)) return { type: "history", value: "forward" };
+
+    // Scroll
+    const scrollMatch = lower.match(/^scroll\s+(up|down|to top|to bottom|top|bottom)/);
+    if (scrollMatch) return { type: "scroll", value: scrollMatch[1] };
+    if (lower === "page down") return { type: "scroll", value: "down" };
+    if (lower === "page up") return { type: "scroll", value: "up" };
+
+    // Fill input: "type X in Y" / "fill Y with X"
+    const fillWith = lower.match(/^(?:fill|set)\s+(.+?)\s+(?:with|to)\s+(.+)$/);
+    if (fillWith) return { type: "fill", value: fillWith[1], extra: fillWith[2] };
+    const typeIn = lower.match(/^type\s+(.+?)\s+(?:in|into)\s+(.+)$/);
+    if (typeIn) return { type: "fill", value: typeIn[2], extra: typeIn[1] };
+
     // Navigation
-    if (lower.includes("go to") || lower.includes("open") || lower.includes("navigate to")) {
+    if (lower.includes("go to") || lower.includes("navigate to") || lower.startsWith("open ")) {
       if (lower.includes("video") || lower.includes("video suite")) return { type: "navigate", value: "/video-suite" };
       if (lower.includes("integration")) return { type: "navigate", value: "/integrations" };
-      if (lower.includes("automation")) return { type: "navigate", value: "automation" };
+      if (lower.includes("automation")) return { type: "navigate", value: "/automation" };
       if (lower.includes("home") || lower.includes("dashboard")) return { type: "navigate", value: "/" };
-      if (lower.includes("tools")) return { type: "navigate", value: "tools" };
       if (lower.includes("about")) return { type: "navigate", value: "/about" };
       if (lower.includes("contact")) return { type: "navigate", value: "/contact" };
+      if (lower.includes("ai tools") || lower === "open tools") return { type: "navigate", value: "tools" };
     }
 
-    // Start assistant
     if (lower.includes("start assistant") || lower.includes("start ai")) {
       return { type: "navigate", value: "/" };
     }
 
+    // Explicit click/press/tap
+    const clickMatch = lower.match(/^(?:click|press|tap|select|activate)\s+(?:on\s+|the\s+)?(.+)$/);
+    if (clickMatch) return { type: "click", value: clickMatch[1].trim() };
+
     // Tool opening
-    if (lower.startsWith("use ") || lower.startsWith("launch ") || lower.startsWith("start ")) {
-      const toolName = lower.replace(/^(use |launch |start )/, "").trim();
+    if (lower.startsWith("use ") || lower.startsWith("launch ")) {
+      const toolName = lower.replace(/^(use |launch )/, "").trim();
       return { type: "tool", value: toolName };
     }
 
     // Search
-    if (lower.startsWith("search ") || lower.startsWith("find ") || lower.startsWith("look for ") || lower.includes("search ai tools")) {
-      const query = lower.replace(/^(search |find |look for )/, "").replace("search ai tools", "").trim() || "AI tools";
+    if (lower.startsWith("search ") || lower.startsWith("find ") || lower.startsWith("look for ")) {
+      const query = lower.replace(/^(search |find |look for )/, "").trim() || "AI tools";
       return { type: "search", value: query };
     }
 
