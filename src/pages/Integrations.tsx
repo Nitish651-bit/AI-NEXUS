@@ -4,6 +4,7 @@ import { OpenAITTS } from '@/components/integrations/OpenAITTS';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { SEO } from '@/components/seo/SEO';
 import logo from "@/assets/ai-nexus-logo.png";
 
 export const Integrations = () => {
@@ -11,6 +12,19 @@ export const Integrations = () => {
 
   return (
     <div className="min-h-screen bg-background p-4 sm:p-6 lg:p-8">
+      <SEO
+        title="AI Integrations — Tool Router, Image Generation & TTS | AI Nexus"
+        description="Powerful AI integrations: smart AI tool router, Lovable AI image generation, OpenAI text-to-speech, and more — all unified inside AI Nexus."
+        path="/integrations"
+        jsonLd={{
+          "@context": "https://schema.org",
+          "@type": "CollectionPage",
+          name: "AI Integrations",
+          url: "https://aiiinexus.lovable.app/integrations",
+          description:
+            "Curated AI integrations including tool router, image generation, and text-to-speech inside AI Nexus.",
+        }}
+      />
       <div className="max-w-7xl mx-auto space-y-6 sm:space-y-8">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3 sm:gap-4">
