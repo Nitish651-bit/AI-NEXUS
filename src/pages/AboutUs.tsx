@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Target, Eye, Rocket, CheckCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { SEO } from "@/components/seo/SEO";
 import logo from "@/assets/ai-nexus-logo.png";
 
 const AboutUs = () => {
@@ -8,6 +9,25 @@ const AboutUs = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      <SEO
+        title="About AI Nexus — Unified AI Operations Platform with 910+ Tools"
+        description="Learn about AI Nexus: a unified platform integrating 910+ AI tools for professionals, developers, and enterprises. Our mission, vision, and objectives."
+        path="/about"
+        jsonLd={{
+          "@context": "https://schema.org",
+          "@type": "AboutPage",
+          name: "About AI Nexus",
+          url: "https://aiiinexus.lovable.app/about",
+          description:
+            "AI Nexus is a unified AI operations platform integrating 910+ AI tools into one intelligent ecosystem.",
+          mainEntity: {
+            "@type": "Organization",
+            name: "AI Nexus",
+            founder: { "@type": "Person", name: "Nitish Tiwari" },
+            url: "https://aiiinexus.lovable.app",
+          },
+        }}
+      />
       {/* Header */}
       <header className="glass-card border-b border-border sticky top-0 z-10">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">

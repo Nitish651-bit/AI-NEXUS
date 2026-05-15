@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Mail, Handshake, Clock, Globe } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { SEO } from "@/components/seo/SEO";
 import logo from "@/assets/ai-nexus-logo.png";
 
 const ContactUs = () => {
@@ -8,6 +9,25 @@ const ContactUs = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      <SEO
+        title="Contact AI Nexus — Support, Partnerships & Collaboration"
+        description="Get in touch with AI Nexus for platform support, partnerships, integrations, and collaboration. Reach our team at ainexus262@gmail.com."
+        path="/contact"
+        jsonLd={{
+          "@context": "https://schema.org",
+          "@type": "ContactPage",
+          name: "Contact AI Nexus",
+          url: "https://aiiinexus.lovable.app/contact",
+          description:
+            "Contact AI Nexus for support, partnerships, and integration inquiries.",
+          mainEntity: {
+            "@type": "Organization",
+            name: "AI Nexus",
+            email: "ainexus262@gmail.com",
+            url: "https://aiiinexus.lovable.app",
+          },
+        }}
+      />
       {/* Header */}
       <header className="glass-card border-b border-border sticky top-0 z-10">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
