@@ -2,6 +2,12 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { aiTools } from "@/data/aiToolsData";
+import {
+  clickByLabel,
+  scrollPage,
+  fillInput,
+  historyAction,
+} from "@/utils/domActionExecutor";
 
 export type VoiceStatus = "idle" | "listening" | "processing" | "speaking" | "wake-listening";
 
