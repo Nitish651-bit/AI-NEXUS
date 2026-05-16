@@ -899,7 +899,16 @@ export function VideoEditor() {
                       </Badge>
                     )}
                   </div>
-                  
+
+                  <SocialExportPresets
+                    onPresetSelected={(p) => {
+                      // Auto-pick best resolution based on preset
+                      if (p.height >= 2160) setExportResolution("4k");
+                      else if (p.height >= 1080) setExportResolution("1080p");
+                      else setExportResolution("720p");
+                    }}
+                  />
+
                   <div className="space-y-3">
                     <div className="space-y-2">
                       <label className="text-sm text-muted-foreground">Resolution</label>
