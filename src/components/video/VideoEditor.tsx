@@ -40,6 +40,9 @@ import { AICreativeDirector } from "./AICreativeDirector";
 import { FilterLibrary } from "./FilterLibrary";
 import { MusicSearch } from "./MusicSearch";
 import { VideoTimeline } from "./VideoTimeline";
+import { AIAutoEdit } from "./AIAutoEdit";
+import { TikTokCaptions, CaptionOverlay } from "./TikTokCaptions";
+import { SocialExportPresets } from "./SocialExportPresets";
 import { toast } from "sonner";
 import { VideoFilter } from "@/data/videoFiltersData";
 import { useFFmpeg } from "@/hooks/useFFmpeg";
@@ -84,6 +87,7 @@ export function VideoEditor() {
   const [isDragging, setIsDragging] = useState(false);
   const [exportCodec, setExportCodec] = useState("h264");
   const [compatibilityProfile, setCompatibilityProfile] = useState("universal");
+  const [activeAiPanel, setActiveAiPanel] = useState<"autoedit" | "captions">("autoedit");
   const [textOverlays, setTextOverlays] = useState<Array<{id: string; text: string; position: string; fontSize: number}>>([]);
   
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -584,20 +588,24 @@ export function VideoEditor() {
         {/* Right Sidebar - Editing Tools */}
         <div className="w-80 flex-shrink-0 border-l border-border bg-card/50 flex flex-col">
           <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as typeof activeTab)} className="flex-1 flex flex-col">
-            <TabsList className="grid grid-cols-4 m-2">
-              <TabsTrigger value="trim" className="text-xs gap-1">
+            <TabsList className="grid grid-cols-5 m-2">
+              <TabsTrigger value="trim" className="text-[10px] gap-1 px-1">
                 <Scissors className="w-3 h-3" />
                 Trim
               </TabsTrigger>
-              <TabsTrigger value="filters" className="text-xs gap-1">
+              <TabsTrigger value="filters" className="text-[10px] gap-1 px-1">
                 <Sparkles className="w-3 h-3" />
-                Filters
+                FX
               </TabsTrigger>
-              <TabsTrigger value="music" className="text-xs gap-1">
+              <TabsTrigger value="music" className="text-[10px] gap-1 px-1">
                 <Music className="w-3 h-3" />
                 Music
               </TabsTrigger>
-              <TabsTrigger value="export" className="text-xs gap-1">
+              <TabsTrigger value="ai" className="text-[10px] gap-1 px-1">
+                <Wand2 className="w-3 h-3" />
+                AI
+              </TabsTrigger>
+              <TabsTrigger value="export" className="text-[10px] gap-1 px-1">
                 <Settings className="w-3 h-3" />
                 Export
               </TabsTrigger>
