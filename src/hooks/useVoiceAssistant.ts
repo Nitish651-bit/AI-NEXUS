@@ -38,6 +38,9 @@ export function useVoiceAssistant(options: UseVoiceAssistantOptions = {}) {
   const [transcript, setTranscript] = useState("");
   const [isActive, setIsActive] = useState(false);
   const [audioLevel, setAudioLevel] = useState(0);
+  const [permissionState, setPermissionState] = useState<"unknown" | "prompt" | "granted" | "denied" | "no-device" | "insecure">("unknown");
+  const [activeDevice, setActiveDevice] = useState<string>("");
+  const [lastError, setLastError] = useState<string>("");
 
   // Refs to avoid stale closures inside recognition callbacks
   const statusRef = useRef<VoiceStatus>("idle");
