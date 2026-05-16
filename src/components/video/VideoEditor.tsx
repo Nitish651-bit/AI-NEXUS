@@ -77,7 +77,7 @@ export function VideoEditor() {
   const [volume, setVolume] = useState(1);
   const [isMuted, setIsMuted] = useState(false);
   const [zoom, setZoom] = useState(1);
-  const [activeTab, setActiveTab] = useState<"trim" | "filters" | "music" | "export">("trim");
+  const [activeTab, setActiveTab] = useState<"trim" | "filters" | "music" | "ai" | "export">("trim");
   const [appliedFilters, setAppliedFilters] = useState<VideoFilter[]>([]);
   const [showOriginal, setShowOriginal] = useState(false);
   const [previewMode, setPreviewMode] = useState<"filtered" | "original" | "split">("filtered");
