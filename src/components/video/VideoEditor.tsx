@@ -40,6 +40,9 @@ import { AICreativeDirector } from "./AICreativeDirector";
 import { FilterLibrary } from "./FilterLibrary";
 import { MusicSearch } from "./MusicSearch";
 import { VideoTimeline } from "./VideoTimeline";
+import { AIAutoEdit } from "./AIAutoEdit";
+import { TikTokCaptions, CaptionOverlay } from "./TikTokCaptions";
+import { SocialExportPresets } from "./SocialExportPresets";
 import { toast } from "sonner";
 import { VideoFilter } from "@/data/videoFiltersData";
 import { useFFmpeg } from "@/hooks/useFFmpeg";
@@ -74,7 +77,7 @@ export function VideoEditor() {
   const [volume, setVolume] = useState(1);
   const [isMuted, setIsMuted] = useState(false);
   const [zoom, setZoom] = useState(1);
-  const [activeTab, setActiveTab] = useState<"trim" | "filters" | "music" | "export">("trim");
+  const [activeTab, setActiveTab] = useState<"trim" | "filters" | "music" | "ai" | "export">("trim");
   const [appliedFilters, setAppliedFilters] = useState<VideoFilter[]>([]);
   const [showOriginal, setShowOriginal] = useState(false);
   const [previewMode, setPreviewMode] = useState<"filtered" | "original" | "split">("filtered");
@@ -84,6 +87,7 @@ export function VideoEditor() {
   const [isDragging, setIsDragging] = useState(false);
   const [exportCodec, setExportCodec] = useState("h264");
   const [compatibilityProfile, setCompatibilityProfile] = useState("universal");
+  const [activeAiPanel, setActiveAiPanel] = useState<"autoedit" | "captions">("autoedit");
   const [textOverlays, setTextOverlays] = useState<Array<{id: string; text: string; position: string; fontSize: number}>>([]);
   
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -416,16 +420,19 @@ export function VideoEditor() {
                   </div>
                 ) : (
                   /* Regular single video view */
-                  <video
-                    ref={videoRef}
-                    src={selectedClip.url}
-                    className="max-w-full max-h-[60vh] rounded-lg shadow-2xl transition-[filter] duration-300"
-                    style={{
-                      filter: previewMode === "original" ? "none" : cssFilterString,
-                    }}
-                    onTimeUpdate={(e) => setCurrentTime(e.currentTarget.currentTime)}
-                    onEnded={() => setIsPlaying(false)}
-                  />
+                  <div className="relative">
+                    <video
+                      ref={videoRef}
+                      src={selectedClip.url}
+                      className="max-w-full max-h-[60vh] rounded-lg shadow-2xl transition-[filter] duration-300"
+                      style={{
+                        filter: previewMode === "original" ? "none" : cssFilterString,
+                      }}
+                      onTimeUpdate={(e) => setCurrentTime(e.currentTarget.currentTime)}
+                      onEnded={() => setIsPlaying(false)}
+                    />
+                    <CaptionOverlay currentTime={currentTime} />
+                  </div>
                 )}
                 
                 {/* Preview Mode Toggle Buttons */}
@@ -584,20 +591,24 @@ export function VideoEditor() {
         {/* Right Sidebar - Editing Tools */}
         <div className="w-80 flex-shrink-0 border-l border-border bg-card/50 flex flex-col">
           <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as typeof activeTab)} className="flex-1 flex flex-col">
-            <TabsList className="grid grid-cols-4 m-2">
-              <TabsTrigger value="trim" className="text-xs gap-1">
+            <TabsList className="grid grid-cols-5 m-2">
+              <TabsTrigger value="trim" className="text-[10px] gap-1 px-1">
                 <Scissors className="w-3 h-3" />
                 Trim
               </TabsTrigger>
-              <TabsTrigger value="filters" className="text-xs gap-1">
+              <TabsTrigger value="filters" className="text-[10px] gap-1 px-1">
                 <Sparkles className="w-3 h-3" />
-                Filters
+                FX
               </TabsTrigger>
-              <TabsTrigger value="music" className="text-xs gap-1">
+              <TabsTrigger value="music" className="text-[10px] gap-1 px-1">
                 <Music className="w-3 h-3" />
                 Music
               </TabsTrigger>
-              <TabsTrigger value="export" className="text-xs gap-1">
+              <TabsTrigger value="ai" className="text-[10px] gap-1 px-1">
+                <Wand2 className="w-3 h-3" />
+                AI
+              </TabsTrigger>
+              <TabsTrigger value="export" className="text-[10px] gap-1 px-1">
                 <Settings className="w-3 h-3" />
                 Export
               </TabsTrigger>
@@ -830,6 +841,50 @@ export function VideoEditor() {
                 <MusicSearch onSelectTrack={handleMusicSelect} />
               </TabsContent>
 
+              <TabsContent value="ai" className="p-4 m-0 space-y-4">
+                <div className="flex gap-1 p-1 rounded-md bg-muted/50">
+                  <button
+                    onClick={() => setActiveAiPanel("autoedit")}
+                    className={`flex-1 px-2 py-1 rounded text-[11px] font-medium transition ${
+                      activeAiPanel === "autoedit"
+                        ? "bg-primary text-primary-foreground"
+                        : "hover:bg-accent"
+                    }`}
+                  >
+                    Auto-Edit
+                  </button>
+                  <button
+                    onClick={() => setActiveAiPanel("captions")}
+                    className={`flex-1 px-2 py-1 rounded text-[11px] font-medium transition ${
+                      activeAiPanel === "captions"
+                        ? "bg-primary text-primary-foreground"
+                        : "hover:bg-accent"
+                    }`}
+                  >
+                    Captions
+                  </button>
+                </div>
+                {activeAiPanel === "autoedit" ? (
+                  <AIAutoEdit
+                    videoDuration={selectedClip?.duration ?? 0}
+                    videoName={selectedClip?.file.name}
+                    hasMusic={audioTracks.length > 0}
+                    onApplyCut={(cut) => {
+                      if (selectedClip) {
+                        setSelectedClip({
+                          ...selectedClip,
+                          startTime: cut.start,
+                          endTime: cut.end,
+                        });
+                        toast.success(`Applied cut: ${cut.start.toFixed(1)}s → ${cut.end.toFixed(1)}s`);
+                      }
+                    }}
+                  />
+                ) : (
+                  <TikTokCaptions videoDuration={selectedClip?.duration ?? 0} />
+                )}
+              </TabsContent>
+
               <TabsContent value="export" className="p-4 m-0">
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
@@ -847,7 +902,16 @@ export function VideoEditor() {
                       </Badge>
                     )}
                   </div>
-                  
+
+                  <SocialExportPresets
+                    onPresetSelected={(p) => {
+                      // Auto-pick best resolution based on preset
+                      if (p.height >= 2160) setExportResolution("4k");
+                      else if (p.height >= 1080) setExportResolution("1080p");
+                      else setExportResolution("720p");
+                    }}
+                  />
+
                   <div className="space-y-3">
                     <div className="space-y-2">
                       <label className="text-sm text-muted-foreground">Resolution</label>
