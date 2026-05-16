@@ -597,6 +597,23 @@ export function useVoiceAssistant(options: UseVoiceAssistantOptions = {}) {
     };
   }, [stopRecognition, stopAudioMonitoring]);
 
+  // Initial permission probe (non-blocking) + react to permission changes
+  useEffect(() => {
+    if (!isSecureOrigin) { setPermissionState("insecure"); return; }
+    const nav: any = navigator;
+    if (nav.permissions?.query) {
+      nav.permissions.query({ name: "microphone" as PermissionName }).then((p: any) => {
+        setPermissionState(p.state);
+        p.onchange = () => setPermissionState(p.state);
+      }).catch(() => {});
+    }
+    navigator.mediaDevices?.enumerateDevices?.().then(devices => {
+      const mic = devices.find(d => d.kind === "audioinput");
+      if (!mic) setPermissionState("no-device");
+      else if (mic.label) setActiveDevice(mic.label);
+    }).catch(() => {});
+  }, [isSecureOrigin]);
+
   return {
     status,
     messages,
@@ -608,5 +625,11 @@ export function useVoiceAssistant(options: UseVoiceAssistantOptions = {}) {
     deactivate,
     pushToTalk,
     setMessages,
+    // Diagnostics
+    permissionState,
+    activeDevice,
+    lastError,
+    isSecureOrigin,
+    retryPermission: requestMicPermission,
   };
 }
