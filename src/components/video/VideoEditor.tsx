@@ -838,6 +838,50 @@ export function VideoEditor() {
                 <MusicSearch onSelectTrack={handleMusicSelect} />
               </TabsContent>
 
+              <TabsContent value="ai" className="p-4 m-0 space-y-4">
+                <div className="flex gap-1 p-1 rounded-md bg-muted/50">
+                  <button
+                    onClick={() => setActiveAiPanel("autoedit")}
+                    className={`flex-1 px-2 py-1 rounded text-[11px] font-medium transition ${
+                      activeAiPanel === "autoedit"
+                        ? "bg-primary text-primary-foreground"
+                        : "hover:bg-accent"
+                    }`}
+                  >
+                    Auto-Edit
+                  </button>
+                  <button
+                    onClick={() => setActiveAiPanel("captions")}
+                    className={`flex-1 px-2 py-1 rounded text-[11px] font-medium transition ${
+                      activeAiPanel === "captions"
+                        ? "bg-primary text-primary-foreground"
+                        : "hover:bg-accent"
+                    }`}
+                  >
+                    Captions
+                  </button>
+                </div>
+                {activeAiPanel === "autoedit" ? (
+                  <AIAutoEdit
+                    videoDuration={selectedClip?.duration ?? 0}
+                    videoName={selectedClip?.file.name}
+                    hasMusic={audioTracks.length > 0}
+                    onApplyCut={(cut) => {
+                      if (selectedClip) {
+                        setSelectedClip({
+                          ...selectedClip,
+                          startTime: cut.start,
+                          endTime: cut.end,
+                        });
+                        toast.success(`Applied cut: ${cut.start.toFixed(1)}s → ${cut.end.toFixed(1)}s`);
+                      }
+                    }}
+                  />
+                ) : (
+                  <TikTokCaptions videoDuration={selectedClip?.duration ?? 0} />
+                )}
+              </TabsContent>
+
               <TabsContent value="export" className="p-4 m-0">
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
