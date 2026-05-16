@@ -65,12 +65,18 @@ export function NexusInterface({ isOpen, onClose, onOpenTool, onSearchTools }: N
     activate,
     deactivate,
     pushToTalk,
+    permissionState,
+    activeDevice,
+    lastError,
+    isSecureOrigin,
+    retryPermission,
   } = useVoiceAssistant({
     onNavigate: handleNavigate,
     onOpenTool: handleOpenTool,
     onSearchTools,
     wakeWord: "hey nexus",
   });
+  const [showDebug, setShowDebug] = useState(false);
 
   if (!isOpen) return null;
 
