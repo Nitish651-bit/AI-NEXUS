@@ -503,14 +503,23 @@ export function useVoiceAssistant(options: UseVoiceAssistantOptions = {}) {
     };
 
     recognition.onerror = (event: any) => {
-      console.warn("Speech recognition error:", event.error);
-      // Only show toast for non-recoverable errors
-      if (event.error === "not-allowed") {
+      const err = event.error;
+      console.warn("Speech recognition error:", err);
+      setLastError(`recognition: ${err}`);
+      if (err === "not-allowed" || err === "service-not-allowed") {
+        setPermissionState("denied");
         toast({ title: "Microphone blocked", description: "Allow microphone access in browser settings.", variant: "destructive" });
         setStatus("idle");
         setIsActive(false);
+      } else if (err === "audio-capture") {
+        setPermissionState("no-device");
+        toast({ title: "No microphone available", description: "Connect a microphone and try again.", variant: "destructive" });
+        setIsActive(false);
+        setStatus("idle");
+      } else if (err === "network") {
+        toast({ title: "Network issue", description: "Speech recognition needs internet. Retrying...", variant: "destructive" });
       }
-      // "no-speech" and "aborted" are normal — don't alert
+      // "no-speech" and "aborted" are normal — auto-restart handled in onend
     };
 
     recognition.onend = () => {
