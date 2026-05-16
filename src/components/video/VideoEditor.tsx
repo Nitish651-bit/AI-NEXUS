@@ -420,16 +420,19 @@ export function VideoEditor() {
                   </div>
                 ) : (
                   /* Regular single video view */
-                  <video
-                    ref={videoRef}
-                    src={selectedClip.url}
-                    className="max-w-full max-h-[60vh] rounded-lg shadow-2xl transition-[filter] duration-300"
-                    style={{
-                      filter: previewMode === "original" ? "none" : cssFilterString,
-                    }}
-                    onTimeUpdate={(e) => setCurrentTime(e.currentTarget.currentTime)}
-                    onEnded={() => setIsPlaying(false)}
-                  />
+                  <div className="relative">
+                    <video
+                      ref={videoRef}
+                      src={selectedClip.url}
+                      className="max-w-full max-h-[60vh] rounded-lg shadow-2xl transition-[filter] duration-300"
+                      style={{
+                        filter: previewMode === "original" ? "none" : cssFilterString,
+                      }}
+                      onTimeUpdate={(e) => setCurrentTime(e.currentTarget.currentTime)}
+                      onEnded={() => setIsPlaying(false)}
+                    />
+                    <CaptionOverlay currentTime={currentTime} />
+                  </div>
                 )}
                 
                 {/* Preview Mode Toggle Buttons */}
