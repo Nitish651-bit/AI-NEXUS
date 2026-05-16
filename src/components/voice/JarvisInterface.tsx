@@ -103,11 +103,56 @@ export function NexusInterface({ isOpen, onClose, onOpenTool, onSearchTools }: N
           <Badge variant="outline" className={`font-mono text-xs ${statusInfo.color} border-current`}>
             {statusInfo.label}
           </Badge>
+          <Button variant="ghost" size="sm" onClick={() => setShowDebug(s => !s)} className="text-muted-foreground hover:text-white font-mono text-xs">
+            {showDebug ? "HIDE" : "DEBUG"}
+          </Button>
           <Button variant="ghost" size="sm" onClick={onClose} className="text-muted-foreground hover:text-white">
             <X size={18} />
           </Button>
         </div>
       </header>
+
+      {/* Permission / hardware error banner */}
+      {(permissionState === "denied" || permissionState === "no-device" || permissionState === "insecure") && (
+        <div className="relative w-full max-w-2xl mx-auto px-4 -mt-2">
+          <div className="rounded-xl border border-red-500/40 bg-red-500/10 backdrop-blur p-4 flex items-start gap-3 animate-fade-in">
+            <div className="w-2 h-2 mt-2 rounded-full bg-red-500 animate-pulse" />
+            <div className="flex-1 text-sm">
+              <p className="text-red-300 font-mono font-semibold">
+                {permissionState === "denied" && "Microphone permission denied"}
+                {permissionState === "no-device" && "No microphone detected"}
+                {permissionState === "insecure" && "HTTPS required"}
+              </p>
+              <p className="text-red-200/80 mt-1">
+                {permissionState === "denied" && "Click the lock icon in the address bar, allow microphone, then retry."}
+                {permissionState === "no-device" && "Plug in a mic or enable a built-in mic in your OS sound settings."}
+                {permissionState === "insecure" && "Open this site over HTTPS or localhost to use voice control."}
+              </p>
+            </div>
+            {permissionState !== "insecure" && (
+              <Button size="sm" onClick={() => retryPermission()} className="bg-red-500/20 hover:bg-red-500/30 text-red-200 border border-red-500/40">
+                Retry
+              </Button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Debug panel */}
+      {showDebug && (
+        <div className="relative w-full max-w-2xl mx-auto px-4 mt-2">
+          <div className="rounded-xl border border-cyan-500/30 bg-black/60 backdrop-blur p-4 font-mono text-[11px] text-cyan-200 grid grid-cols-2 gap-x-4 gap-y-1">
+            <span className="text-gray-500">Status</span><span>{status}</span>
+            <span className="text-gray-500">Permission</span><span>{permissionState}</span>
+            <span className="text-gray-500">Microphone</span><span className="truncate">{activeDevice || "—"}</span>
+            <span className="text-gray-500">Speech API</span><span>{isSpeechSupported ? "supported" : "unsupported"}</span>
+            <span className="text-gray-500">Secure origin</span><span>{isSecureOrigin ? "yes (HTTPS)" : "no"}</span>
+            <span className="text-gray-500">Audio level</span><span>{Math.round(audioLevel * 100)}%</span>
+            <span className="text-gray-500">Last transcript</span><span className="truncate">{transcript || "—"}</span>
+            <span className="text-gray-500">Last error</span><span className="truncate text-red-300">{lastError || "none"}</span>
+          </div>
+        </div>
+      )}
 
       {/* Main content */}
       <div className="relative flex-1 flex flex-col items-center justify-center w-full max-w-2xl px-4 gap-6">
