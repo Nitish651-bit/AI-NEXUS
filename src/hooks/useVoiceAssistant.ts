@@ -63,13 +63,65 @@ export function useVoiceAssistant(options: UseVoiceAssistantOptions = {}) {
     ("SpeechRecognition" in window || "webkitSpeechRecognition" in window);
 
   // ── Microphone permission + audio level monitoring ──
-  const requestMicPermission = useCallback(async (): Promise<boolean> => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      streamRef.current = stream;
+  const isSecureOrigin = typeof window !== "undefined" &&
+    (window.isSecureContext || location.hostname === "localhost" || location.hostname === "127.0.0.1");
 
-      // Set up audio level analyser
-      const ctx = new AudioContext();
+  const requestMicPermission = useCallback(async (retry = 0): Promise<boolean> => {
+    // 1. Secure context check
+    if (!isSecureOrigin) {
+      setPermissionState("insecure");
+      setLastError("Insecure origin");
+      toast({
+        title: "Voice control requires HTTPS",
+        description: "Open the site over HTTPS or localhost to enable the microphone.",
+        variant: "destructive",
+      });
+      return false;
+    }
+
+    // 2. API support check
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setPermissionState("denied");
+      setLastError("getUserMedia unsupported");
+      toast({ title: "Microphone API unsupported", description: "Use Chrome, Edge, Brave, or Opera.", variant: "destructive" });
+      return false;
+    }
+
+    // 3. Enumerate devices early to detect missing hardware
+    try {
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const mics = devices.filter(d => d.kind === "audioinput");
+      if (mics.length === 0) {
+        setPermissionState("no-device");
+        setLastError("No microphone detected");
+        toast({
+          title: "No microphone detected",
+          description: "Connect a microphone, then click Activate again.",
+          variant: "destructive",
+        });
+        return false;
+      }
+    } catch {/* enumeration may need permission first — continue */}
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+        },
+      });
+      streamRef.current = stream;
+      setPermissionState("granted");
+      setLastError("");
+
+      // Identify active device
+      const track = stream.getAudioTracks()[0];
+      setActiveDevice(track?.label || "Default microphone");
+
+      // Audio level analyser
+      const Ctx = (window as any).AudioContext || (window as any).webkitAudioContext;
+      const ctx = new Ctx();
       audioContextRef.current = ctx;
       const source = ctx.createMediaStreamSource(stream);
       const analyser = ctx.createAnalyser();
@@ -85,16 +137,41 @@ export function useVoiceAssistant(options: UseVoiceAssistantOptions = {}) {
       };
       tick();
       return true;
-    } catch (err) {
-      console.error("Microphone access denied:", err);
-      toast({
-        title: "Microphone access denied",
-        description: "Please allow microphone access in your browser settings to use voice control.",
-        variant: "destructive",
-      });
+    } catch (err: any) {
+      const name = err?.name || "Error";
+      console.error("Microphone access failed:", name, err);
+      setLastError(`${name}: ${err?.message || ""}`);
+
+      if (name === "NotAllowedError" || name === "SecurityError") {
+        setPermissionState("denied");
+        toast({
+          title: "Microphone blocked",
+          description: "Click the lock icon in your address bar and allow microphone access, then retry.",
+          variant: "destructive",
+        });
+      } else if (name === "NotFoundError" || name === "DevicesNotFoundError" || name === "OverconstrainedError") {
+        setPermissionState("no-device");
+        toast({
+          title: "No microphone found",
+          description: "Plug in a microphone or enable a built-in mic in your OS sound settings.",
+          variant: "destructive",
+        });
+      } else if (name === "NotReadableError" || name === "TrackStartError") {
+        toast({
+          title: "Microphone in use",
+          description: "Another app is using the mic. Close it and try again.",
+          variant: "destructive",
+        });
+        if (retry < 1) {
+          await new Promise(r => setTimeout(r, 800));
+          return requestMicPermission(retry + 1);
+        }
+      } else {
+        toast({ title: "Microphone error", description: err?.message || name, variant: "destructive" });
+      }
       return false;
     }
-  }, [toast]);
+  }, [toast, isSecureOrigin]);
 
   const stopAudioMonitoring = useCallback(() => {
     if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
