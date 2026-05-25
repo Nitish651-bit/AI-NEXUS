@@ -3,6 +3,7 @@ import { Dashboard } from "@/components/dashboard/Dashboard";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { Loader2 } from "lucide-react";
+import { SEO } from "@/components/seo/SEO";
 
 const Index = () => {
   const { user, isLoading, isAuthenticated, signIn, signUp, signInWithGoogle, signOut, resetPassword } = useAuth();
