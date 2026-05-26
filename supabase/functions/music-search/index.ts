@@ -70,52 +70,6 @@ async function searchPixabay(
   }
 }
 
-async function searchCCMixter(
-  query: string | undefined,
-  category: string | undefined,
-  limit: number,
-  offset: number,
-): Promise<{ tracks: UnifiedTrack[]; total: number }> {
-  try {
-    const tags = [query, category && category !== "all" ? category : ""]
-      .filter(Boolean).join(" ").trim();
-    const params = new URLSearchParams({
-      f: "json",
-      limit: String(limit),
-      offset: String(offset),
-      sort: "rank",
-    });
-    if (tags) params.set("tags", tags);
-    const res = await fetch(`https://ccmixter.org/api/query?${params}`);
-    if (!res.ok) return { tracks: [], total: 0 };
-    const data = await res.json();
-    const arr = Array.isArray(data) ? data : [];
-    const tracks: UnifiedTrack[] = arr
-      .filter((t: any) => t.files?.[0]?.download_url)
-      .map((t: any) => {
-        const file = t.files.find((f: any) =>
-          /\.(mp3|ogg|m4a|wav)$/i.test(f.download_url || "")
-        ) || t.files[0];
-        return {
-          id: `cc-${t.upload_id}`,
-          name: t.upload_name || "Untitled",
-          artist: t.user_real_name || t.user_name || "ccMixter Artist",
-          duration: Math.round(Number(file?.file_duration_raw || 0) / 1000) || 180,
-          previewUrl: file.download_url,
-          downloadUrl: file.download_url,
-          image: t.artist_page_img || "https://ccmixter.org/sites/default/files/ccmixter-logo.png",
-          album: "ccMixter",
-          source: "ccMixter",
-          tags: (t.upload_tags || "").replace(/,/g, ", "),
-        };
-      });
-    return { tracks, total: tracks.length + offset + (tracks.length === limit ? limit : 0) };
-  } catch (e) {
-    console.error("ccMixter error:", e);
-    return { tracks: [], total: 0 };
-  }
-}
-
 async function searchInternetArchive(
   query: string | undefined,
   category: string | undefined,
@@ -125,34 +79,53 @@ async function searchInternetArchive(
   try {
     const terms = [query, category && category !== "all" ? category : ""]
       .filter(Boolean).join(" ").trim() || "music";
-    const q = `mediatype:(audio) AND collection:(opensource_audio OR netlabels) AND (${terms})`;
+    const q = `mediatype:(audio) AND collection:(opensource_audio OR netlabels OR audio_music) AND format:(MP3) AND (${terms})`;
     const url =
       `https://archive.org/advancedsearch.php?q=${encodeURIComponent(q)}` +
-      `&fl[]=identifier&fl[]=title&fl[]=creator&fl[]=subject` +
+      `&fl[]=identifier&fl[]=title&fl[]=creator&fl[]=subject&fl[]=runtime` +
       `&rows=${limit}&page=${page}&output=json&sort[]=downloads+desc`;
     const res = await fetch(url);
     if (!res.ok) return { tracks: [], total: 0 };
     const data = await res.json();
     const docs = data?.response?.docs || [];
     const total = data?.response?.numFound || docs.length;
-    // Build a streaming URL guess for the most common IA layout (mp3 derivative)
-    const tracks: UnifiedTrack[] = docs.map((d: any) => {
+
+    // Resolve real playable mp3 URL per item via the metadata API (parallel).
+    const resolved = await Promise.all(docs.map(async (d: any) => {
       const id = d.identifier;
-      // IA exposes a deterministic stream proxy for the first audio file:
-      const stream = `https://archive.org/download/${id}/${encodeURIComponent(id)}_vbr.mp3`;
-      return {
-        id: `ia-${id}`,
-        name: Array.isArray(d.title) ? d.title[0] : d.title || id,
-        artist: Array.isArray(d.creator) ? d.creator[0] : d.creator || "Internet Archive",
-        duration: 0,
-        previewUrl: stream,
-        downloadUrl: stream,
-        image: `https://archive.org/services/img/${id}`,
-        album: "Internet Archive",
-        source: "Internet Archive",
-        tags: Array.isArray(d.subject) ? d.subject.join(", ") : (d.subject || ""),
-      };
-    });
+      try {
+        const metaRes = await fetch(`https://archive.org/metadata/${id}`);
+        if (!metaRes.ok) return null;
+        const meta = await metaRes.json();
+        const files: any[] = meta?.files || [];
+        // Prefer VBR MP3, then any MP3, then OGG
+        const file =
+          files.find((f) => /VBR MP3/i.test(f.format)) ||
+          files.find((f) => /MP3/i.test(f.format)) ||
+          files.find((f) => /Ogg/i.test(f.format));
+        if (!file?.name) return null;
+        const streamUrl = `https://archive.org/download/${id}/${encodeURIComponent(file.name)}`;
+        const duration = Number(file.length)
+          ? Math.round(Number(file.length))
+          : Number(file.length?.toString().split(":").reduce((a: number, b: string) => a * 60 + Number(b), 0)) || 0;
+        return {
+          id: `ia-${id}`,
+          name: Array.isArray(d.title) ? d.title[0] : d.title || id,
+          artist: Array.isArray(d.creator) ? d.creator[0] : d.creator || "Internet Archive",
+          duration: duration || 0,
+          previewUrl: streamUrl,
+          downloadUrl: streamUrl,
+          image: `https://archive.org/services/img/${id}`,
+          album: "Internet Archive",
+          source: "Internet Archive",
+          tags: Array.isArray(d.subject) ? d.subject.join(", ") : (d.subject || ""),
+        } as UnifiedTrack;
+      } catch {
+        return null;
+      }
+    }));
+
+    const tracks = resolved.filter((t): t is UnifiedTrack => t !== null);
     return { tracks, total };
   } catch (e) {
     console.error("Internet Archive error:", e);
