@@ -2,6 +2,22 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Hide platform-injected "Edit with Lovable" badge / floating popup on published builds */
+#lovable-badge,
+[id^="lovable-badge"],
+[class*="lovable-badge"],
+a[href*="lovable.dev"][target="_blank"][rel*="noopener"],
+iframe[src*="lovable.dev/badge"],
+div[data-lovable-badge],
+#lovable-portal {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
 /* AI Android App Design System - Dark Holo Blue Theme
 All colors MUST be HSL.
 */
