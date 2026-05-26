@@ -156,30 +156,29 @@ serve(async (req) => {
       category: z.string().max(50).optional(),
       page: z.number().int().min(1).max(100).optional(),
       limit: z.number().int().min(1).max(100).optional(),
-      sources: z.array(z.enum(["pixabay", "ccmixter", "archive"])).optional(),
+      sources: z.array(z.enum(["pixabay", "archive"])).optional(),
     });
     const { query, category, page = 1, limit = 40, sources } = schema.parse(body);
-    const enabled = new Set(sources && sources.length ? sources : ["pixabay", "ccmixter", "archive"]);
+    const enabled = new Set(sources && sources.length ? sources : ["pixabay", "archive"]);
 
     const perSource = Math.max(10, Math.floor(limit / enabled.size));
-    const [pix, cc, ia] = await Promise.all([
+    const [pix, ia] = await Promise.all([
       enabled.has("pixabay") ? searchPixabay(query, category, page, perSource) : { tracks: [], total: 0 },
-      enabled.has("ccmixter") ? searchCCMixter(query, category, perSource, (page - 1) * perSource) : { tracks: [], total: 0 },
       enabled.has("archive") ? searchInternetArchive(query, category, perSource, page) : { tracks: [], total: 0 },
     ]);
 
     // Interleave so the user sees variety across sources
-    const buckets = [pix.tracks, cc.tracks, ia.tracks];
+    const buckets = [pix.tracks, ia.tracks];
     const merged: UnifiedTrack[] = [];
     const max = Math.max(...buckets.map((b) => b.length));
     for (let i = 0; i < max; i++) {
       for (const b of buckets) if (b[i]) merged.push(b[i]);
     }
 
-    const total = pix.total + cc.total + ia.total;
+    const total = pix.total + ia.total;
     const hasMore = merged.length >= perSource; // optimistic
 
-    console.log(`music-search: pixabay=${pix.tracks.length} ccmixter=${cc.tracks.length} archive=${ia.tracks.length} total~${total}`);
+    console.log(`music-search: pixabay=${pix.tracks.length} archive=${ia.tracks.length} total~${total}`);
 
     return new Response(
       JSON.stringify({ tracks: merged, total, page, hasMore }),
