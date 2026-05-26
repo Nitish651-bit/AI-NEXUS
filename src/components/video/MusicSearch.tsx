@@ -361,7 +361,7 @@ export function MusicSearch({ onSelectTrack }: MusicSearchProps) {
 
       {/* Attribution */}
       <div className="text-[9px] text-muted-foreground pt-1 border-t border-border">
-        🎵 Royalty-free music from SoundHelix & Pixabay ({totalPixabay > 0 ? `${totalPixabay.toLocaleString()}+` : '20,000+'} tracks available)
+        Unlimited royalty-free music from Pixabay, ccMixter & Internet Archive — millions of tracks searchable
       </div>
     </div>
   );
