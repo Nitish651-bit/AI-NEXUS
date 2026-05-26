@@ -201,5 +201,27 @@
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+    <script>
+      // Remove any platform-injected Lovable badge / floating popup at runtime
+      (function () {
+        var SELECTORS = [
+          '#lovable-badge',
+          '[id^="lovable-badge"]',
+          '[class*="lovable-badge"]',
+          'a[href*="lovable.dev"][target="_blank"]',
+          'iframe[src*="lovable.dev/badge"]',
+          'div[data-lovable-badge]',
+          '#lovable-portal'
+        ];
+        function purge() {
+          SELECTORS.forEach(function (sel) {
+            document.querySelectorAll(sel).forEach(function (el) { el.remove(); });
+          });
+        }
+        purge();
+        var mo = new MutationObserver(purge);
+        mo.observe(document.documentElement, { childList: true, subtree: true });
+      })();
+    </script>
   </body>
 </html>
