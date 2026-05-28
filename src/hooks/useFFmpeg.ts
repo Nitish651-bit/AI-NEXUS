@@ -333,9 +333,15 @@ export function useFFmpeg() {
           }
         });
 
+        // CRITICAL: libx264 requires even dimensions — always append a
+        // safety scale that rounds width/height up to the nearest even number.
+        if (options.format !== "gif" && options.format !== "webm") {
+          vfFilters.push("scale=trunc(iw/2)*2:trunc(ih/2)*2");
+        }
         if (vfFilters.length > 0) {
           args.push("-vf", vfFilters.join(","));
         }
+
 
         // Build audio filter complex for mixing multiple audio tracks
         const hasAudioTracks = audioInputs.length > 0;
@@ -405,13 +411,33 @@ export function useFFmpeg() {
             args.push("-c:a", "libvorbis", "-b:a", "128k");
           }
         } else {
-          // MP4 format
-          const quality = options.quality ? Math.max(1, Math.min(10, Math.round((100 - options.quality) / 10) + 1)) : 5;
-          args.push("-c:v", "mpeg4", "-q:v", quality.toString());
+          // MP4 — UNIVERSAL DEVICE COMPATIBILITY
+          // H.264 Baseline + yuv420p + faststart plays on iPhone, Android,
+          // Safari, Chrome, smart TVs, WhatsApp, Instagram, YouTube, etc.
+          // CRF maps quality slider (higher slider = lower CRF = better quality).
+          const crf = options.quality
+            ? Math.max(18, Math.min(32, Math.round(32 - (options.quality / 100) * 14)))
+            : 23;
+          args.push(
+            "-c:v", "libx264",
+            "-preset", "veryfast",
+            "-profile:v", "baseline",
+            "-level", "3.1",
+            "-pix_fmt", "yuv420p",
+            "-crf", crf.toString(),
+            "-movflags", "+faststart",
+            // Ensure dimensions are even (libx264 requirement)
+            // -vf chain already appended above; this is a safety
+          );
           if (!hasAudioTracks && !includeOriginalAudio) {
             args.push("-an");
           } else {
-            args.push("-c:a", "aac", "-b:a", "128k");
+            args.push(
+              "-c:a", "aac",
+              "-b:a", "192k",
+              "-ar", "44100",
+              "-ac", "2",
+            );
           }
         }
 
