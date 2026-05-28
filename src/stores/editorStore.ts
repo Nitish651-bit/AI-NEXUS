@@ -5,6 +5,7 @@
  * will progressively migrate here.
  */
 import { create } from "zustand";
+import type { VideoTransition } from "@/data/videoTransitionsData";
 
 export type TrackKind = "video" | "audio" | "text" | "effect";
 
@@ -55,24 +56,28 @@ interface EditorState {
   captions: Caption[];
   activePreset: SocialPreset;
   cutSuggestions: CutSuggestion[];
+  selectedTransition: VideoTransition | null;
   addCaption: (c: Caption) => void;
   addCaptions: (cs: Caption[]) => void;
   removeCaption: (id: string) => void;
   clearCaptions: () => void;
   setActivePreset: (p: SocialPreset) => void;
   setCutSuggestions: (cs: CutSuggestion[]) => void;
+  setSelectedTransition: (t: VideoTransition | null) => void;
 }
 
 export const useEditorStore = create<EditorState>((set) => ({
   captions: [],
   activePreset: SOCIAL_PRESETS[0],
   cutSuggestions: [],
+  selectedTransition: null,
   addCaption: (c) => set((s) => ({ captions: [...s.captions, c] })),
   addCaptions: (cs) => set((s) => ({ captions: [...s.captions, ...cs] })),
   removeCaption: (id) => set((s) => ({ captions: s.captions.filter((c) => c.id !== id) })),
   clearCaptions: () => set({ captions: [] }),
   setActivePreset: (p) => set({ activePreset: p }),
   setCutSuggestions: (cs) => set({ cutSuggestions: cs }),
+  setSelectedTransition: (t) => set({ selectedTransition: t }),
 }));
 
 export const CAPTION_PRESET_STYLES: Record<CaptionPreset, React.CSSProperties> = {
