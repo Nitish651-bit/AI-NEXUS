@@ -43,6 +43,7 @@ import { VideoTimeline } from "./VideoTimeline";
 import { AIAutoEdit } from "./AIAutoEdit";
 import { TikTokCaptions, CaptionOverlay } from "./TikTokCaptions";
 import { SocialExportPresets } from "./SocialExportPresets";
+import { TransitionsLibrary } from "./TransitionsLibrary";
 import { toast } from "sonner";
 import { VideoFilter } from "@/data/videoFiltersData";
 import { useFFmpeg } from "@/hooks/useFFmpeg";
@@ -667,8 +668,11 @@ export function VideoEditor() {
                 </div>
               </TabsContent>
 
-              <TabsContent value="filters" className="p-4 m-0">
+              <TabsContent value="filters" className="p-4 m-0 space-y-6">
                 <FilterLibrary onApplyFilter={handleFilterApply} />
+                <div className="pt-4 border-t border-border">
+                  <TransitionsLibrary />
+                </div>
               </TabsContent>
 
               <TabsContent value="music" className="p-4 m-0 space-y-6">
