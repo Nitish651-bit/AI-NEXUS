@@ -34,9 +34,11 @@ export function useFFmpeg() {
         console.log("[FFmpeg]", message);
       });
 
-      // Load FFmpeg with CORS-enabled URLs (ESM build for browser compatibility)
-      const baseURL = "https://unpkg.com/@ffmpeg/core@0.12.6/dist/esm";
-      
+      // Use the UMD build — the ESM build needs a module Worker that fails to
+      // spawn from a blob URL in most browsers, which causes ffmpeg.load() to
+      // hang silently after the core JS/WASM are fetched.
+      const baseURL = "https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd";
+
       await ffmpeg.load({
         coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, "text/javascript"),
         wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, "application/wasm"),
