@@ -31,9 +31,7 @@ export const LovableAIImage = () => {
         body: { prompt }
       });
 
-      if (error) {
-        throw error;
-      }
+      if (error) throw error;
 
       if (!data?.success || !data?.imageUrl) {
         throw new Error(data?.error || "Failed to generate image");
@@ -41,14 +39,17 @@ export const LovableAIImage = () => {
 
       setGeneratedImage(data.imageUrl);
       toast({
-        title: "Success",
-        description: "Image generated successfully!",
+        title: "Image ready",
+        description: "Your AI Nexus image has been generated.",
       });
     } catch (error) {
       console.error("Error generating image:", error);
+      const message = error instanceof Error && error.message !== "Edge Function returned a non-2xx status code"
+        ? error.message
+        : "Image generation failed. Please try again with a shorter, clear prompt.";
       toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to generate image",
+        title: "Generation failed",
+        description: message,
         variant: "destructive",
       });
     } finally {
@@ -61,10 +62,10 @@ export const LovableAIImage = () => {
       <CardHeader>
         <div className="flex items-center gap-2">
           <Image className="w-5 h-5 text-primary" />
-          <CardTitle>AI Image Generation</CardTitle>
+          <CardTitle>AI Nexus Image Studio</CardTitle>
         </div>
         <CardDescription>
-          Generate stunning images using Lovable AI - Powered by Gemini 2.5 Flash
+          Generate high-quality visuals from any clear creative prompt.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
