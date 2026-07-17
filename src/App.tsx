@@ -13,6 +13,7 @@ import AboutUs from "./pages/AboutUs";
 import ContactUs from "./pages/ContactUs";
 import Automation from "./pages/Automation";
 import AuthCallback from "./pages/AuthCallback";
+import AuthDebug from "./pages/AuthDebug";
 import PWAInstallPrompt from "./components/pwa/PWAInstallPrompt";
 
 const queryClient = new QueryClient();
@@ -34,6 +35,7 @@ const App = () => (
             <Route path="/automation" element={<Automation />} />
             <Route path="/auth/callback" element={<AuthCallback />} />
             <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="/auth/debug" element={<AuthDebug />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
