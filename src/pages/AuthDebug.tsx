@@ -212,9 +212,15 @@ export default function AuthDebug() {
           </div>
         </Card>
 
-        <Button onClick={testGoogle} disabled={testing} size="lg" className="w-full">
-          {testing ? "Redirecting to Google..." : "Test Google Sign-in"}
-        </Button>
+        <div className="grid gap-2 sm:grid-cols-2">
+          <Button onClick={testGoogle} disabled={testing} size="lg" variant="outline">
+            {testing ? "Redirecting..." : "Test Google Sign-in"}
+          </Button>
+          <Button onClick={clearAndRetry} disabled={testing} size="lg">
+            <RefreshCw className="mr-2 h-4 w-4" />
+            {testing ? "Clearing..." : "Clear session & retry Google"}
+          </Button>
+        </div>
       </div>
     </div>
   );
