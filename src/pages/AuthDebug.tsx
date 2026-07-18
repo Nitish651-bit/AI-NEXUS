@@ -72,6 +72,49 @@ export default function AuthDebug() {
     }
   };
 
+  const clearAndRetry = async () => {
+    setTesting(true);
+    try {
+      // 1. Sign out from Supabase (revokes refresh token + clears its storage)
+      await supabase.auth.signOut({ scope: "global" }).catch(() => {});
+
+      // 2. Nuke any lingering Supabase auth entries from localStorage / sessionStorage
+      const purge = (store: Storage) => {
+        const keys: string[] = [];
+        for (let i = 0; i < store.length; i++) {
+          const k = store.key(i);
+          if (k && (k.startsWith("sb-") || k.includes("supabase.auth"))) keys.push(k);
+        }
+        keys.forEach((k) => store.removeItem(k));
+      };
+      purge(window.localStorage);
+      purge(window.sessionStorage);
+
+      // 3. Best-effort clear of non-HttpOnly cookies on this origin
+      document.cookie.split(";").forEach((c) => {
+        const name = c.split("=")[0].trim();
+        if (!name) return;
+        document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/`;
+      });
+
+      setSession(null);
+      toast.success("Session cleared. Redirecting to Google...");
+
+      // 4. Fresh OAuth call — Supabase generates a new state + PKCE verifier
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: { redirectTo: appCallback, queryParams: { prompt: "select_account" } },
+      });
+      if (error) {
+        toast.error(error.message);
+        setTesting(false);
+      }
+    } catch (e: any) {
+      toast.error(e?.message || "Failed to clear session");
+      setTesting(false);
+    }
+  };
+
   const explanation = errorCode ? ERROR_EXPLANATIONS[errorCode] || ERROR_EXPLANATIONS[errorDesc?.includes("403") ? "403" : ""] : null;
 
   const Row = ({ label, value }: { label: string; value: string }) => (
