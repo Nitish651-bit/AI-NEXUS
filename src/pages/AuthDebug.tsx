@@ -341,6 +341,56 @@ export default function AuthDebug() {
         </Card>
 
         <Card className="space-y-3 p-5">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold">Auto-checks</h2>
+            <Button size="sm" variant="outline" onClick={runChecks} disabled={runningChecks}>
+              <RefreshCw className={`mr-2 h-3 w-3 ${runningChecks ? "animate-spin" : ""}`} />
+              Re-run
+            </Button>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Client-side verification of the callback URL, Supabase provider status, and origin registration. Google's Authorized redirect URI list is not readable via API — checks marked "warn" mean you must verify manually in Google Cloud Console.
+          </p>
+          <div className="space-y-2">
+            {checks.length === 0 && runningChecks && (
+              <div className="text-sm text-muted-foreground">Running checks...</div>
+            )}
+            {checks.map((c) => {
+              const Icon =
+                c.status === "pass" ? CheckCircle2 : c.status === "fail" ? XCircle : AlertTriangle;
+              const color =
+                c.status === "pass"
+                  ? "text-green-500"
+                  : c.status === "fail"
+                    ? "text-destructive"
+                    : "text-yellow-500";
+              const bg =
+                c.status === "pass"
+                  ? "border-green-500/30 bg-green-500/5"
+                  : c.status === "fail"
+                    ? "border-destructive/40 bg-destructive/5"
+                    : "border-yellow-500/30 bg-yellow-500/5";
+              return (
+                <div key={c.id} className={`flex gap-3 rounded-lg border p-3 ${bg}`}>
+                  <Icon className={`mt-0.5 h-4 w-4 shrink-0 ${color}`} />
+                  <div className="min-w-0 flex-1 space-y-1">
+                    <div className="text-sm font-medium">{c.label}</div>
+                    <div className="break-all text-xs text-muted-foreground">{c.detail}</div>
+                    {c.fix && (
+                      <div className="text-xs">
+                        <span className="font-semibold">Fix:</span> {c.fix}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </Card>
+
+
+
+        <Card className="space-y-3 p-5">
           <h2 className="text-lg font-semibold">Required Setup Checklist</h2>
           <ol className="list-decimal space-y-2 pl-5 text-sm">
             <li>
