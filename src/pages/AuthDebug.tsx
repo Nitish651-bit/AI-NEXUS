@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Copy, CheckCircle2, XCircle, AlertTriangle, ExternalLink } from "lucide-react";
+import { Copy, CheckCircle2, XCircle, AlertTriangle, ExternalLink, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
@@ -68,6 +68,49 @@ export default function AuthDebug() {
     });
     if (error) {
       toast.error(error.message);
+      setTesting(false);
+    }
+  };
+
+  const clearAndRetry = async () => {
+    setTesting(true);
+    try {
+      // 1. Sign out from Supabase (revokes refresh token + clears its storage)
+      await supabase.auth.signOut({ scope: "global" }).catch(() => {});
+
+      // 2. Nuke any lingering Supabase auth entries from localStorage / sessionStorage
+      const purge = (store: Storage) => {
+        const keys: string[] = [];
+        for (let i = 0; i < store.length; i++) {
+          const k = store.key(i);
+          if (k && (k.startsWith("sb-") || k.includes("supabase.auth"))) keys.push(k);
+        }
+        keys.forEach((k) => store.removeItem(k));
+      };
+      purge(window.localStorage);
+      purge(window.sessionStorage);
+
+      // 3. Best-effort clear of non-HttpOnly cookies on this origin
+      document.cookie.split(";").forEach((c) => {
+        const name = c.split("=")[0].trim();
+        if (!name) return;
+        document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/`;
+      });
+
+      setSession(null);
+      toast.success("Session cleared. Redirecting to Google...");
+
+      // 4. Fresh OAuth call — Supabase generates a new state + PKCE verifier
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: { redirectTo: appCallback, queryParams: { prompt: "select_account" } },
+      });
+      if (error) {
+        toast.error(error.message);
+        setTesting(false);
+      }
+    } catch (e: any) {
+      toast.error(e?.message || "Failed to clear session");
       setTesting(false);
     }
   };
@@ -169,9 +212,15 @@ export default function AuthDebug() {
           </div>
         </Card>
 
-        <Button onClick={testGoogle} disabled={testing} size="lg" className="w-full">
-          {testing ? "Redirecting to Google..." : "Test Google Sign-in"}
-        </Button>
+        <div className="grid gap-2 sm:grid-cols-2">
+          <Button onClick={testGoogle} disabled={testing} size="lg" variant="outline">
+            {testing ? "Redirecting..." : "Test Google Sign-in"}
+          </Button>
+          <Button onClick={clearAndRetry} disabled={testing} size="lg">
+            <RefreshCw className="mr-2 h-4 w-4" />
+            {testing ? "Clearing..." : "Clear session & retry Google"}
+          </Button>
+        </div>
       </div>
     </div>
   );
