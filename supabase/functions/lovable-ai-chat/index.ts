@@ -123,7 +123,7 @@ async function callOllama(baseUrl: string, model: string, systemPrompt: string, 
 }
 
 // ─── Lovable AI Gateway caller ───
-async function callLovableAI(systemPrompt: string, userContent: any, enableWebSearch?: boolean): Promise<string> {
+async function callLovableAI(systemPrompt: string, userContent: any, enableWebSearch?: boolean, history?: Array<{role: string, content: string}>): Promise<string> {
   const apiKey = Deno.env.get("LOVABLE_API_KEY");
   if (!apiKey) throw new Error("LOVABLE_API_KEY is not configured");
 
@@ -131,6 +131,7 @@ async function callLovableAI(systemPrompt: string, userContent: any, enableWebSe
     model: "google/gemini-3-flash-preview",
     messages: [
       { role: "system", content: systemPrompt },
+      ...(history ?? []),
       { role: "user", content: userContent },
     ],
   };
