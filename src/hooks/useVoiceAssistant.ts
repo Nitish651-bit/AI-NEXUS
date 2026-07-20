@@ -369,17 +369,20 @@ export function useVoiceAssistant(options: UseVoiceAssistantOptions = {}) {
       timestamp: new Date(),
     };
     setMessages(prev => [...prev, userMsg]);
+    persistMessage("user", userMessage);
 
     let responseText = "I encountered an error. Please try again.";
 
+    // Build history from state (last 20) for context
+    const priorHistory = messagesRef.current.slice(-20).map(m => ({ role: m.role, content: m.content }));
+
     try {
-      // Try orchestrator first
       const toolNames = aiTools.map(t => t.title);
       const { data, error } = await supabase.functions.invoke("nexus-orchestrator", {
         body: {
           command: userMessage,
           availableTools: toolNames,
-          context: { currentPage: window.location.pathname },
+          context: { currentPage: window.location.pathname, history: priorHistory },
         },
       });
 
@@ -390,18 +393,18 @@ export function useVoiceAssistant(options: UseVoiceAssistantOptions = {}) {
         onNavigate(data.orchestration.navigation_target);
       }
     } catch {
-      // Fallback to direct chat
       try {
-          const { data, error } = await supabase.functions.invoke("lovable-ai-chat", {
+        const { data, error } = await supabase.functions.invoke("lovable-ai-chat", {
           body: {
-              message: userMessage,
+            message: userMessage,
             toolCategory: "Voice Assistant",
             toolTitle: "AI NEXUS Voice",
+            conversationHistory: priorHistory,
           },
         });
-          if (!error && data?.success) {
-            responseText = data.output || responseText;
-          }
+        if (!error && data?.success) {
+          responseText = data.output || responseText;
+        }
       } catch {
         // Use fallback message
       }
@@ -414,8 +417,9 @@ export function useVoiceAssistant(options: UseVoiceAssistantOptions = {}) {
       timestamp: new Date(),
     };
     setMessages(prev => [...prev, assistantMsg]);
+    persistMessage("assistant", responseText);
     await speakResponse(responseText);
-  }, [onNavigate, speakResponse]);
+  }, [onNavigate, speakResponse, persistMessage]);
 
   // ── Command handler ──
   const handleCommand = useCallback(async (text: string) => {
