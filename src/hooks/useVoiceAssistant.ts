@@ -42,6 +42,10 @@ export function useVoiceAssistant(options: UseVoiceAssistantOptions = {}) {
   const [activeDevice, setActiveDevice] = useState<string>("");
   const [lastError, setLastError] = useState<string>("");
 
+  // Persistent conversation memory (per authenticated user)
+  const conversationIdRef = useRef<string | null>(null);
+  const userIdRef = useRef<string | null>(null);
+
   // Refs to avoid stale closures inside recognition callbacks
   const statusRef = useRef<VoiceStatus>("idle");
   const isActiveRef = useRef(false);
@@ -51,6 +55,82 @@ export function useVoiceAssistant(options: UseVoiceAssistantOptions = {}) {
   const animationFrameRef = useRef<number | null>(null);
   const shouldRestartRef = useRef(false);
   const startRecognitionRef = useRef<() => void>(() => {});
+
+  // ── Persistence helpers ──
+  const persistMessage = useCallback(async (role: "user" | "assistant", content: string) => {
+    const convId = conversationIdRef.current;
+    const uid = userIdRef.current;
+    if (!convId || !uid) return;
+    try {
+      await supabase.from("voice_messages").insert({
+        conversation_id: convId,
+        user_id: uid,
+        role,
+        content: content.slice(0, 8000),
+      });
+      // Bump conversation updated_at
+      await supabase
+        .from("voice_conversations")
+        .update({ updated_at: new Date().toISOString() })
+        .eq("id", convId);
+    } catch (err) {
+      console.warn("Failed to persist voice message:", err);
+    }
+  }, []);
+
+  const initConversation = useCallback(async () => {
+    try {
+      const { data: userData } = await supabase.auth.getUser();
+      const user = userData?.user;
+      if (!user || (user as any).is_anonymous) {
+        userIdRef.current = null;
+        conversationIdRef.current = null;
+        return { history: [] as VoiceMessage[] };
+      }
+      userIdRef.current = user.id;
+
+      // Find most recent conversation in last 24h, else create new
+      const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+      const { data: existing } = await supabase
+        .from("voice_conversations")
+        .select("id")
+        .eq("user_id", user.id)
+        .gte("updated_at", cutoff)
+        .order("updated_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      let convId = existing?.id as string | undefined;
+      if (!convId) {
+        const { data: created, error: createErr } = await supabase
+          .from("voice_conversations")
+          .insert({ user_id: user.id, title: `Voice session ${new Date().toLocaleString()}` })
+          .select("id")
+          .single();
+        if (createErr) throw createErr;
+        convId = created.id;
+      }
+      conversationIdRef.current = convId!;
+
+      const { data: prior } = await supabase
+        .from("voice_messages")
+        .select("id, role, content, created_at")
+        .eq("conversation_id", convId!)
+        .order("created_at", { ascending: true })
+        .limit(40);
+
+      const history: VoiceMessage[] = (prior ?? []).map((m) => ({
+        id: m.id as string,
+        role: m.role as "user" | "assistant",
+        content: m.content as string,
+        timestamp: new Date(m.created_at as string),
+      }));
+      return { history };
+    } catch (err) {
+      console.warn("Voice memory init failed:", err);
+      return { history: [] as VoiceMessage[] };
+    }
+  }, []);
 
   // Keep refs in sync with state
   useEffect(() => { statusRef.current = status; }, [status]);
