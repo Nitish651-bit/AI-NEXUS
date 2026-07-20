@@ -162,7 +162,7 @@ serve(async (req) => {
     console.log("User:", user.id);
 
     const body = await req.json();
-    const { message, toolCategory, toolTitle, images, enableWebSearch } = inputSchema.parse(body);
+    const { message, toolCategory, toolTitle, images, enableWebSearch, conversationHistory } = inputSchema.parse(body);
 
     const systemPrompt = buildSystemPrompt(toolCategory, toolTitle);
     const textMessage = message || "Please analyze the attached image(s)";
