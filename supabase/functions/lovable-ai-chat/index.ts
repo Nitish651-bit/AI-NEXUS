@@ -24,6 +24,10 @@ const inputSchema = z.object({
   toolTitle: z.string().max(100).optional(),
   images: z.array(z.object({ url: z.string(), mimeType: z.string().optional() })).max(5).optional(),
   enableWebSearch: z.boolean().optional(),
+  conversationHistory: z.array(z.object({
+    role: z.enum(["user", "assistant"]),
+    content: z.string().max(8000),
+  })).max(40).optional(),
 }).refine(d => d.message || (d.images && d.images.length > 0), {
   message: "Either message or images must be provided",
 });
