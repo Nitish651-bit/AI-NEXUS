@@ -133,6 +133,7 @@ export function useVoiceAssistant(options: UseVoiceAssistantOptions = {}) {
   }, []);
 
   // Keep refs in sync with state
+  const messagesRef = useRef<VoiceMessage[]>([]);
   useEffect(() => { statusRef.current = status; }, [status]);
   useEffect(() => { isActiveRef.current = isActive; }, [isActive]);
 
