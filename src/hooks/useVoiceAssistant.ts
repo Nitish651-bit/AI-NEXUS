@@ -136,6 +136,7 @@ export function useVoiceAssistant(options: UseVoiceAssistantOptions = {}) {
   const messagesRef = useRef<VoiceMessage[]>([]);
   useEffect(() => { statusRef.current = status; }, [status]);
   useEffect(() => { isActiveRef.current = isActive; }, [isActive]);
+  useEffect(() => { messagesRef.current = messages; }, [messages]);
 
   const { toast } = useToast();
 
