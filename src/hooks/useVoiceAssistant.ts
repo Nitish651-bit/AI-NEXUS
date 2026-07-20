@@ -643,15 +643,24 @@ export function useVoiceAssistant(options: UseVoiceAssistantOptions = {}) {
     setStatus("wake-listening");
     startRecognition();
 
+    // Load persisted conversation memory (if signed in)
+    const { history } = await initConversation();
+
     const welcomeMsg: VoiceMessage = {
       id: crypto.randomUUID(),
       role: "assistant",
-      content: 'AI NEXUS online. Say "Hey Nexus" to give me a command, or press Push to Talk.',
+      content: history.length > 0
+        ? `Welcome back. I remember our previous ${history.length} messages. Say "Hey Nexus" to continue.`
+        : 'AI NEXUS online. Say "Hey Nexus" to give me a command, or press Push to Talk.',
       timestamp: new Date(),
     };
-    setMessages([welcomeMsg]);
-    await speakResponse("AI NEXUS online. Say Hey Nexus to give me a command.");
-  }, [requestMicPermission, startRecognition, speakResponse]);
+    setMessages([...history, welcomeMsg]);
+    await speakResponse(
+      history.length > 0
+        ? "Welcome back. I remember our previous conversation."
+        : "AI NEXUS online. Say Hey Nexus to give me a command."
+    );
+  }, [requestMicPermission, startRecognition, speakResponse, initConversation]);
 
   /** Deactivate — stop everything */
   const deactivate = useCallback(() => {
