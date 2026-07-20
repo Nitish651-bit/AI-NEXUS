@@ -198,7 +198,7 @@ serve(async (req) => {
       } else {
         userContent = textMessage;
       }
-      aiResponse = await callLovableAI(systemPrompt, userContent, enableWebSearch);
+      aiResponse = await callLovableAI(systemPrompt, userContent, enableWebSearch, conversationHistory);
       provider = "AI Nexus (ainexus)";
     }
 
