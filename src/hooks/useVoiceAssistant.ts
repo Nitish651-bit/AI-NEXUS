@@ -42,6 +42,10 @@ export function useVoiceAssistant(options: UseVoiceAssistantOptions = {}) {
   const [activeDevice, setActiveDevice] = useState<string>("");
   const [lastError, setLastError] = useState<string>("");
 
+  // Persistent conversation memory (per authenticated user)
+  const conversationIdRef = useRef<string | null>(null);
+  const userIdRef = useRef<string | null>(null);
+
   // Refs to avoid stale closures inside recognition callbacks
   const statusRef = useRef<VoiceStatus>("idle");
   const isActiveRef = useRef(false);
@@ -52,9 +56,87 @@ export function useVoiceAssistant(options: UseVoiceAssistantOptions = {}) {
   const shouldRestartRef = useRef(false);
   const startRecognitionRef = useRef<() => void>(() => {});
 
+  // ── Persistence helpers ──
+  const persistMessage = useCallback(async (role: "user" | "assistant", content: string) => {
+    const convId = conversationIdRef.current;
+    const uid = userIdRef.current;
+    if (!convId || !uid) return;
+    try {
+      await supabase.from("voice_messages").insert({
+        conversation_id: convId,
+        user_id: uid,
+        role,
+        content: content.slice(0, 8000),
+      });
+      // Bump conversation updated_at
+      await supabase
+        .from("voice_conversations")
+        .update({ updated_at: new Date().toISOString() })
+        .eq("id", convId);
+    } catch (err) {
+      console.warn("Failed to persist voice message:", err);
+    }
+  }, []);
+
+  const initConversation = useCallback(async () => {
+    try {
+      const { data: userData } = await supabase.auth.getUser();
+      const user = userData?.user;
+      if (!user || (user as any).is_anonymous) {
+        userIdRef.current = null;
+        conversationIdRef.current = null;
+        return { history: [] as VoiceMessage[] };
+      }
+      userIdRef.current = user.id;
+
+      // Find most recent conversation in last 24h, else create new
+      const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+      const { data: existing } = await supabase
+        .from("voice_conversations")
+        .select("id")
+        .eq("user_id", user.id)
+        .gte("updated_at", cutoff)
+        .order("updated_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      let convId = existing?.id as string | undefined;
+      if (!convId) {
+        const { data: created, error: createErr } = await supabase
+          .from("voice_conversations")
+          .insert({ user_id: user.id, title: `Voice session ${new Date().toLocaleString()}` })
+          .select("id")
+          .single();
+        if (createErr) throw createErr;
+        convId = created.id;
+      }
+      conversationIdRef.current = convId!;
+
+      const { data: prior } = await supabase
+        .from("voice_messages")
+        .select("id, role, content, created_at")
+        .eq("conversation_id", convId!)
+        .order("created_at", { ascending: true })
+        .limit(40);
+
+      const history: VoiceMessage[] = (prior ?? []).map((m) => ({
+        id: m.id as string,
+        role: m.role as "user" | "assistant",
+        content: m.content as string,
+        timestamp: new Date(m.created_at as string),
+      }));
+      return { history };
+    } catch (err) {
+      console.warn("Voice memory init failed:", err);
+      return { history: [] as VoiceMessage[] };
+    }
+  }, []);
+
   // Keep refs in sync with state
+  const messagesRef = useRef<VoiceMessage[]>([]);
   useEffect(() => { statusRef.current = status; }, [status]);
   useEffect(() => { isActiveRef.current = isActive; }, [isActive]);
+  useEffect(() => { messagesRef.current = messages; }, [messages]);
 
   const { toast } = useToast();
 
@@ -289,17 +371,20 @@ export function useVoiceAssistant(options: UseVoiceAssistantOptions = {}) {
       timestamp: new Date(),
     };
     setMessages(prev => [...prev, userMsg]);
+    persistMessage("user", userMessage);
 
     let responseText = "I encountered an error. Please try again.";
 
+    // Build history from state (last 20) for context
+    const priorHistory = messagesRef.current.slice(-20).map(m => ({ role: m.role, content: m.content }));
+
     try {
-      // Try orchestrator first
       const toolNames = aiTools.map(t => t.title);
       const { data, error } = await supabase.functions.invoke("nexus-orchestrator", {
         body: {
           command: userMessage,
           availableTools: toolNames,
-          context: { currentPage: window.location.pathname },
+          context: { currentPage: window.location.pathname, history: priorHistory },
         },
       });
 
@@ -310,18 +395,18 @@ export function useVoiceAssistant(options: UseVoiceAssistantOptions = {}) {
         onNavigate(data.orchestration.navigation_target);
       }
     } catch {
-      // Fallback to direct chat
       try {
-          const { data, error } = await supabase.functions.invoke("lovable-ai-chat", {
+        const { data, error } = await supabase.functions.invoke("lovable-ai-chat", {
           body: {
-              message: userMessage,
+            message: userMessage,
             toolCategory: "Voice Assistant",
             toolTitle: "AI NEXUS Voice",
+            conversationHistory: priorHistory,
           },
         });
-          if (!error && data?.success) {
-            responseText = data.output || responseText;
-          }
+        if (!error && data?.success) {
+          responseText = data.output || responseText;
+        }
       } catch {
         // Use fallback message
       }
@@ -334,8 +419,9 @@ export function useVoiceAssistant(options: UseVoiceAssistantOptions = {}) {
       timestamp: new Date(),
     };
     setMessages(prev => [...prev, assistantMsg]);
+    persistMessage("assistant", responseText);
     await speakResponse(responseText);
-  }, [onNavigate, speakResponse]);
+  }, [onNavigate, speakResponse, persistMessage]);
 
   // ── Command handler ──
   const handleCommand = useCallback(async (text: string) => {
@@ -557,15 +643,24 @@ export function useVoiceAssistant(options: UseVoiceAssistantOptions = {}) {
     setStatus("wake-listening");
     startRecognition();
 
+    // Load persisted conversation memory (if signed in)
+    const { history } = await initConversation();
+
     const welcomeMsg: VoiceMessage = {
       id: crypto.randomUUID(),
       role: "assistant",
-      content: 'AI NEXUS online. Say "Hey Nexus" to give me a command, or press Push to Talk.',
+      content: history.length > 0
+        ? `Welcome back. I remember our previous ${history.length} messages. Say "Hey Nexus" to continue.`
+        : 'AI NEXUS online. Say "Hey Nexus" to give me a command, or press Push to Talk.',
       timestamp: new Date(),
     };
-    setMessages([welcomeMsg]);
-    await speakResponse("AI NEXUS online. Say Hey Nexus to give me a command.");
-  }, [requestMicPermission, startRecognition, speakResponse]);
+    setMessages([...history, welcomeMsg]);
+    await speakResponse(
+      history.length > 0
+        ? "Welcome back. I remember our previous conversation."
+        : "AI NEXUS online. Say Hey Nexus to give me a command."
+    );
+  }, [requestMicPermission, startRecognition, speakResponse, initConversation]);
 
   /** Deactivate — stop everything */
   const deactivate = useCallback(() => {

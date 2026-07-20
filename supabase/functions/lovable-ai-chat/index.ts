@@ -24,6 +24,10 @@ const inputSchema = z.object({
   toolTitle: z.string().max(100).optional(),
   images: z.array(z.object({ url: z.string(), mimeType: z.string().optional() })).max(5).optional(),
   enableWebSearch: z.boolean().optional(),
+  conversationHistory: z.array(z.object({
+    role: z.enum(["user", "assistant"]),
+    content: z.string().max(8000),
+  })).max(40).optional(),
 }).refine(d => d.message || (d.images && d.images.length > 0), {
   message: "Either message or images must be provided",
 });
@@ -119,7 +123,7 @@ async function callOllama(baseUrl: string, model: string, systemPrompt: string, 
 }
 
 // ─── Lovable AI Gateway caller ───
-async function callLovableAI(systemPrompt: string, userContent: any, enableWebSearch?: boolean): Promise<string> {
+async function callLovableAI(systemPrompt: string, userContent: any, enableWebSearch?: boolean, history?: Array<{role: string, content: string}>): Promise<string> {
   const apiKey = Deno.env.get("LOVABLE_API_KEY");
   if (!apiKey) throw new Error("LOVABLE_API_KEY is not configured");
 
@@ -127,6 +131,7 @@ async function callLovableAI(systemPrompt: string, userContent: any, enableWebSe
     model: "google/gemini-3-flash-preview",
     messages: [
       { role: "system", content: systemPrompt },
+      ...(history ?? []),
       { role: "user", content: userContent },
     ],
   };
@@ -157,7 +162,7 @@ serve(async (req) => {
     console.log("User:", user.id);
 
     const body = await req.json();
-    const { message, toolCategory, toolTitle, images, enableWebSearch } = inputSchema.parse(body);
+    const { message, toolCategory, toolTitle, images, enableWebSearch, conversationHistory } = inputSchema.parse(body);
 
     const systemPrompt = buildSystemPrompt(toolCategory, toolTitle);
     const textMessage = message || "Please analyze the attached image(s)";
@@ -193,7 +198,7 @@ serve(async (req) => {
       } else {
         userContent = textMessage;
       }
-      aiResponse = await callLovableAI(systemPrompt, userContent, enableWebSearch);
+      aiResponse = await callLovableAI(systemPrompt, userContent, enableWebSearch, conversationHistory);
       provider = "AI Nexus (ainexus)";
     }
 
