@@ -51,7 +51,7 @@ export default function AgentQueuePage() {
 
   return (
     <div className="min-h-screen bg-background text-foreground p-4 md:p-8">
-      <SEO title="Agent Task Queue | AI NEXUS" description="Shared task queue for planner, research, coding, document, image, and automation agents with persisted job state and validation." canonical="/agents/queue" />
+      <SEO title="Agent Task Queue | AI NEXUS" description="Shared task queue for planner, research, coding, document, image, and automation agents with persisted job state and validation." path="/agents/queue" noindex />
       <div className="max-w-7xl mx-auto space-y-6">
         <header>
           <h1 className="text-3xl font-bold">Agent Task Queue</h1>
