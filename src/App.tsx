@@ -14,6 +14,7 @@ import ContactUs from "./pages/ContactUs";
 import Automation from "./pages/Automation";
 import AuthCallback from "./pages/AuthCallback";
 import AuthDebug from "./pages/AuthDebug";
+import AgentQueue from "./pages/AgentQueue";
 import PWAInstallPrompt from "./components/pwa/PWAInstallPrompt";
 
 const queryClient = new QueryClient();
@@ -36,6 +37,7 @@ const App = () => (
             <Route path="/auth/callback" element={<AuthCallback />} />
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/auth/debug" element={<AuthDebug />} />
+            <Route path="/agents/queue" element={<AgentQueue />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
