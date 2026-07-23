@@ -14,6 +14,118 @@ export type Database = {
   }
   public: {
     Tables: {
+      agent_job_events: {
+        Row: {
+          created_at: string
+          data: Json | null
+          event_type: string
+          id: string
+          job_id: string
+          message: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          data?: Json | null
+          event_type: string
+          id?: string
+          job_id: string
+          message?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          data?: Json | null
+          event_type?: string
+          id?: string
+          job_id?: string
+          message?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_job_events_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "agent_jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      agent_jobs: {
+        Row: {
+          agent_type: Database["public"]["Enums"]["agent_type"]
+          attempts: number
+          claimed_at: string | null
+          claimed_by: string | null
+          completed_at: string | null
+          conversation_id: string | null
+          created_at: string
+          error: string | null
+          id: string
+          input: Json
+          max_attempts: number
+          output: Json | null
+          parent_job_id: string | null
+          priority: number
+          started_at: string | null
+          status: Database["public"]["Enums"]["agent_job_status"]
+          updated_at: string
+          user_id: string
+          validation: Json | null
+        }
+        Insert: {
+          agent_type: Database["public"]["Enums"]["agent_type"]
+          attempts?: number
+          claimed_at?: string | null
+          claimed_by?: string | null
+          completed_at?: string | null
+          conversation_id?: string | null
+          created_at?: string
+          error?: string | null
+          id?: string
+          input?: Json
+          max_attempts?: number
+          output?: Json | null
+          parent_job_id?: string | null
+          priority?: number
+          started_at?: string | null
+          status?: Database["public"]["Enums"]["agent_job_status"]
+          updated_at?: string
+          user_id: string
+          validation?: Json | null
+        }
+        Update: {
+          agent_type?: Database["public"]["Enums"]["agent_type"]
+          attempts?: number
+          claimed_at?: string | null
+          claimed_by?: string | null
+          completed_at?: string | null
+          conversation_id?: string | null
+          created_at?: string
+          error?: string | null
+          id?: string
+          input?: Json
+          max_attempts?: number
+          output?: Json | null
+          parent_job_id?: string | null
+          priority?: number
+          started_at?: string | null
+          status?: Database["public"]["Enums"]["agent_job_status"]
+          updated_at?: string
+          user_id?: string
+          validation?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_jobs_parent_job_id_fkey"
+            columns: ["parent_job_id"]
+            isOneToOne: false
+            referencedRelation: "agent_jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ai_tool_usage: {
         Row: {
           created_at: string
@@ -249,10 +361,59 @@ export type Database = {
       }
     }
     Functions: {
-      [_ in never]: never
+      claim_agent_job: {
+        Args: {
+          _agent_types: Database["public"]["Enums"]["agent_type"][]
+          _user_id: string
+          _worker: string
+        }
+        Returns: {
+          agent_type: Database["public"]["Enums"]["agent_type"]
+          attempts: number
+          claimed_at: string | null
+          claimed_by: string | null
+          completed_at: string | null
+          conversation_id: string | null
+          created_at: string
+          error: string | null
+          id: string
+          input: Json
+          max_attempts: number
+          output: Json | null
+          parent_job_id: string | null
+          priority: number
+          started_at: string | null
+          status: Database["public"]["Enums"]["agent_job_status"]
+          updated_at: string
+          user_id: string
+          validation: Json | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "agent_jobs"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
     }
     Enums: {
-      [_ in never]: never
+      agent_job_status:
+        | "pending"
+        | "running"
+        | "completed"
+        | "failed"
+        | "validated"
+        | "rejected"
+        | "cancelled"
+      agent_type:
+        | "planner"
+        | "research"
+        | "coding"
+        | "document"
+        | "image"
+        | "automation"
+        | "validator"
+        | "orchestrator"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -379,6 +540,26 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      agent_job_status: [
+        "pending",
+        "running",
+        "completed",
+        "failed",
+        "validated",
+        "rejected",
+        "cancelled",
+      ],
+      agent_type: [
+        "planner",
+        "research",
+        "coding",
+        "document",
+        "image",
+        "automation",
+        "validator",
+        "orchestrator",
+      ],
+    },
   },
 } as const
