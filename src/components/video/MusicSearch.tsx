@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { 
-  Search, Music, Play, Pause, Plus, Heart, ChevronDown, X, Loader2, RefreshCw
+  Search, Music, Play, Pause, Plus, Heart, ChevronDown, X, Loader2, RefreshCw, Upload
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -194,6 +194,32 @@ export function MusicSearch({ onSelectTrack }: MusicSearchProps) {
 
   const selectedCategoryData = CATEGORIES.find(c => c.id === selectedCategory);
 
+  const LANGUAGE_CHIPS = [
+    "Hindi latest", "Bollywood", "Marathi latest", "Punjabi", "Tamil", "Telugu",
+    "Bhangra", "Sufi", "Ghazal", "Devotional", "Lavani", "Dandiya",
+  ];
+
+  const handleUploadOwn = (files: FileList | null) => {
+    if (!files || !files.length) return;
+    Array.from(files).forEach((file) => {
+      const url = URL.createObjectURL(file);
+      const audio = new Audio(url);
+      audio.onloadedmetadata = () => {
+        onSelectTrack({
+          id: `upload-${Date.now()}-${file.name}`,
+          name: file.name.replace(/\.[^.]+$/, ""),
+          url,
+          duration: Math.round(audio.duration || 0),
+          volume: 0.8,
+          fadeIn: 0,
+          fadeOut: 0,
+        });
+        toast.success(`Added "${file.name}"`);
+      };
+      audio.onerror = () => toast.error(`Couldn't load ${file.name}`);
+    });
+  };
+
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
@@ -201,6 +227,32 @@ export function MusicSearch({ onSelectTrack }: MusicSearchProps) {
         <Badge variant="secondary" className="text-[10px]">
           {allTracks.length} tracks {totalPixabay > 0 && `(${totalPixabay.toLocaleString()}+ available)`}
         </Badge>
+      </div>
+
+      {/* Upload your own audio */}
+      <label className="flex items-center justify-center gap-2 border-2 border-dashed border-border rounded-lg p-2 cursor-pointer hover:bg-accent/50 transition-colors text-xs">
+        <Upload className="w-3 h-3" />
+        <span>Upload your own audio (MP3, WAV, M4A) — Hindi, Marathi, any language</span>
+        <input
+          type="file"
+          accept="audio/*"
+          multiple
+          className="hidden"
+          onChange={(e) => { handleUploadOwn(e.target.files); e.target.value = ""; }}
+        />
+      </label>
+
+      {/* Language quick chips */}
+      <div className="flex flex-wrap gap-1">
+        {LANGUAGE_CHIPS.map((q) => (
+          <button
+            key={q}
+            onClick={() => { setSearchQuery(q); searchPixabay(q, selectedCategory, 1); }}
+            className="text-[9px] px-2 py-0.5 rounded-full bg-muted hover:bg-primary hover:text-primary-foreground transition-colors"
+          >
+            {q}
+          </button>
+        ))}
       </div>
 
       {/* Search */}
